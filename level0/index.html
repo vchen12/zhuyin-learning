@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+    <title>🌟 注音符號學習樂園 - 基礎認識 🌟</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .header {
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .header .subtitle {
+            color: #764ba2;
+            font-size: 1.2rem;
+        }
+        .progress-bar {
+            margin: 15px auto;
+            max-width: 600px;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .score {
+            font-size: 1.5rem;
+            color: #764ba2;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .content {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .stage-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stage-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .stage-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+        }
+        .stage-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .stage-card.completed {
+            border: 3px solid #4caf50;
+        }
+        .stage-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        .stage-title {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .stage-desc {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .learn-container {
+            text-align: center;
+        }
+        .symbol-display {
+            background: white;
+            border-radius: 30px;
+            padding: 60px;
+            margin: 30px auto;
+            max-width: 500px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        }
+        .symbol {
+            font-size: 12rem;
+            color: #667eea;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+        }
+        .symbol-info {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: #666;
+        }
+        .action-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            padding: 25px 50px;
+            border-radius: 50px;
+            font-size: 1.8rem;
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+        .action-btn:hover {
+            transform: scale(1.05);
+        }
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .action-btn.success {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        }
+        .game-area {
+            position: relative;
+            height: 600px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .falling-item {
+            position: absolute;
+            font-size: 4rem;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .falling-item:hover {
+            transform: scale(1.2);
+        }
+        .fireworks {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            font-size: 3rem;
+            animation: explode 1s ease-out;
+        }
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.9);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            color: #667eea;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .hidden { display: none; }
+        .status-msg {
+            margin-top: 20px;
+            font-size: 1.8rem;
+            color: white;
+            min-height: 50px;
+            font-weight: bold;
+        }
+        .symbols-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .symbol-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .symbol-card:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        .symbol-card.mastered {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border: 2px solid #4caf50;
+        }
+        .notice {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px auto;
+            max-width: 600px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌟 注音符號學習樂園 🌟</h1>
+        <div class="subtitle">簡化版（不需要麥克風）</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar" style="width: 0%">0%</div>
+        </div>
+        <div class="score">⭐ 已掌握：<span id="masteredCount">0</span> / 37</div>
+    </div>
+
+    <div class="content">
+        <div class="notice">
+            📢 <strong>簡化版說明：</strong><br>
+            此版本不使用語音辨識功能，只要聽發音、多練習，覺得學會了就按「✓ 我學會了」即可！
+        </div>
+
+        <!-- 階段選單 -->
+        <div id="stageMenu">
+            <div class="stage-menu">
+                <div class="stage-card" id="stage1Card" onclick="selectStage(1)">
+                    <div class="stage-icon">📖</div>
+                    <div class="stage-title">第一階段</div>
+                    <div class="stage-desc">學習聲母 (21個)</div>
+                    <div class="stage-desc" style="margin-top: 10px; color: #4caf50; font-weight: bold;">
+                        <span id="stage1Progress">0/21</span>
+                    </div>
+                </div>
+                
+                <div class="stage-card locked" id="stage2Card" onclick="selectStage(2)">
+                    <div class="stage-icon">📚</div>
+                    <div class="stage-title">第二階段</div>
+                    <div class="stage-desc">學習韻母 (16個)</div>
+                    <div class="stage-desc" style="margin-top: 10px; color: #4caf50; font-weight: bold;">
+                        <span id="stage2Progress">0/16</span>
+                    </div>
+                </div>
+                
+                <div class="stage-card locked" id="stage3Card" onclick="selectStage(3)">
+                    <div class="stage-icon">🎮</div>
+                    <div class="stage-title">挑戰關卡</div>
+                    <div class="stage-desc">綜合遊戲測試</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 學習模式 -->
+        <div id="learnScreen" class="learn-container hidden">
+            <button class="back-btn" onclick="goHome()">← 回到首頁</button>
+            
+            <div class="symbol-display">
+                <div class="symbol" id="symbolDisplay">👋</div>
+                <div class="symbol-info" id="symbolInfo"></div>
+            </div>
+
+            <div class="status-msg" id="statusMsg"></div>
+
+            <button class="action-btn" onclick="playCurrentSound()">🔊 聽發音</button>
+            <button class="action-btn" onclick="nextSymbol()">⚡ 換一個</button>
+            <button class="action-btn success" onclick="markAsMastered()">✓ 我學會了</button>
+            
+            <div class="symbols-grid" id="symbolsGrid"></div>
+        </div>
+
+        <!-- 遊戲模式 -->
+        <div id="gameScreen" class="learn-container hidden">
+            <button class="back-btn" onclick="goHome()">← 回到首頁</button>
+            
+            <h2 style="color: white; font-size: 2rem; margin-bottom: 20px;">
+                🎯 點擊掉下來的注音符號！
+            </h2>
+
+            <div class="game-area" id="gameArea"></div>
+        </div>
+    </div>
+
+    <div id="fireworks" class="fireworks"></div>
+
+    <script>
+        // 注音符號定義
+        const STAGES = {
+            1: {
+                name: '聲母',
+                symbols: ['ㄅ', 'ㄆ', 'ㄇ', 'ㄈ', 'ㄉ', 'ㄊ', 'ㄋ', 'ㄌ', 'ㄍ', 'ㄎ', 'ㄏ', 'ㄐ', 'ㄑ', 'ㄒ', 'ㄓ', 'ㄔ', 'ㄕ', 'ㄖ', 'ㄗ', 'ㄘ', 'ㄙ'],
+                soundMap: {
+                    'ㄅ': 'F1', 'ㄆ': 'F2', 'ㄇ': 'F3', 'ㄈ': 'F4', 'ㄉ': 'F5', 'ㄊ': 'F6', 'ㄋ': 'F7', 'ㄌ': 'F8',
+                    'ㄍ': 'F9', 'ㄎ': 'F10', 'ㄏ': 'F11', 'ㄐ': 'F12', 'ㄑ': 'F13', 'ㄒ': 'F14', 'ㄓ': 'F15', 'ㄔ': 'F16',
+                    'ㄕ': 'F17', 'ㄖ': 'F18', 'ㄗ': 'F19', 'ㄘ': 'F20', 'ㄙ': 'F21'
+                }
+            },
+            2: {
+                name: '韻母',
+                symbols: ['ㄚ', 'ㄛ', 'ㄜ', 'ㄝ', 'ㄞ', 'ㄟ', 'ㄠ', 'ㄡ', 'ㄢ', 'ㄣ', 'ㄤ', 'ㄥ', 'ㄦ', 'ㄧ', 'ㄨ', 'ㄩ'],
+                soundMap: {
+                    'ㄚ': 'F22', 'ㄛ': 'F23', 'ㄜ': 'F24', 'ㄝ': 'F25', 'ㄞ': 'F26', 'ㄟ': 'F27', 'ㄠ': 'F28', 'ㄡ': 'F29',
+                    'ㄢ': 'F30', 'ㄣ': 'F31', 'ㄤ': 'F32', 'ㄥ': 'F33', 'ㄦ': 'F34', 'ㄧ': 'F35', 'ㄨ': 'F36', 'ㄩ': 'F37'
+                }
+            }
+        };
+
+        const ALL_SOUND_MAP = {...STAGES[1].soundMap, ...STAGES[2].soundMap};
+
+        let currentStage = 0;
+        let currentSymbol = '';
+        let currentAudio = null;
+        let masteredSymbols = new Set(JSON.parse(localStorage.getItem('masteredSymbols') || '[]'));
+        let gameInterval = null;
+
+        function init() {
+            updateProgress();
+            updateStageCards();
+        }
+
+        function updateProgress() {
+            const total = 37;
+            const mastered = masteredSymbols.size;
+            const percent = Math.round((mastered / total) * 100);
+            
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressBar').textContent = percent + '%';
+            document.getElementById('masteredCount').textContent = mastered;
+            
+            updateStageProgress(1);
+            updateStageProgress(2);
+        }
+
+        function updateStageProgress(stage) {
+            const symbols = STAGES[stage].symbols;
+            const mastered = symbols.filter(s => masteredSymbols.has(s)).length;
+            document.getElementById(`stage${stage}Progress`).textContent = `${mastered}/${symbols.length}`;
+        }
+
+        function updateStageCards() {
+            document.getElementById('stage1Card').classList.remove('locked');
+            
+            const stage1Mastered = STAGES[1].symbols.filter(s => masteredSymbols.has(s)).length;
+            if (stage1Mastered === STAGES[1].symbols.length) {
+                document.getElementById('stage1Card').classList.add('completed');
+                document.getElementById('stage2Card').classList.remove('locked');
+            }
+            
+            const stage2Mastered = STAGES[2].symbols.filter(s => masteredSymbols.has(s)).length;
+            if (stage2Mastered === STAGES[2].symbols.length) {
+                document.getElementById('stage2Card').classList.add('completed');
+                document.getElementById('stage3Card').classList.remove('locked');
+            }
+        }
+
+        function selectStage(stage) {
+            const card = document.getElementById(`stage${stage}Card`);
+            if (card.classList.contains('locked')) {
+                alert('請先完成前一個階段！');
+                return;
+            }
+            
+            if (stage === 3) {
+                startGame();
+                return;
+            }
+            
+            currentStage = stage;
+            showScreen('learnScreen');
+            displaySymbolsGrid();
+            nextSymbol();
+        }
+
+        function displaySymbolsGrid() {
+            const grid = document.getElementById('symbolsGrid');
+            grid.innerHTML = '<h3 style="grid-column: 1/-1; color: white; margin-top: 30px;">點擊任一符號複習</h3>';
+            
+            STAGES[currentStage].symbols.forEach(symbol => {
+                const card = document.createElement('div');
+                card.className = 'symbol-card';
+                if (masteredSymbols.has(symbol)) {
+                    card.classList.add('mastered');
+                }
+                card.textContent = symbol;
+                card.onclick = () => {
+                    currentSymbol = symbol;
+                    displayCurrentSymbol();
+                    playSound(symbol);
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        function nextSymbol() {
+            const symbols = STAGES[currentStage].symbols;
+            const unmastered = symbols.filter(s => !masteredSymbols.has(s));
+            
+            if (unmastered.length > 0) {
+                currentSymbol = unmastered[Math.floor(Math.random() * unmastered.length)];
+            } else {
+                currentSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+            }
+            
+            displayCurrentSymbol();
+            setTimeout(() => playSound(currentSymbol), 300);
+        }
+
+        function displayCurrentSymbol() {
+            document.getElementById('symbolDisplay').textContent = currentSymbol;
+            document.getElementById('symbolInfo').textContent = 
+                `${STAGES[currentStage].name} ${STAGES[currentStage].symbols.indexOf(currentSymbol) + 1}/${STAGES[currentStage].symbols.length}`;
+            document.getElementById('statusMsg').textContent = '';
+        }
+
+        function playCurrentSound() {
+            playSound(currentSymbol);
+            showStatus('🔊 聽發音中...');
+            setTimeout(() => showStatus(''), 1500);
+        }
+
+        function playSound(symbol) {
+            const fileNum = ALL_SOUND_MAP[symbol];
+            if (!fileNum) {
+                console.warn('找不到音檔:', symbol);
+                return;
+            }
+
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+
+            currentAudio = new Audio(`../sounds/${fileNum}.mp3`);
+            currentAudio.play().catch(err => {
+                console.error('播放失敗:', err);
+                showStatus('音檔載入中，請稍候...');
+            });
+        }
+
+        function showStatus(msg) {
+            const statusEl = document.getElementById('statusMsg');
+            if (statusEl) {
+                statusEl.textContent = msg;
+            }
+        }
+
+        function markAsMastered() {
+            masteredSymbols.add(currentSymbol);
+            localStorage.setItem('masteredSymbols', JSON.stringify([...masteredSymbols]));
+            
+            celebrate();
+            showStatus('✓ 已加入掌握清單！');
+            
+            updateProgress();
+            updateStageCards();
+            displaySymbolsGrid();
+            
+            setTimeout(() => {
+                nextSymbol();
+            }, 2000);
+        }
+
+        function startGame() {
+            showScreen('gameScreen');
+            const allSymbols = [...STAGES[1].symbols, ...STAGES[2].symbols];
+            
+            gameInterval = setInterval(() => {
+                createFallingItem(allSymbols);
+            }, 2000);
+        }
+
+        function createFallingItem(symbols) {
+            const gameArea = document.getElementById('gameArea');
+            const item = document.createElement('div');
+            const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+            
+            item.className = 'falling-item';
+            item.textContent = symbol;
+            item.style.left = (Math.random() * 80 + 10) + '%';
+            item.style.top = '-10%';
+            
+            item.onclick = () => {
+                playSound(symbol);
+                item.remove();
+                celebrate();
+            };
+            
+            gameArea.appendChild(item);
+            
+            let position = -10;
+            const fall = setInterval(() => {
+                position += 1;
+                item.style.top = position + '%';
+                
+                if (position > 100) {
+                    clearInterval(fall);
+                    item.remove();
+                }
+            }, 50);
+        }
+
+        function celebrate() {
+            const container = document.getElementById('fireworks');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < 20; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = '✨';
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 2000);
+        }
+
+        function showScreen(screenId) {
+            document.getElementById('stageMenu').classList.add('hidden');
+            document.getElementById('learnScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function goHome() {
+            showScreen('stageMenu');
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                gameInterval = null;
+            }
+            document.getElementById('gameArea').innerHTML = '';
+        }
+
+        window.onload = () => {
+            init();
+        };
+    </script>
+</body>
+</html>
