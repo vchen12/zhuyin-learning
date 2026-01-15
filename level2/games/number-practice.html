@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#11998e">
+    <link rel="manifest" href="../../manifest.json">
+    <title>🔢 數字練習 (0-30)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .score-display {
+            font-size: 1.2rem;
+            color: #11998e;
+            font-weight: bold;
+        }
+
+        .container { max-width: 700px; margin: 0 auto; }
+
+        .title {
+            text-align: center;
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .progress-section {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.3);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s;
+        }
+        .progress-text {
+            color: white;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .number-display {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        .number {
+            font-size: 8rem;
+            color: #11998e;
+            font-weight: bold;
+        }
+        .number-zhuyin {
+            font-size: 1.8rem;
+            color: #38ef7d;
+            margin-top: 10px;
+        }
+
+        .mode-section {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.5);
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: white;
+            color: #11998e;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .option-btn {
+            background: white;
+            border: none;
+            padding: 25px;
+            border-radius: 20px;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        .option-btn:hover { transform: scale(1.05); }
+        .option-btn.correct { background: #4caf50; color: white; }
+        .option-btn.wrong { background: #f44336; color: white; }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+        .action-btn:active { transform: scale(0.95); }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.8rem;
+            color: white;
+            margin-top: 20px;
+            min-height: 50px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .fireworks {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .complete-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show { display: flex; }
+        .complete-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
+        .complete-title { font-size: 2rem; color: #11998e; margin-bottom: 15px; }
+        .complete-score { font-size: 1.5rem; color: #666; margin-bottom: 25px; }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .number-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .number-card {
+            background: rgba(255,255,255,0.2);
+            padding: 12px 8px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .number-card:hover {
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.05);
+        }
+        .number-card.mastered {
+            background: rgba(76, 175, 80, 0.5);
+            border: 2px solid #4caf50;
+        }
+        .number-card .num {
+            font-size: 1.5rem;
+            color: white;
+            font-weight: bold;
+        }
+        .number-card .zhuyin {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.8);
+        }
+
+        @media (max-width: 500px) {
+            .number { font-size: 5rem; }
+            .option-btn { font-size: 1.5rem; padding: 20px; }
+            .number-grid { grid-template-columns: repeat(5, 1fr); }
+            .number-card .num { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="score-display">得分：<span id="score">0</span></div>
+    </nav>
+
+    <div class="container">
+        <h1 class="title">🔢 數字練習 (0-30)</h1>
+
+        <div class="mode-section">
+            <button class="mode-btn active" onclick="setMode('learn')">📖 學習模式</button>
+            <button class="mode-btn" onclick="setMode('listen')">👂 聽音選數</button>
+            <button class="mode-btn" onclick="setMode('speak')">🎤 看數唸出</button>
+        </div>
+
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">第 <span id="currentRound">1</span> / <span id="totalRounds">10</span> 題</div>
+        </div>
+
+        <div class="number-display">
+            <div class="number" id="numberDisplay">0</div>
+            <div class="number-zhuyin" id="zhuyinDisplay">ㄌㄧㄥˊ</div>
+        </div>
+
+        <div class="options-grid" id="optionsGrid" style="display: none;"></div>
+
+        <div class="action-buttons" id="actionButtons">
+            <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
+            <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
+            <button class="action-btn" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
+        </div>
+
+        <div class="result-message" id="resultMessage"></div>
+
+        <div class="number-grid" id="numberGrid"></div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon">🎉</div>
+            <div class="complete-title">太棒了！</div>
+            <div class="complete-score" id="completeScore">得分：100 分</div>
+            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script>
+        // 數字資料 (0-30)
+        const NUMBERS = [];
+        const DIGIT_TEXT = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+        const DIGIT_ZHUYIN = ['ㄌㄧㄥˊ', 'ㄧ', 'ㄦˋ', 'ㄙㄢ', 'ㄙˋ', 'ㄨˇ', 'ㄌㄧㄡˋ', 'ㄑㄧ', 'ㄅㄚ', 'ㄐㄧㄡˇ'];
+
+        // 生成 0-30 的數字資料
+        for (let i = 0; i <= 30; i++) {
+            let text, zhuyin;
+            if (i === 0) {
+                text = '零';
+                zhuyin = 'ㄌㄧㄥˊ';
+            } else if (i === 10) {
+                text = '十';
+                zhuyin = 'ㄕˊ';
+            } else if (i < 10) {
+                text = DIGIT_TEXT[i];
+                zhuyin = DIGIT_ZHUYIN[i];
+            } else if (i === 20) {
+                text = '二十';
+                zhuyin = 'ㄦˋㄕˊ';
+            } else if (i === 30) {
+                text = '三十';
+                zhuyin = 'ㄙㄢㄕˊ';
+            } else if (i < 20) {
+                text = '十' + DIGIT_TEXT[i - 10];
+                zhuyin = 'ㄕˊ' + DIGIT_ZHUYIN[i - 10];
+            } else {
+                const tens = Math.floor(i / 10);
+                const ones = i % 10;
+                text = DIGIT_TEXT[tens] + '十' + (ones > 0 ? DIGIT_TEXT[ones] : '');
+                zhuyin = DIGIT_ZHUYIN[tens] + 'ㄕˊ' + (ones > 0 ? DIGIT_ZHUYIN[ones] : '');
+            }
+            NUMBERS.push({ num: i, text, zhuyin });
+        }
+
+        const ENCOURAGEMENTS = ['太棒了！', '好厲害！', '答對了！', '真聰明！', '很棒喔！'];
+
+        let currentMode = 'learn';
+        let currentNumber = null;
+        let currentRound = 0;
+        let totalRounds = 10;
+        let score = 0;
+        let questionQueue = [];
+        let recognition = null;
+        let isListening = false;
+        let masteredNumbers = new Set(JSON.parse(localStorage.getItem('masteredNumbers_0_30') || '[]'));
+
+        function speak(text, callback) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.1;
+                if (callback) utterance.onend = callback;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function playSound() {
+            speak(currentNumber.text);
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('optionsGrid').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('numberGrid').style.display = mode === 'learn' ? 'grid' : 'none';
+            document.getElementById('speakBtn').style.display = 'none';
+            document.getElementById('resultMessage').textContent = '';
+
+            if (mode === 'learn') {
+                document.getElementById('actionButtons').style.display = 'flex';
+                renderNumberGrid();
+                nextNumber();
+                speak('學習模式！點擊數字聽發音，跟著唸一遍！');
+            } else if (mode === 'listen') {
+                startListenMode();
+            } else if (mode === 'speak') {
+                startSpeakMode();
+            }
+        }
+
+        function renderNumberGrid() {
+            const grid = document.getElementById('numberGrid');
+            grid.innerHTML = '';
+
+            NUMBERS.forEach(num => {
+                const card = document.createElement('div');
+                card.className = 'number-card';
+                if (masteredNumbers.has(num.num)) card.classList.add('mastered');
+                card.innerHTML = `<div class="num">${num.num}</div><div class="zhuyin">${num.zhuyin}</div>`;
+                card.onclick = () => {
+                    currentNumber = num;
+                    displayNumber();
+                    playSound();
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        function nextNumber() {
+            currentNumber = NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
+            displayNumber();
+            setTimeout(playSound, 300);
+        }
+
+        function displayNumber() {
+            document.getElementById('numberDisplay').textContent = currentNumber.num;
+            document.getElementById('zhuyinDisplay').textContent = currentNumber.zhuyin;
+        }
+
+        function startListenMode() {
+            currentRound = 0;
+            score = 0;
+            questionQueue = shuffle([...NUMBERS]).slice(0, totalRounds);
+
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('optionsGrid').style.display = 'grid';
+            document.getElementById('actionButtons').style.display = 'none';
+
+            updateScore();
+            speak('聽音選數模式！聽發音後，選出正確的數字！', () => {
+                nextListenQuestion();
+            });
+        }
+
+        function nextListenQuestion() {
+            if (currentRound >= totalRounds) {
+                endGame();
+                return;
+            }
+
+            currentNumber = questionQueue[currentRound];
+            currentRound++;
+
+            document.getElementById('currentRound').textContent = currentRound;
+            document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
+            document.getElementById('numberDisplay').textContent = '?';
+            document.getElementById('zhuyinDisplay').textContent = '聽發音選擇';
+            document.getElementById('resultMessage').textContent = '';
+
+            generateOptions();
+            setTimeout(() => speak(currentNumber.text), 500);
+        }
+
+        function generateOptions() {
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+
+            let options = [currentNumber];
+            while (options.length < 4) {
+                const rand = NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
+                if (!options.find(o => o.num === rand.num)) {
+                    options.push(rand);
+                }
+            }
+            options = shuffle(options);
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt.num;
+                btn.onclick = () => checkAnswer(btn, opt);
+                grid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(btn, selected) {
+            const isCorrect = selected.num === currentNumber.num;
+            document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                score += 10;
+                updateScore();
+                saveMastered(currentNumber.num);
+
+                const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+                document.getElementById('resultMessage').textContent = encouragement;
+                document.getElementById('numberDisplay').textContent = currentNumber.num;
+                document.getElementById('zhuyinDisplay').textContent = currentNumber.zhuyin;
+
+                setTimeout(() => speak(encouragement), 500);
+                createFireworks(20);
+                setTimeout(nextListenQuestion, 2500);
+            } else {
+                btn.classList.add('wrong');
+                document.getElementById('resultMessage').textContent = '再試一次！正確答案是 ' + currentNumber.num;
+                speak('再試一次！正確答案是' + currentNumber.text);
+
+                setTimeout(() => {
+                    document.querySelectorAll('.option-btn').forEach(b => {
+                        b.disabled = false;
+                        b.classList.remove('wrong');
+                    });
+                }, 1500);
+            }
+        }
+
+        function startSpeakMode() {
+            currentRound = 0;
+            score = 0;
+            questionQueue = shuffle([...NUMBERS]).slice(0, totalRounds);
+
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('optionsGrid').style.display = 'none';
+            document.getElementById('actionButtons').style.display = 'flex';
+            document.getElementById('speakBtn').style.display = 'inline-block';
+
+            initSpeechRecognition();
+            updateScore();
+            speak('看數唸出模式！看到數字後，大聲唸出來！', () => {
+                nextSpeakQuestion();
+            });
+        }
+
+        function nextSpeakQuestion() {
+            if (currentRound >= totalRounds) {
+                endGame();
+                return;
+            }
+
+            currentNumber = questionQueue[currentRound];
+            currentRound++;
+
+            document.getElementById('currentRound').textContent = currentRound;
+            document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
+            displayNumber();
+            document.getElementById('resultMessage').textContent = '看到這個數字了嗎？點擊麥克風唸出來！';
+        }
+
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'zh-TW';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 5;
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    document.getElementById('speakBtn').textContent = '🎤 聽你說...';
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    checkSpeakResult(transcript);
+                };
+
+                recognition.onerror = (event) => {
+                    isListening = false;
+                    document.getElementById('speakBtn').textContent = '🎤 我來唸';
+                    if (event.error === 'no-speech') {
+                        document.getElementById('resultMessage').textContent = '沒有聽到，慢慢來，準備好再按！';
+                        setTimeout(() => speak('沒關係，準備好再按麥克風！'), 500);
+                    }
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    document.getElementById('speakBtn').textContent = '🎤 我來唸';
+                };
+            }
+        }
+
+        function startSpeaking() {
+            if (!recognition) {
+                if (confirm(`你說的是「${currentNumber.text}」嗎？`)) {
+                    handleSpeakCorrect();
+                }
+                return;
+            }
+
+            if (isListening) return;
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('啟動辨識失敗:', error);
+            }
+        }
+
+        function checkSpeakResult(transcript) {
+            const isCorrect = transcript.includes(currentNumber.text) ||
+                              transcript.includes(String(currentNumber.num));
+
+            if (isCorrect) {
+                handleSpeakCorrect();
+            } else {
+                document.getElementById('resultMessage').textContent = '再試一次！你說：' + transcript;
+                speak('再試一次！');
+            }
+        }
+
+        function handleSpeakCorrect() {
+            score += 10;
+            updateScore();
+            saveMastered(currentNumber.num);
+
+            const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+            document.getElementById('resultMessage').textContent = encouragement;
+
+            setTimeout(() => speak(encouragement), 800);
+            createFireworks(20);
+            setTimeout(nextSpeakQuestion, 3000);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function saveMastered(num) {
+            masteredNumbers.add(num);
+            localStorage.setItem('masteredNumbers_0_30', JSON.stringify([...masteredNumbers]));
+            renderNumberGrid();
+        }
+
+        function endGame() {
+            document.getElementById('completeScore').textContent = `得分：${score} 分`;
+            document.getElementById('completeOverlay').classList.add('show');
+            createFireworks(50);
+            speak(`太棒了！你得了${score}分！`);
+        }
+
+        function restartGame() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            setMode(currentMode);
+        }
+
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        function init() {
+            renderNumberGrid();
+            currentNumber = NUMBERS[0];
+            displayNumber();
+            setTimeout(() => {
+                speak('歡迎來到數字練習！這裡練習數字零到三十的發音。', () => {
+                    setTimeout(() => speak('點擊下方的數字，聽發音跟著唸！'), 1000);
+                });
+            }, 500);
+        }
+
+        init();
+    </script>
+</body>
+</html>

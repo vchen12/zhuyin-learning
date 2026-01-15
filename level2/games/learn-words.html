@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#11998e">
+    <link rel="manifest" href="../../manifest.json">
+    <title>📚 看圖學詞</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .progress-info {
+            font-size: 1rem;
+            color: #11998e;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* 分類選擇 */
+        .category-selector {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        .category-selector h3 {
+            color: #11998e;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        .category-btn {
+            background: #f5f5f5;
+            border: 3px solid transparent;
+            border-radius: 15px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .category-btn:hover {
+            background: #e8f5e9;
+        }
+        .category-btn.active {
+            border-color: #11998e;
+            background: #e8f5e9;
+        }
+        .category-btn .icon {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .category-btn .name {
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        /* 詞彙卡片 */
+        .word-card {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .word-emoji {
+            font-size: 8rem;
+            margin-bottom: 20px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .word-text {
+            font-size: 4rem;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .word-zhuyin {
+            font-size: 2.2rem;
+            color: #11998e;
+            letter-spacing: 3px;
+        }
+
+        /* 狀態訊息 */
+        .status-message {
+            text-align: center;
+            font-size: 1.5rem;
+            color: white;
+            min-height: 40px;
+            margin: 15px 0;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* 按鈕區 */
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            padding: 18px 35px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+        .action-btn.speak {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .action-btn.next {
+            background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+        }
+        .action-btn.prev {
+            background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+        }
+
+        /* 詞彙列表 */
+        .word-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 15px;
+        }
+        .word-item {
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+        .word-item:hover {
+            transform: scale(1.05);
+        }
+        .word-item.mastered {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border: 2px solid #4caf50;
+        }
+        .word-item.current {
+            border: 3px solid #11998e;
+            box-shadow: 0 0 15px rgba(17, 153, 142, 0.5);
+        }
+        .word-item-emoji {
+            font-size: 1.8rem;
+        }
+        .word-item-text {
+            font-size: 0.8rem;
+            color: #333;
+            margin-top: 3px;
+        }
+
+        /* 煙火 */
+        .fireworks {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        @media (max-width: 600px) {
+            .word-emoji { font-size: 5rem; }
+            .word-text { font-size: 3rem; }
+            .word-zhuyin { font-size: 1.8rem; }
+            .word-card { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="progress-info">已學會：<span id="masteredCount">0</span> 個詞</div>
+    </nav>
+
+    <div class="container">
+        <!-- 分類選擇 -->
+        <div class="category-selector">
+            <h3>選擇學習分類</h3>
+            <div class="category-grid" id="categoryGrid"></div>
+        </div>
+
+        <!-- 詞彙卡片 -->
+        <div class="word-card">
+            <div class="word-emoji" id="wordEmoji">🐕</div>
+            <div class="word-text" id="wordText">狗</div>
+            <div class="word-zhuyin" id="wordZhuyin">ㄍㄡˇ</div>
+        </div>
+
+        <!-- 狀態訊息 -->
+        <div class="status-message" id="statusMessage">點擊「聽發音」開始學習！</div>
+
+        <!-- 按鈕區 -->
+        <div class="buttons">
+            <button class="action-btn prev" onclick="prevWord()">⬅️ 上一個</button>
+            <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
+            <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來唸</button>
+            <button class="action-btn next" onclick="nextWord()">➡️ 下一個</button>
+        </div>
+
+        <!-- 詞彙列表 -->
+        <div class="word-list" id="wordList"></div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <script src="../../js/vocabulary.js"></script>
+    <script>
+        // 遊戲狀態
+        let currentCategory = 'animals';
+        let currentWordIndex = 0;
+        let masteredWords = JSON.parse(localStorage.getItem('masteredWords_level2') || '{}');
+        let recognition = null;
+        let isRecognizing = false;
+
+        // 初始化
+        function init() {
+            // 檢查是否有預設分類
+            const savedCategory = localStorage.getItem('selectedCategory');
+            if (savedCategory && VOCABULARY[savedCategory]) {
+                currentCategory = savedCategory;
+            }
+
+            renderCategories();
+            initSpeechRecognition();
+            showCurrentWord();
+            renderWordList();
+            updateMasteredCount();
+        }
+
+        // 渲染分類選擇
+        function renderCategories() {
+            const grid = document.getElementById('categoryGrid');
+            grid.innerHTML = '';
+
+            for (const [key, cat] of Object.entries(VOCABULARY)) {
+                const btn = document.createElement('div');
+                btn.className = 'category-btn' + (key === currentCategory ? ' active' : '');
+                btn.innerHTML = `<span class="icon">${cat.icon}</span><span class="name">${cat.name}</span>`;
+                btn.onclick = () => selectCategory(key);
+                grid.appendChild(btn);
+            }
+        }
+
+        // 選擇分類
+        function selectCategory(key) {
+            currentCategory = key;
+            currentWordIndex = 0;
+            renderCategories();
+            showCurrentWord();
+            renderWordList();
+        }
+
+        // 顯示當前詞彙
+        function showCurrentWord() {
+            const word = VOCABULARY[currentCategory].words[currentWordIndex];
+            document.getElementById('wordEmoji').textContent = word.emoji;
+            document.getElementById('wordText').textContent = word.text;
+            document.getElementById('wordZhuyin').textContent = word.zhuyin;
+            document.getElementById('statusMessage').textContent = '點擊「聽發音」開始學習！';
+        }
+
+        // 渲染詞彙列表
+        function renderWordList() {
+            const list = document.getElementById('wordList');
+            const words = VOCABULARY[currentCategory].words;
+            list.innerHTML = '';
+
+            words.forEach((word, index) => {
+                const item = document.createElement('div');
+                item.className = 'word-item';
+
+                if (isWordMastered(currentCategory, index)) {
+                    item.classList.add('mastered');
+                }
+                if (index === currentWordIndex) {
+                    item.classList.add('current');
+                }
+
+                item.innerHTML = `
+                    <div class="word-item-emoji">${word.emoji}</div>
+                    <div class="word-item-text">${word.text}</div>
+                `;
+                item.onclick = () => {
+                    currentWordIndex = index;
+                    showCurrentWord();
+                    renderWordList();
+                };
+                list.appendChild(item);
+            });
+        }
+
+        // 播放發音 (TTS)
+        function playSound() {
+            const word = VOCABULARY[currentCategory].words[currentWordIndex];
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(word.text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.8;
+                utterance.pitch = 1.1;
+
+                utterance.onend = () => {
+                    document.getElementById('statusMessage').textContent = '聽到了嗎？試著唸唸看！';
+                };
+
+                window.speechSynthesis.speak(utterance);
+                document.getElementById('statusMessage').textContent = '🔊 ' + word.text;
+            }
+        }
+
+        // 初始化語音辨識
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'zh-TW';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = () => {
+                    isRecognizing = true;
+                    document.getElementById('statusMessage').textContent = '🎤 正在聽你說...';
+                    document.getElementById('speakBtn').disabled = true;
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    handleRecognitionResult(transcript);
+                };
+
+                recognition.onerror = (event) => {
+                    isRecognizing = false;
+                    document.getElementById('speakBtn').disabled = false;
+                    if (event.error === 'no-speech') {
+                        document.getElementById('statusMessage').textContent = '沒有聽到聲音，請再試一次！';
+                    }
+                };
+
+                recognition.onend = () => {
+                    isRecognizing = false;
+                    document.getElementById('speakBtn').disabled = false;
+                };
+            }
+        }
+
+        // 開始語音辨識
+        function startListening() {
+            if (!recognition) {
+                // 沒有語音辨識，用手動確認
+                const word = VOCABULARY[currentCategory].words[currentWordIndex];
+                if (confirm(`你唸的是「${word.text}」嗎？`)) {
+                    handleCorrect();
+                }
+                return;
+            }
+
+            if (isRecognizing) return;
+
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('啟動辨識失敗:', error);
+            }
+        }
+
+        // 處理辨識結果
+        function handleRecognitionResult(transcript) {
+            const word = VOCABULARY[currentCategory].words[currentWordIndex];
+            const isCorrect = transcript.includes(word.text) ||
+                              word.text.includes(transcript) ||
+                              isSimilar(transcript, word.text);
+
+            if (isCorrect) {
+                handleCorrect();
+            } else {
+                document.getElementById('statusMessage').textContent = `聽到「${transcript}」，再試一次！`;
+                setTimeout(playSound, 1500);
+            }
+        }
+
+        // 相似度檢查
+        function isSimilar(a, b) {
+            const aChars = a.split('');
+            const bChars = b.split('');
+            let matches = 0;
+            for (const char of aChars) {
+                if (bChars.includes(char)) matches++;
+            }
+            return matches >= Math.min(a.length, b.length) * 0.5;
+        }
+
+        // 答對處理
+        function handleCorrect() {
+            const word = VOCABULARY[currentCategory].words[currentWordIndex];
+
+            // 儲存進度
+            if (!masteredWords[currentCategory]) {
+                masteredWords[currentCategory] = {};
+            }
+            masteredWords[currentCategory][currentWordIndex] = true;
+            localStorage.setItem('masteredWords_level2', JSON.stringify(masteredWords));
+
+            document.getElementById('statusMessage').textContent = '🎉 太棒了！「' + word.text + '」答對了！';
+            createFireworks(25);
+            speak(getEncouragement());
+
+            renderWordList();
+            updateMasteredCount();
+
+            // 自動下一個
+            setTimeout(() => {
+                nextWord();
+            }, 2500);
+        }
+
+        // 下一個詞彙
+        function nextWord() {
+            const words = VOCABULARY[currentCategory].words;
+            currentWordIndex = (currentWordIndex + 1) % words.length;
+            showCurrentWord();
+            renderWordList();
+        }
+
+        // 上一個詞彙
+        function prevWord() {
+            const words = VOCABULARY[currentCategory].words;
+            currentWordIndex = (currentWordIndex - 1 + words.length) % words.length;
+            showCurrentWord();
+            renderWordList();
+        }
+
+        // 檢查是否已掌握
+        function isWordMastered(category, index) {
+            return masteredWords[category] && masteredWords[category][index];
+        }
+
+        // 更新已掌握數量
+        function updateMasteredCount() {
+            let total = 0;
+            for (const cat of Object.keys(masteredWords)) {
+                total += Object.keys(masteredWords[cat]).length;
+            }
+            document.getElementById('masteredCount').textContent = total;
+        }
+
+        // 鼓勵語
+        function getEncouragement() {
+            const phrases = ['太棒了！', '好厲害！', '真聰明！', '很棒喔！', '繼續加油！'];
+            return phrases[Math.floor(Math.random() * phrases.length)];
+        }
+
+        // 語音合成
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 1.0;
+                utterance.pitch = 1.2;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 煙火效果
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        // 啟動
+        init();
+    </script>
+</body>
+</html>

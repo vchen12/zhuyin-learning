@@ -388,19 +388,24 @@
         function selectStage(stage) {
             const card = document.getElementById(`stage${stage}Card`);
             if (card.classList.contains('locked')) {
-                alert('請先完成前一個階段！');
+                speak('請先完成前一個階段喔！');
                 return;
             }
-            
+
             if (stage === 3) {
                 startGame();
                 return;
             }
-            
+
             currentStage = stage;
             showScreen('learnScreen');
             displaySymbolsGrid();
-            nextSymbol();
+
+            // 進入學習模式時的語音引導
+            const stageName = stage === 1 ? '聲母' : '韻母';
+            speak(`開始學習${stageName}！聽完發音後，請跟著唸一遍。覺得學會了就按「我學會了」。`, () => {
+                nextSymbol();
+            });
         }
 
         function displaySymbolsGrid() {
@@ -566,8 +571,36 @@
             document.getElementById('gameArea').innerHTML = '';
         }
 
+        // 語音合成說話功能
+        function speak(text, callback) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.1;
+                if (callback) {
+                    utterance.onend = callback;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 歡迎語音引導
+        function welcomeGuide() {
+            setTimeout(() => {
+                speak('歡迎來到注音符號學習樂園！請點選第一階段開始學習聲母。', () => {
+                    // 歡迎語結束後，再次提示
+                    setTimeout(() => {
+                        speak('點擊下方的卡片，開始你的學習之旅！');
+                    }, 1000);
+                });
+            }, 500);
+        }
+
         window.onload = () => {
             init();
+            welcomeGuide();
         };
     </script>
 </body>

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#11998e">
+    <link rel="manifest" href="../../manifest.json">
+    <title>👂 聽音選圖</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .score-display {
+            font-size: 1.2rem;
+            color: #11998e;
+            font-weight: bold;
+        }
+
+        .container { max-width: 600px; margin: 0 auto; }
+
+        .progress-section {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.3);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s;
+        }
+        .progress-text {
+            color: white;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .play-section {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .play-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            font-size: 3.5rem;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+            transition: transform 0.2s;
+        }
+        .play-btn:active { transform: scale(0.95); }
+        .play-btn.playing { animation: pulse 0.5s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .hint-text {
+            font-size: 1.3rem;
+            color: #11998e;
+            margin-top: 15px;
+        }
+
+        .choices-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .choice-btn {
+            background: white;
+            border: 4px solid #e0e0e0;
+            border-radius: 20px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .choice-btn:hover {
+            border-color: #11998e;
+            transform: translateY(-3px);
+        }
+        .choice-btn .emoji {
+            font-size: 4rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .choice-btn .text {
+            font-size: 1.2rem;
+            color: #333;
+        }
+        .choice-btn.correct {
+            background: #4caf50;
+            border-color: #4caf50;
+            animation: correctPulse 0.5s;
+        }
+        .choice-btn.correct .text { color: white; }
+        .choice-btn.wrong {
+            background: #f44336;
+            border-color: #f44336;
+            animation: shake 0.5s;
+        }
+        .choice-btn.wrong .text { color: white; }
+        .choice-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+
+        @keyframes correctPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.8rem;
+            color: white;
+            margin-top: 20px;
+            min-height: 50px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .fireworks {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .complete-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show { display: flex; }
+        .complete-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
+        .complete-title { font-size: 2rem; color: #11998e; margin-bottom: 15px; }
+        .complete-score { font-size: 1.5rem; color: #666; margin-bottom: 25px; }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media (max-width: 500px) {
+            .choice-btn .emoji { font-size: 3rem; }
+            .choice-btn .text { font-size: 1rem; }
+            .play-btn { width: 100px; height: 100px; font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="score-display">得分：<span id="score">0</span></div>
+    </nav>
+
+    <div class="container">
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">第 <span id="currentRound">1</span> / <span id="totalRounds">10</span> 題</div>
+        </div>
+
+        <div class="play-section">
+            <button class="play-btn" id="playBtn" onclick="playCurrentSound()">🔊</button>
+            <div class="hint-text" id="hintText">點擊播放，聽聽看是什麼？</div>
+        </div>
+
+        <div class="choices-grid" id="choicesGrid"></div>
+
+        <div class="result-message" id="resultMessage"></div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon">🎉</div>
+            <div class="complete-title">太棒了！</div>
+            <div class="complete-score" id="completeScore">得分：100 分</div>
+            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script src="../../js/vocabulary.js"></script>
+    <script>
+        const ENCOURAGEMENTS = ['太棒了！', '好厲害！', '答對了！', '真聰明！', '很棒喔！'];
+
+        let currentRound = 0;
+        let totalRounds = 10;
+        let score = 0;
+        let currentAnswer = null;
+        let choices = [];
+        let answered = false;
+        let questionQueue = [];
+
+        function getAllWords() {
+            let allWords = [];
+            for (const [catKey, cat] of Object.entries(VOCABULARY)) {
+                cat.words.forEach((word, index) => {
+                    allWords.push({ ...word, category: catKey, index });
+                });
+            }
+            return allWords;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function initGame() {
+            currentRound = 0;
+            score = 0;
+            answered = false;
+            const allWords = getAllWords();
+            questionQueue = shuffle(allWords).slice(0, totalRounds);
+            updateScore();
+            nextRound();
+        }
+
+        function nextRound() {
+            if (currentRound >= totalRounds) {
+                endGame();
+                return;
+            }
+
+            answered = false;
+            currentAnswer = questionQueue[currentRound];
+            currentRound++;
+
+            // 產生選項
+            const allWords = getAllWords();
+            const otherWords = allWords.filter(w => w.text !== currentAnswer.text);
+            choices = [currentAnswer, ...shuffle(otherWords).slice(0, 3)];
+            choices = shuffle(choices);
+
+            updateUI();
+            renderChoices();
+            document.getElementById('hintText').textContent = '點擊播放，聽聽看是什麼？';
+            document.getElementById('resultMessage').textContent = '';
+        }
+
+        function updateUI() {
+            document.getElementById('currentRound').textContent = currentRound;
+            document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function renderChoices() {
+            const grid = document.getElementById('choicesGrid');
+            grid.innerHTML = '';
+
+            choices.forEach((word, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.innerHTML = `<span class="emoji">${word.emoji}</span><span class="text">${word.text}</span>`;
+                btn.onclick = () => checkAnswer(index);
+                grid.appendChild(btn);
+            });
+        }
+
+        function playCurrentSound() {
+            const playBtn = document.getElementById('playBtn');
+            playBtn.classList.add('playing');
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(currentAnswer.text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.8;
+                utterance.pitch = 1.1;
+
+                utterance.onend = () => {
+                    playBtn.classList.remove('playing');
+                    document.getElementById('hintText').textContent = '這是哪一個？';
+                };
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function checkAnswer(index) {
+            if (answered) return;
+            answered = true;
+
+            const buttons = document.querySelectorAll('.choice-btn');
+            const selectedWord = choices[index];
+            const correctIndex = choices.findIndex(w => w.text === currentAnswer.text);
+
+            buttons.forEach(btn => btn.disabled = true);
+
+            if (selectedWord.text === currentAnswer.text) {
+                buttons[index].classList.add('correct');
+                score += 10;
+                updateScore();
+
+                const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+                document.getElementById('resultMessage').textContent = encouragement;
+                speak(encouragement);
+                createFireworks(20);
+
+                saveMastered(currentAnswer);
+            } else {
+                buttons[index].classList.add('wrong');
+                buttons[correctIndex].classList.add('correct');
+                document.getElementById('resultMessage').textContent = `答案是「${currentAnswer.text}」`;
+                speak('沒關係，再試試看！');
+            }
+
+            setTimeout(nextRound, 2000);
+        }
+
+        function saveMastered(word) {
+            let mastered = JSON.parse(localStorage.getItem('masteredWords_level2') || '{}');
+            if (!mastered[word.category]) mastered[word.category] = {};
+            mastered[word.category][word.index] = true;
+            localStorage.setItem('masteredWords_level2', JSON.stringify(mastered));
+        }
+
+        function endGame() {
+            document.getElementById('completeScore').textContent = `得分：${score} 分`;
+            document.getElementById('completeOverlay').classList.add('show');
+            createFireworks(50);
+            speak(`太棒了！你得了${score}分！`);
+        }
+
+        function restartGame() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            initGame();
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

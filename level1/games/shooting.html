@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="../../manifest.json">
+    <title>🎤 射擊挑戰</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        .status-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .score-display {
+            font-size: 1.3rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .progress-text {
+            font-size: 1rem;
+            color: #764ba2;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: calc(100vh - 80px);
+            padding: 20px;
+        }
+
+        /* 符號顯示 */
+        .symbol-display {
+            background: white;
+            border-radius: 30px;
+            padding: 50px 70px;
+            margin: 20px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .symbol {
+            font-size: 12rem;
+            color: #667eea;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .symbol.correct {
+            animation: explode 0.6s ease-out forwards;
+            color: #4caf50;
+        }
+        .symbol.wrong {
+            animation: shake 0.5s ease-in-out;
+            color: #f44336;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        @keyframes explode {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(2) rotate(360deg); opacity: 0; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-15px); }
+            75% { transform: translateX(15px); }
+        }
+
+        /* 提示訊息 */
+        .hint-message {
+            font-size: 2rem;
+            color: white;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            min-height: 50px;
+        }
+        .hint-message.listening {
+            color: #ffd700;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 嘗試次數 */
+        .attempts {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .attempt-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4caf50;
+            transition: all 0.3s;
+        }
+        .attempt-dot.used {
+            background: #ccc;
+        }
+
+        /* 按鈕 */
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .game-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+        .game-btn:active {
+            transform: scale(0.95);
+        }
+        .game-btn.skip {
+            background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+        }
+        .game-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 嘴型提示 */
+        .mouth-hint {
+            background: rgba(255,255,255,0.9);
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            color: #667eea;
+            margin-top: 15px;
+            display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .mouth-hint.show {
+            display: block;
+        }
+
+        /* 煙火 */
+        .fireworks {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* 開始/結束畫面 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .overlay.hidden {
+            display: none;
+        }
+        .overlay-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 500px;
+        }
+        .overlay h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        .overlay p {
+            color: #666;
+            font-size: 1.3rem;
+            margin: 15px 0;
+        }
+        .overlay .warning {
+            color: #f44336;
+            font-size: 1rem;
+        }
+        .start-btn {
+            background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+            border: none;
+            padding: 20px 50px;
+            border-radius: 30px;
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+            margin-top: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 600px) {
+            .symbol { font-size: 8rem; }
+            .symbol-display { padding: 30px 50px; }
+            .hint-message { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 開始畫面 -->
+    <div class="overlay" id="startOverlay">
+        <div class="overlay-content">
+            <h1>🎤 射擊挑戰</h1>
+            <p>聽到注音符號的發音後<br>請大聲唸出來！</p>
+            <p class="warning">⚠️ 請確認已允許麥克風權限<br>建議使用 Chrome 瀏覽器</p>
+            <button class="start-btn" onclick="startGame()">🚀 開始遊戲</button>
+        </div>
+    </div>
+
+    <!-- 結束畫面 -->
+    <div class="overlay hidden" id="endOverlay">
+        <div class="overlay-content">
+            <h1>🎉 恭喜完成！</h1>
+            <p id="finalScore">得分：0 分</p>
+            <p id="finalProgress">完成：0 / 10</p>
+            <button class="start-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="start-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2); margin-left: 10px;">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="gameScreen" style="display: none;">
+        <div class="status-bar">
+            <a href="../index.html" class="back-btn">← 返回</a>
+            <div class="score-display">得分：<span id="score">0</span></div>
+            <div class="progress-text">第 <span id="current">1</span>/10</div>
+        </div>
+
+        <div class="game-container">
+            <div class="symbol-display">
+                <div class="symbol" id="targetSymbol">ㄅ</div>
+            </div>
+
+            <div class="hint-message" id="hintMessage">準備中...</div>
+
+            <div class="attempts" id="attempts">
+                <div class="attempt-dot"></div>
+                <div class="attempt-dot"></div>
+                <div class="attempt-dot"></div>
+            </div>
+
+            <div class="mouth-hint" id="mouthHint"></div>
+
+            <div class="buttons">
+                <button class="game-btn" onclick="replaySound()">🔊 再聽一次</button>
+                <button class="game-btn skip" id="skipBtn" onclick="skipSymbol()" style="display: none;">⏭️ 跳過</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <script>
+        // 注音符號
+        const ALL_SYMBOLS = [
+            'ㄅ', 'ㄆ', 'ㄇ', 'ㄈ', 'ㄉ', 'ㄊ', 'ㄋ', 'ㄌ', 'ㄍ', 'ㄎ', 'ㄏ',
+            'ㄐ', 'ㄑ', 'ㄒ', 'ㄓ', 'ㄔ', 'ㄕ', 'ㄖ', 'ㄗ', 'ㄘ', 'ㄙ',
+            'ㄚ', 'ㄛ', 'ㄜ', 'ㄝ', 'ㄞ', 'ㄟ', 'ㄠ', 'ㄡ', 'ㄢ', 'ㄣ', 'ㄤ', 'ㄥ', 'ㄦ', 'ㄧ', 'ㄨ', 'ㄩ'
+        ];
+
+        const SOUND_MAP = {
+            'ㄅ': 'F1', 'ㄆ': 'F2', 'ㄇ': 'F3', 'ㄈ': 'F4', 'ㄉ': 'F5', 'ㄊ': 'F6', 'ㄋ': 'F7', 'ㄌ': 'F8',
+            'ㄍ': 'F9', 'ㄎ': 'F10', 'ㄏ': 'F11', 'ㄐ': 'F12', 'ㄑ': 'F13', 'ㄒ': 'F14', 'ㄓ': 'F15', 'ㄔ': 'F16',
+            'ㄕ': 'F17', 'ㄖ': 'F18', 'ㄗ': 'F19', 'ㄘ': 'F20', 'ㄙ': 'F21',
+            'ㄚ': 'F22', 'ㄛ': 'F23', 'ㄜ': 'F24', 'ㄝ': 'F25', 'ㄞ': 'F26', 'ㄟ': 'F27', 'ㄠ': 'F28', 'ㄡ': 'F29',
+            'ㄢ': 'F30', 'ㄣ': 'F31', 'ㄤ': 'F32', 'ㄥ': 'F33', 'ㄦ': 'F34', 'ㄧ': 'F35', 'ㄨ': 'F36', 'ㄩ': 'F37'
+        };
+
+        const MOUTH_HINTS = {
+            'ㄅ': '雙唇緊閉，然後突然打開',
+            'ㄆ': '雙唇緊閉，用力送氣',
+            'ㄇ': '雙唇閉合，氣流從鼻腔出',
+            'ㄈ': '上齒輕觸下唇',
+            'ㄉ': '舌尖抵住上齒齦',
+            'ㄊ': '舌尖抵住上齒齦，用力送氣',
+            'ㄋ': '舌尖抵住上齒齦，氣流從鼻腔出',
+            'ㄌ': '舌尖抵住上齒齦，氣流從舌側出'
+        };
+
+        const ENCOURAGEMENTS = {
+            correct: ['太棒了！', '好厲害！', '完美！', '真聰明！', '超級棒！'],
+            try1: ['再試一次！', '沒關係，加油！', '慢慢來！'],
+            try2: ['你可以的！', '快對了！', '再努力一下！']
+        };
+
+        // 遊戲狀態
+        let currentSymbol = '';
+        let currentAudio = null;
+        let recognition = null;
+        let isRecognizing = false;
+        let score = 0;
+        let completed = 0;
+        let attempts = 0;
+        let totalQuestions = 10;
+        let symbolQueue = [];
+
+        // 洗牌
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 開始遊戲
+        function startGame() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('很抱歉，您的瀏覽器不支援語音辨識功能。\n\n建議使用 Google Chrome 瀏覽器。');
+                return;
+            }
+
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameScreen').style.display = 'block';
+
+            initGame();
+            initRecognition();
+            nextSymbol();
+        }
+
+        // 初始化遊戲
+        function initGame() {
+            symbolQueue = shuffle([...ALL_SYMBOLS]).slice(0, totalQuestions);
+            score = 0;
+            completed = 0;
+            updateUI();
+        }
+
+        // 初始化語音辨識
+        function initRecognition() {
+            if (recognition) return;
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            // 延長語音辨識的聆聽時間，適合失語症患者發音較慢的情況
+            recognition.maxAlternatives = 5;
+
+            recognition.onresult = (event) => {
+                isRecognizing = false;
+                const transcript = event.results[0][0].transcript;
+                console.log('辨識結果:', transcript);
+                handleRecognitionResult(transcript);
+            };
+
+            recognition.onerror = (event) => {
+                isRecognizing = false;
+                console.error('語音辨識錯誤:', event.error);
+
+                if (event.error === 'not-allowed') {
+                    alert('請允許麥克風權限！');
+                    return;
+                }
+
+                // 延長重試間隔，給使用者更多準備時間
+                setTimeout(() => {
+                    if (!isRecognizing && document.getElementById('gameScreen').style.display !== 'none') {
+                        showHint('慢慢來，準備好再唸 🎤', true);
+                        startListening();
+                    }
+                }, 2000);
+            };
+
+            recognition.onend = () => {
+                isRecognizing = false;
+                if (document.getElementById('gameScreen').style.display !== 'none') {
+                    // 延長等待時間，讓失語症患者有更多時間準備
+                    setTimeout(() => {
+                        if (!isRecognizing) {
+                            showHint('準備好了嗎？請唸出來 🎤', true);
+                            startListening();
+                        }
+                    }, 2500);
+                }
+            };
+        }
+
+        // 下一個符號
+        function nextSymbol() {
+            if (symbolQueue.length === 0) {
+                endGame();
+                return;
+            }
+
+            currentSymbol = symbolQueue.shift();
+            attempts = 0;
+            completed++;
+            updateAttempts();
+            displaySymbol();
+
+            setTimeout(() => {
+                playSound(currentSymbol);
+                setTimeout(() => {
+                    showHint('請大聲唸出來！🎤', true);
+                    startListening();
+                }, 1500);
+            }, 500);
+        }
+
+        // 顯示符號
+        function displaySymbol() {
+            const symbolEl = document.getElementById('targetSymbol');
+            symbolEl.textContent = currentSymbol;
+            symbolEl.className = 'symbol';
+            document.getElementById('mouthHint').classList.remove('show');
+            document.getElementById('skipBtn').style.display = 'none';
+            updateUI();
+        }
+
+        // 播放音檔
+        function playSound(symbol) {
+            const fileNum = SOUND_MAP[symbol];
+            if (!fileNum) return;
+
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+
+            currentAudio = new Audio(`../../sounds/${fileNum}.mp3`);
+            currentAudio.play().catch(err => console.error('播放失敗:', err));
+        }
+
+        // 重播
+        function replaySound() {
+            playSound(currentSymbol);
+            showHint('仔細聽！', false);
+        }
+
+        // 開始監聽
+        function startListening() {
+            if (isRecognizing || !recognition) return;
+
+            try {
+                isRecognizing = true;
+                document.getElementById('hintMessage').classList.add('listening');
+                recognition.start();
+            } catch (error) {
+                console.error('啟動辨識失敗:', error);
+                isRecognizing = false;
+            }
+        }
+
+        // 處理辨識結果
+        function handleRecognitionResult(transcript) {
+            const isCorrect = transcript.includes(currentSymbol);
+
+            if (isCorrect) {
+                handleCorrect();
+            } else {
+                handleWrong();
+            }
+        }
+
+        // 答對
+        function handleCorrect() {
+            score += 10;
+            document.getElementById('targetSymbol').classList.add('correct');
+
+            const encouragement = ENCOURAGEMENTS.correct[Math.floor(Math.random() * ENCOURAGEMENTS.correct.length)];
+            // 延遲播放鼓勵語，避免與使用者發音重疊
+            setTimeout(() => {
+                speak(encouragement);
+            }, 800);
+            showHint(encouragement + ' ✨', false);
+            createFireworks(25);
+
+            saveMastered(currentSymbol);
+            updateUI();
+
+            // 延長等待時間，讓使用者有時間感受成就感
+            setTimeout(nextSymbol, 3000);
+        }
+
+        // 答錯
+        function handleWrong() {
+            attempts++;
+            updateAttempts();
+
+            document.getElementById('targetSymbol').classList.add('wrong');
+            setTimeout(() => {
+                document.getElementById('targetSymbol').classList.remove('wrong');
+            }, 500);
+
+            if (attempts === 1) {
+                const encouragement = ENCOURAGEMENTS.try1[Math.floor(Math.random() * ENCOURAGEMENTS.try1.length)];
+                speak(encouragement);
+                showHint(encouragement, false);
+                playSound(currentSymbol);
+            } else if (attempts === 2) {
+                const encouragement = ENCOURAGEMENTS.try2[Math.floor(Math.random() * ENCOURAGEMENTS.try2.length)];
+                speak(encouragement);
+                showHint(encouragement, false);
+                playSound(currentSymbol);
+
+                if (MOUTH_HINTS[currentSymbol]) {
+                    document.getElementById('mouthHint').textContent = '💡 ' + MOUTH_HINTS[currentSymbol];
+                    document.getElementById('mouthHint').classList.add('show');
+                }
+            } else {
+                showHint('可以跳過或再試試', false);
+                document.getElementById('skipBtn').style.display = 'inline-block';
+            }
+        }
+
+        // 跳過
+        function skipSymbol() {
+            speak('沒關係，繼續下一個！');
+            showHint('繼續加油！', false);
+            setTimeout(nextSymbol, 1500);
+        }
+
+        // 更新嘗試次數
+        function updateAttempts() {
+            const dots = document.querySelectorAll('.attempt-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('used', index < attempts);
+            });
+        }
+
+        // 更新UI
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('current').textContent = completed;
+        }
+
+        // 顯示提示
+        function showHint(message, listening) {
+            const hintEl = document.getElementById('hintMessage');
+            hintEl.textContent = message;
+            hintEl.classList.toggle('listening', listening);
+        }
+
+        // 儲存進度
+        function saveMastered(symbol) {
+            let mastered = JSON.parse(localStorage.getItem('masteredZhuyin') || '[]');
+            if (!mastered.includes(symbol)) {
+                mastered.push(symbol);
+                localStorage.setItem('masteredZhuyin', JSON.stringify(mastered));
+            }
+        }
+
+        // 結束遊戲
+        function endGame() {
+            if (recognition) {
+                recognition.stop();
+                isRecognizing = false;
+            }
+
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('endOverlay').classList.remove('hidden');
+
+            document.getElementById('finalScore').textContent = '得分：' + score + ' 分';
+            document.getElementById('finalProgress').textContent = '完成：' + totalQuestions + ' / ' + totalQuestions;
+
+            createFireworks(60);
+            speak(`太棒了！你得了${score}分！`);
+        }
+
+        // 重新開始
+        function restartGame() {
+            document.getElementById('endOverlay').classList.add('hidden');
+            startGame();
+        }
+
+        // 語音合成
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 煙火
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+    </script>
+</body>
+</html>

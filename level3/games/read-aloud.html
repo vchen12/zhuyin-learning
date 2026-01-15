@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f5576c">
+    <link rel="manifest" href="../../manifest.json">
+    <title>📢 朗讀練習</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .passage-info {
+            font-size: 1rem;
+            color: #f5576c;
+            font-weight: bold;
+        }
+
+        .container { max-width: 700px; margin: 0 auto; }
+
+        /* 文章區 */
+        .passage-section {
+            background: white;
+            border-radius: 25px;
+            padding: 35px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .passage-title {
+            font-size: 1.8rem;
+            color: #f5576c;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .passage-image {
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .passage-text {
+            font-size: 1.6rem;
+            line-height: 2.2;
+            color: #333;
+        }
+        .passage-text .sentence {
+            display: inline;
+            padding: 5px 0;
+            transition: all 0.3s;
+            border-radius: 5px;
+        }
+        .passage-text .sentence.current {
+            background: #fff3e0;
+            color: #ff9800;
+        }
+        .passage-text .sentence.completed {
+            background: #e8f5e9;
+            color: #4caf50;
+        }
+
+        /* 當前句子顯示 */
+        .current-sentence {
+            background: #fff3e0;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .current-sentence .text {
+            font-size: 1.8rem;
+            color: #ff9800;
+            font-weight: bold;
+        }
+        .current-sentence .hint {
+            font-size: 1rem;
+            color: #999;
+            margin-top: 10px;
+        }
+
+        /* 按鈕區 */
+        .buttons-section {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .action-btn {
+            background: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.2s;
+        }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn.speak {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .action-btn.listen {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        .action-btn.next {
+            background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+            color: white;
+        }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.5rem;
+            color: white;
+            min-height: 45px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .recognized-text {
+            text-align: center;
+            background: rgba(255,255,255,0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-top: 15px;
+            font-size: 1.2rem;
+            color: white;
+            display: none;
+        }
+        .recognized-text.show { display: block; }
+
+        .fireworks {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .complete-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show { display: flex; }
+        .complete-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
+        .complete-title { font-size: 2rem; color: #f5576c; margin-bottom: 15px; }
+        .complete-message { font-size: 1.2rem; color: #666; margin-bottom: 25px; }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media (max-width: 500px) {
+            .passage-text { font-size: 1.3rem; line-height: 2; }
+            .current-sentence .text { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="passage-info">短文 <span id="passageNum">1</span>/3</div>
+    </nav>
+
+    <div class="container">
+        <div class="passage-section">
+            <div class="passage-title" id="passageTitle">我的家</div>
+            <div class="passage-image" id="passageImage">🏠👨‍👩‍👧</div>
+            <div class="passage-text" id="passageText"></div>
+        </div>
+
+        <div class="current-sentence">
+            <div class="text" id="currentSentence">我有一個家。</div>
+            <div class="hint">請朗讀這句話</div>
+        </div>
+
+        <div class="buttons-section">
+            <button class="action-btn listen" onclick="playSentence()">🔊 聽示範</button>
+            <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來讀</button>
+            <button class="action-btn next" onclick="skipSentence()">⏭️ 跳過</button>
+        </div>
+
+        <div class="recognized-text" id="recognizedText">你說：</div>
+        <div class="result-message" id="resultMessage"></div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon">📚</div>
+            <div class="complete-title">朗讀完成！</div>
+            <div class="complete-message" id="completeMessage">你完成了這篇短文的朗讀！</div>
+            <button class="complete-btn" onclick="nextPassage()">📖 下一篇</button>
+            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script>
+        // 短文資料
+        const PASSAGES = [
+            {
+                title: '我的家',
+                image: '🏠👨‍👩‍👧',
+                sentences: [
+                    '我有一個家。',
+                    '家裡有爸爸和媽媽。',
+                    '還有我和妹妹。',
+                    '我們很快樂。',
+                    '我愛我的家。'
+                ]
+            },
+            {
+                title: '小狗',
+                image: '🐕🦴',
+                sentences: [
+                    '我有一隻小狗。',
+                    '小狗很可愛。',
+                    '牠會汪汪叫。',
+                    '牠喜歡吃骨頭。',
+                    '我每天都和牠玩。'
+                ]
+            },
+            {
+                title: '上學',
+                image: '🏫📚',
+                sentences: [
+                    '早上我起床了。',
+                    '我刷牙洗臉。',
+                    '然後吃早餐。',
+                    '我背著書包去上學。',
+                    '學校真好玩。'
+                ]
+            }
+        ];
+
+        let currentPassageIndex = 0;
+        let currentSentenceIndex = 0;
+        let currentPassage = null;
+        let recognition = null;
+        let isListening = false;
+
+        function initGame() {
+            currentPassageIndex = 0;
+            loadPassage();
+            initSpeechRecognition();
+        }
+
+        function loadPassage() {
+            currentSentenceIndex = 0;
+            currentPassage = PASSAGES[currentPassageIndex];
+
+            document.getElementById('passageNum').textContent = currentPassageIndex + 1;
+            document.getElementById('passageTitle').textContent = currentPassage.title;
+            document.getElementById('passageImage').textContent = currentPassage.image;
+
+            renderPassageText();
+            showCurrentSentence();
+        }
+
+        function renderPassageText() {
+            const container = document.getElementById('passageText');
+            container.innerHTML = currentPassage.sentences.map((sentence, index) =>
+                `<span class="sentence" id="sentence-${index}">${sentence}</span>`
+            ).join('');
+        }
+
+        function showCurrentSentence() {
+            const sentence = currentPassage.sentences[currentSentenceIndex];
+
+            // 更新所有句子狀態
+            currentPassage.sentences.forEach((_, index) => {
+                const el = document.getElementById(`sentence-${index}`);
+                el.classList.remove('current');
+                if (index < currentSentenceIndex) {
+                    el.classList.add('completed');
+                }
+                if (index === currentSentenceIndex) {
+                    el.classList.add('current');
+                }
+            });
+
+            document.getElementById('currentSentence').textContent = sentence;
+            document.getElementById('resultMessage').textContent = '';
+            document.getElementById('recognizedText').classList.remove('show');
+        }
+
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'zh-TW';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    document.getElementById('speakBtn').textContent = '🎤 聽你說...';
+                    document.getElementById('speakBtn').disabled = true;
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('recognizedText').textContent = '你說：' + transcript;
+                    document.getElementById('recognizedText').classList.add('show');
+                    checkResult(transcript);
+                };
+
+                recognition.onerror = (event) => {
+                    isListening = false;
+                    document.getElementById('speakBtn').textContent = '🎤 我來讀';
+                    document.getElementById('speakBtn').disabled = false;
+                    document.getElementById('resultMessage').textContent = '沒有聽到，請再試一次！';
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    document.getElementById('speakBtn').textContent = '🎤 我來讀';
+                    document.getElementById('speakBtn').disabled = false;
+                };
+            }
+        }
+
+        function playSentence() {
+            const sentence = currentPassage.sentences[currentSentenceIndex];
+            speak(sentence);
+        }
+
+        function startListening() {
+            if (!recognition) {
+                const sentence = currentPassage.sentences[currentSentenceIndex];
+                if (confirm(`你讀的是「${sentence}」嗎？`)) {
+                    handleCorrect();
+                }
+                return;
+            }
+
+            if (isListening) return;
+
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('啟動辨識失敗:', error);
+            }
+        }
+
+        function checkResult(transcript) {
+            const sentence = currentPassage.sentences[currentSentenceIndex];
+            // 移除標點符號比較
+            const cleanSentence = sentence.replace(/[。，！？、]/g, '');
+            const cleanTranscript = transcript.replace(/[。，！？、]/g, '');
+
+            const isCorrect = cleanTranscript.includes(cleanSentence) ||
+                              cleanSentence.includes(cleanTranscript) ||
+                              calculateSimilarity(cleanTranscript, cleanSentence) > 0.6;
+
+            if (isCorrect) {
+                handleCorrect();
+            } else {
+                document.getElementById('resultMessage').textContent = '再讀一次！';
+                speak('再試一次！');
+            }
+        }
+
+        function calculateSimilarity(a, b) {
+            const aChars = a.replace(/\s/g, '').split('');
+            const bChars = b.replace(/\s/g, '').split('');
+            let matches = 0;
+            for (const char of aChars) {
+                if (bChars.includes(char)) matches++;
+            }
+            return matches / Math.max(aChars.length, bChars.length);
+        }
+
+        function handleCorrect() {
+            document.getElementById('resultMessage').textContent = '太棒了！讀得真好！';
+            speak('太棒了！');
+            createFireworks(15);
+
+            // 標記完成
+            document.getElementById(`sentence-${currentSentenceIndex}`).classList.add('completed');
+
+            setTimeout(() => {
+                currentSentenceIndex++;
+                if (currentSentenceIndex >= currentPassage.sentences.length) {
+                    finishPassage();
+                } else {
+                    showCurrentSentence();
+                }
+            }, 1500);
+        }
+
+        function skipSentence() {
+            const sentence = currentPassage.sentences[currentSentenceIndex];
+            document.getElementById('resultMessage').textContent = '跳過';
+            speak(sentence);
+
+            setTimeout(() => {
+                document.getElementById(`sentence-${currentSentenceIndex}`).classList.add('completed');
+                currentSentenceIndex++;
+                if (currentSentenceIndex >= currentPassage.sentences.length) {
+                    finishPassage();
+                } else {
+                    showCurrentSentence();
+                }
+            }, 1500);
+        }
+
+        function finishPassage() {
+            document.getElementById('completeMessage').textContent =
+                `你完成了「${currentPassage.title}」的朗讀！`;
+            document.getElementById('completeOverlay').classList.add('show');
+            createFireworks(50);
+            speak('太棒了！朗讀完成了！');
+        }
+
+        function nextPassage() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            currentPassageIndex++;
+
+            if (currentPassageIndex >= PASSAGES.length) {
+                currentPassageIndex = 0;
+            }
+
+            loadPassage();
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
