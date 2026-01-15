@@ -350,6 +350,7 @@
         let attempts = 0;
         let totalQuestions = 10;
         let symbolQueue = [];
+        let isProcessing = false; // 防止重複處理
 
         // 洗牌
         function shuffle(array) {
@@ -397,6 +398,7 @@
 
             recognition.onresult = (event) => {
                 isRecognizing = false;
+                if (isProcessing) return; // 正在處理中，忽略
                 const transcript = event.results[0][0].transcript;
                 console.log('辨識結果:', transcript);
                 handleRecognitionResult(transcript);
@@ -411,9 +413,14 @@
                     return;
                 }
 
+                // 如果正在處理答題或遊戲已結束，不要重新開始監聽
+                if (isProcessing || document.getElementById('gameScreen').style.display === 'none') {
+                    return;
+                }
+
                 // 延長重試間隔，給使用者更多準備時間
                 setTimeout(() => {
-                    if (!isRecognizing && document.getElementById('gameScreen').style.display !== 'none') {
+                    if (!isRecognizing && !isProcessing && document.getElementById('gameScreen').style.display !== 'none') {
                         showHint('慢慢來，準備好再唸 🎤', true);
                         startListening();
                     }
@@ -422,15 +429,17 @@
 
             recognition.onend = () => {
                 isRecognizing = false;
-                if (document.getElementById('gameScreen').style.display !== 'none') {
-                    // 延長等待時間，讓失語症患者有更多時間準備
-                    setTimeout(() => {
-                        if (!isRecognizing) {
-                            showHint('準備好了嗎？請唸出來 🎤', true);
-                            startListening();
-                        }
-                    }, 2500);
+                // 如果正在處理答題或遊戲已結束，不要重新開始監聽
+                if (isProcessing || document.getElementById('gameScreen').style.display === 'none') {
+                    return;
                 }
+                // 延長等待時間，讓失語症患者有更多時間準備
+                setTimeout(() => {
+                    if (!isRecognizing && !isProcessing && document.getElementById('gameScreen').style.display !== 'none') {
+                        showHint('準備好了嗎？請唸出來 🎤', true);
+                        startListening();
+                    }
+                }, 2500);
             };
         }
 
@@ -513,6 +522,14 @@
 
         // 答對
         function handleCorrect() {
+            isProcessing = true; // 開始處理，停止語音辨識自動重啟
+
+            // 停止語音辨識
+            if (recognition && isRecognizing) {
+                try { recognition.stop(); } catch(e) {}
+                isRecognizing = false;
+            }
+
             score += 10;
             document.getElementById('targetSymbol').classList.add('correct');
 
@@ -528,11 +545,22 @@
             updateUI();
 
             // 延長等待時間，讓使用者有時間感受成就感
-            setTimeout(nextSymbol, 3000);
+            setTimeout(() => {
+                isProcessing = false; // 恢復狀態
+                nextSymbol();
+            }, 3000);
         }
 
         // 答錯
         function handleWrong() {
+            isProcessing = true; // 暫時停止自動重啟
+
+            // 停止語音辨識
+            if (recognition && isRecognizing) {
+                try { recognition.stop(); } catch(e) {}
+                isRecognizing = false;
+            }
+
             attempts++;
             updateAttempts();
 
@@ -545,28 +573,61 @@
                 const encouragement = ENCOURAGEMENTS.try1[Math.floor(Math.random() * ENCOURAGEMENTS.try1.length)];
                 speak(encouragement);
                 showHint(encouragement, false);
-                playSound(currentSymbol);
+                setTimeout(() => {
+                    playSound(currentSymbol);
+                    // 播放完音檔後重新開始監聽
+                    setTimeout(() => {
+                        isProcessing = false;
+                        showHint('請再試一次 🎤', true);
+                        startListening();
+                    }, 1500);
+                }, 1000);
             } else if (attempts === 2) {
                 const encouragement = ENCOURAGEMENTS.try2[Math.floor(Math.random() * ENCOURAGEMENTS.try2.length)];
                 speak(encouragement);
                 showHint(encouragement, false);
-                playSound(currentSymbol);
+                setTimeout(() => {
+                    playSound(currentSymbol);
+                    // 播放完音檔後重新開始監聽
+                    setTimeout(() => {
+                        isProcessing = false;
+                        showHint('請再試一次 🎤', true);
+                        startListening();
+                    }, 1500);
+                }, 1000);
 
                 if (MOUTH_HINTS[currentSymbol]) {
                     document.getElementById('mouthHint').textContent = '💡 ' + MOUTH_HINTS[currentSymbol];
                     document.getElementById('mouthHint').classList.add('show');
                 }
             } else {
+                isProcessing = false;
                 showHint('可以跳過或再試試', false);
                 document.getElementById('skipBtn').style.display = 'inline-block';
+                // 仍然允許繼續嘗試
+                setTimeout(() => {
+                    if (!isProcessing) {
+                        startListening();
+                    }
+                }, 2000);
             }
         }
 
         // 跳過
         function skipSymbol() {
+            isProcessing = true;
+            // 停止語音辨識
+            if (recognition && isRecognizing) {
+                try { recognition.stop(); } catch(e) {}
+                isRecognizing = false;
+            }
+
             speak('沒關係，繼續下一個！');
             showHint('繼續加油！', false);
-            setTimeout(nextSymbol, 1500);
+            setTimeout(() => {
+                isProcessing = false;
+                nextSymbol();
+            }, 1500);
         }
 
         // 更新嘗試次數
@@ -601,8 +662,10 @@
 
         // 結束遊戲
         function endGame() {
+            isProcessing = true; // 防止任何自動重啟
+
             if (recognition) {
-                recognition.stop();
+                try { recognition.stop(); } catch(e) {}
                 isRecognizing = false;
             }
 
@@ -618,6 +681,7 @@
 
         // 重新開始
         function restartGame() {
+            isProcessing = false; // 重置狀態
             document.getElementById('endOverlay').classList.add('hidden');
             startGame();
         }

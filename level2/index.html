@@ -294,6 +294,14 @@
             }
         }
 
+        // 預先載入語音引擎
+        function initVoices() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => {};
+            }
+        }
+
         // 歡迎語音引導
         let hasPlayedWelcome = false;
         function welcomeGuide() {
@@ -305,18 +313,15 @@
                         speak('建議從「看圖學詞」開始，看圖片、聽發音、學詞彙！');
                     }, 800);
                 });
-            }, 300);
+            }, 500);
         }
 
         loadProgress();
         renderCategories();
-        // iOS Safari 需要用戶互動才能播放語音
+        initVoices();
+        // 所有瀏覽器都需要用戶互動才能播放語音
         document.addEventListener('touchstart', welcomeGuide, { once: true });
         document.addEventListener('click', welcomeGuide, { once: true });
-        // 桌面版直接播放
-        if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-            welcomeGuide();
-        }
     </script>
 </body>
 </html>

@@ -308,6 +308,7 @@
         loadProgress();
 
         // 語音合成說話功能
+        let voicesReady = false;
         function speak(text, callback) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -322,27 +323,40 @@
             }
         }
 
+        // 預先載入語音引擎
+        function initVoices() {
+            if ('speechSynthesis' in window) {
+                // 強制初始化語音引擎
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => {
+                    voicesReady = true;
+                };
+                // 某些瀏覽器不會觸發 onvoiceschanged
+                setTimeout(() => { voicesReady = true; }, 500);
+            }
+        }
+
         // 歡迎語音引導
         let hasPlayedWelcome = false;
         function welcomeGuide() {
             if (hasPlayedWelcome) return;
             hasPlayedWelcome = true;
+            // 確保語音引擎已就緒
             setTimeout(() => {
                 speak('歡迎來到注音符號學習樂園！請選擇一個關卡開始學習。', () => {
                     setTimeout(() => {
                         speak('建議從第零關開始，熟悉注音符號！');
                     }, 800);
                 });
-            }, 300);
+            }, 500);
         }
 
-        // iOS Safari 需要用戶互動才能播放語音，所以在第一次觸碰時播放
+        // 初始化語音引擎
+        initVoices();
+
+        // 所有瀏覽器都需要用戶互動才能播放語音
         document.addEventListener('touchstart', welcomeGuide, { once: true });
         document.addEventListener('click', welcomeGuide, { once: true });
-        // 桌面版直接播放
-        if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-            welcomeGuide();
-        }
 
         // 註冊 Service Worker
         if ('serviceWorker' in navigator) {
