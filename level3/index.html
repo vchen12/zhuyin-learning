@@ -269,17 +269,26 @@
         }
 
         // 歡迎語音引導
+        let hasPlayedWelcome = false;
         function welcomeGuide() {
+            if (hasPlayedWelcome) return;
+            hasPlayedWelcome = true;
             setTimeout(() => {
-                speak('歡迎來到第三關，句子與閱讀！這是最高級的關卡，有十個遊戲等著你挑戰。', () => {
+                speak('歡迎來到第三關，句子與閱讀！這是最高級的關卡，有十一個遊戲等著你挑戰。', () => {
                     setTimeout(() => {
                         speak('建議從「看圖說話」開始，練習說句子！如果想要刺激一點，可以試試下方的賽車衝刺或寶物獵人！');
                     }, 800);
                 });
-            }, 500);
+            }, 300);
         }
 
-        welcomeGuide();
+        // iOS Safari 需要用戶互動才能播放語音
+        document.addEventListener('touchstart', welcomeGuide, { once: true });
+        document.addEventListener('click', welcomeGuide, { once: true });
+        // 桌面版直接播放
+        if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            welcomeGuide();
+        }
     </script>
 </body>
 </html>

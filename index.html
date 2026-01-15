@@ -323,17 +323,26 @@
         }
 
         // 歡迎語音引導
+        let hasPlayedWelcome = false;
         function welcomeGuide() {
+            if (hasPlayedWelcome) return;
+            hasPlayedWelcome = true;
             setTimeout(() => {
                 speak('歡迎來到注音符號學習樂園！請選擇一個關卡開始學習。', () => {
                     setTimeout(() => {
                         speak('建議從第零關開始，熟悉注音符號！');
                     }, 800);
                 });
-            }, 500);
+            }, 300);
         }
 
-        welcomeGuide();
+        // iOS Safari 需要用戶互動才能播放語音，所以在第一次觸碰時播放
+        document.addEventListener('touchstart', welcomeGuide, { once: true });
+        document.addEventListener('click', welcomeGuide, { once: true });
+        // 桌面版直接播放
+        if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            welcomeGuide();
+        }
 
         // 註冊 Service Worker
         if ('serviceWorker' in navigator) {
