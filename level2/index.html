@@ -307,12 +307,19 @@
         function welcomeGuide() {
             if (hasPlayedWelcome) return;
             hasPlayedWelcome = true;
+
+            // 如果已經在首頁播放過歡迎語，只播放簡短提示
+            const welcomePlayed = sessionStorage.getItem('welcomePlayed');
             setTimeout(() => {
-                speak('歡迎來到第二關，圖片識字！這裡有七個遊戲，幫助你認識詞彙和圖片。', () => {
-                    setTimeout(() => {
-                        speak('建議從「看圖學詞」開始，看圖片、聽發音、學詞彙！');
-                    }, 800);
-                });
+                if (welcomePlayed) {
+                    speak('第二關，圖片識字！請選擇一個遊戲。');
+                } else {
+                    speak('歡迎來到第二關，圖片識字！這裡有七個遊戲，幫助你認識詞彙和圖片。', () => {
+                        setTimeout(() => {
+                            speak('建議從「看圖學詞」開始，看圖片、聽發音、學詞彙！');
+                        }, 800);
+                    });
+                }
             }, 500);
         }
 

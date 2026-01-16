@@ -252,8 +252,8 @@
 </head>
 <body>
     <div class="header">
-        <h1>🌟 注音符號學習樂園 🌟</h1>
-        <div class="subtitle">簡化版（不需要麥克風）</div>
+        <h1>📖 第0關：基礎認識</h1>
+        <div class="subtitle">聽發音、跟著唸、建立基礎認知</div>
         <div class="progress-bar">
             <div class="progress-fill" id="progressBar" style="width: 0%">0%</div>
         </div>
@@ -262,8 +262,9 @@
 
     <div class="content">
         <div class="notice">
-            📢 <strong>簡化版說明：</strong><br>
-            此版本不使用語音辨識功能，只要聽發音、多練習，覺得學會了就按「✓ 我學會了」即可！
+            📢 <strong>學習方法：</strong><br>
+            點擊注音符號聽發音，跟著唸出來。覺得學會了就按「✓ 我學會了」！<br>
+            <span style="color: #28a745;">💡 完成全部37個注音後，建議進入第一關挑戰更多遊戲！</span>
         </div>
 
         <!-- 階段選單 -->
@@ -497,17 +498,47 @@
         function markAsMastered() {
             masteredSymbols.add(currentSymbol);
             localStorage.setItem('masteredSymbols', JSON.stringify([...masteredSymbols]));
-            
+
+            // 同步更新到 level1 使用的 masteredZhuyin
+            let masteredZhuyin = JSON.parse(localStorage.getItem('masteredZhuyin') || '[]');
+            if (!masteredZhuyin.includes(currentSymbol)) {
+                masteredZhuyin.push(currentSymbol);
+                localStorage.setItem('masteredZhuyin', JSON.stringify(masteredZhuyin));
+            }
+
             celebrate();
             showStatus('✓ 已加入掌握清單！');
-            
+
             updateProgress();
             updateStageCards();
             displaySymbolsGrid();
-            
-            setTimeout(() => {
-                nextSymbol();
-            }, 2000);
+
+            // 檢查是否完成全部37個，自動建議進階
+            const totalMastered = masteredSymbols.size;
+            if (totalMastered === 37) {
+                // 完成全部！
+                setTimeout(() => {
+                    speak('太棒了！你已經學會所有37個注音符號！', () => {
+                        setTimeout(() => {
+                            if (confirm('🎉 恭喜！你已經學會全部37個注音符號！\n\n要進入第一關挑戰更多遊戲嗎？')) {
+                                location.href = '../level1/index.html';
+                            }
+                        }, 500);
+                    });
+                }, 1500);
+            } else if (totalMastered === 21 && currentStage === 1) {
+                // 完成聲母，自動切換到韻母
+                setTimeout(() => {
+                    speak('聲母全部學完了！接下來學習韻母吧！');
+                    currentStage = 2;
+                    updateStageCards();
+                    selectStage(2);
+                }, 2000);
+            } else {
+                setTimeout(() => {
+                    nextSymbol();
+                }, 2000);
+            }
         }
 
         function startGame() {
@@ -612,12 +643,19 @@
         function welcomeGuide() {
             if (hasPlayedWelcome) return;
             hasPlayedWelcome = true;
+
+            // 如果已經在首頁播放過歡迎語，只播放簡短提示
+            const welcomePlayed = sessionStorage.getItem('welcomePlayed');
             setTimeout(() => {
-                speak('歡迎來到注音符號學習樂園！請點選第一階段開始學習聲母。', () => {
-                    setTimeout(() => {
-                        speak('點擊下方的卡片，開始你的學習之旅！');
-                    }, 1000);
-                });
+                if (welcomePlayed) {
+                    speak('第零關，基礎認識！請點選階段開始學習。');
+                } else {
+                    speak('歡迎來到注音符號學習樂園！請點選第一階段開始學習聲母。', () => {
+                        setTimeout(() => {
+                            speak('點擊下方的卡片，開始你的學習之旅！');
+                        }, 1000);
+                    });
+                }
             }, 500);
         }
 

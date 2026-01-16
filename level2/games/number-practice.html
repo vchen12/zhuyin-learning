@@ -286,6 +286,7 @@
             <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
             <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
             <button class="action-btn" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
+            <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
         </div>
 
         <div class="result-message" id="resultMessage"></div>
@@ -541,6 +542,8 @@
             document.getElementById('resultMessage').textContent = '看到這個數字了嗎？點擊麥克風唸出來！';
         }
 
+        let recognitionFailed = false;
+
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -563,6 +566,16 @@
                 recognition.onerror = (event) => {
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
+                    console.error('語音辨識錯誤:', event.error);
+
+                    if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
+                        recognitionFailed = true;
+                        document.getElementById('resultMessage').textContent = '麥克風無法使用，請點「✅我會唸」按鈕';
+                        document.getElementById('speakBtn').style.display = 'none';
+                        document.getElementById('manualSpeakBtn').style.display = 'inline-block';
+                        return;
+                    }
+
                     if (event.error === 'no-speech') {
                         document.getElementById('resultMessage').textContent = '沒有聽到，慢慢來，準備好再按！';
                         setTimeout(() => speak('沒關係，準備好再按麥克風！'), 500);
@@ -574,6 +587,17 @@
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
                 };
             }
+        }
+
+        function manualSpeakConfirm() {
+            speak(currentNumber.text, () => {
+                if (confirm('你會唸「' + currentNumber.text + '」嗎？\n\n點「確定」表示會唸')) {
+                    handleSpeakCorrect();
+                } else {
+                    document.getElementById('resultMessage').textContent = '沒關係，再聽一次！';
+                    speak('沒關係，再聽一次！');
+                }
+            });
         }
 
         function startSpeaking() {

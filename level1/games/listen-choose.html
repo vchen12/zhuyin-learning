@@ -482,8 +482,22 @@
             setTimeout(() => { container.innerHTML = ''; }, 2000);
         }
 
+        // 語音引導
+        let hasPlayedGuide = false;
+        function playGuide() {
+            if (hasPlayedGuide) return;
+            hasPlayedGuide = true;
+            speak('聽音選字！點擊藍色播放按鈕聽發音，然後選出正確的注音符號。', () => {
+                setTimeout(playCurrentSound, 800);
+            });
+        }
+
         // 啟動遊戲
         initGame();
+
+        // 首次點擊時播放引導
+        document.addEventListener('touchstart', playGuide, { once: true });
+        document.addEventListener('click', playGuide, { once: true });
     </script>
 </body>
 </html>

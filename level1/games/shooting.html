@@ -114,6 +114,35 @@
             50% { opacity: 0.5; }
         }
 
+        /* 麥克風指示 */
+        .mic-indicator {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+            box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
+            font-size: 3.5rem;
+            animation: mic-pulse 2s ease-in-out infinite;
+        }
+        .mic-indicator.listening {
+            animation: mic-active 0.8s ease-in-out infinite;
+            box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7);
+        }
+        @keyframes mic-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+        @keyframes mic-active {
+            0% { box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7); }
+            70% { box-shadow: 0 0 0 30px rgba(240, 147, 251, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(240, 147, 251, 0); }
+        }
+
         /* 嘗試次數 */
         .attempts {
             display: flex;
@@ -288,6 +317,8 @@
                 <div class="symbol" id="targetSymbol">ㄅ</div>
             </div>
 
+            <div class="mic-indicator" id="micIndicator">🎤</div>
+
             <div class="hint-message" id="hintMessage">準備中...</div>
 
             <div class="attempts" id="attempts">
@@ -300,6 +331,7 @@
 
             <div class="buttons">
                 <button class="game-btn" onclick="replaySound()">🔊 再聽一次</button>
+                <button class="game-btn" id="manualBtn" onclick="manualConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
                 <button class="game-btn skip" id="skipBtn" onclick="skipSymbol()" style="display: none;">⏭️ 跳過</button>
             </div>
         </div>
@@ -373,7 +405,11 @@
 
             initGame();
             initRecognition();
-            nextSymbol();
+
+            // 播放語音引導
+            speak('射擊挑戰開始！聽發音後，請大聲唸出注音符號。', () => {
+                setTimeout(nextSymbol, 500);
+            });
         }
 
         // 初始化遊戲
@@ -383,6 +419,9 @@
             completed = 0;
             updateUI();
         }
+
+        // 語音辨識失敗標記
+        let recognitionFailed = false;
 
         // 初始化語音辨識
         function initRecognition() {
@@ -398,6 +437,7 @@
 
             recognition.onresult = (event) => {
                 isRecognizing = false;
+                document.getElementById('micIndicator').classList.remove('listening');
                 if (isProcessing) return; // 正在處理中，忽略
                 const transcript = event.results[0][0].transcript;
                 console.log('辨識結果:', transcript);
@@ -406,10 +446,22 @@
 
             recognition.onerror = (event) => {
                 isRecognizing = false;
+                document.getElementById('micIndicator').classList.remove('listening');
                 console.error('語音辨識錯誤:', event.error);
 
-                if (event.error === 'not-allowed') {
-                    alert('請允許麥克風權限！');
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    recognitionFailed = true;
+                    showHint('麥克風無法使用，請點「我會唸」按鈕 👆', false);
+                    document.getElementById('skipBtn').style.display = 'none';
+                    document.getElementById('manualBtn').style.display = 'inline-block';
+                    return;
+                }
+
+                if (event.error === 'audio-capture') {
+                    recognitionFailed = true;
+                    showHint('找不到麥克風，請點「我會唸」按鈕 👆', false);
+                    document.getElementById('skipBtn').style.display = 'none';
+                    document.getElementById('manualBtn').style.display = 'inline-block';
                     return;
                 }
 
@@ -420,7 +472,7 @@
 
                 // 延長重試間隔，給使用者更多準備時間
                 setTimeout(() => {
-                    if (!isRecognizing && !isProcessing && document.getElementById('gameScreen').style.display !== 'none') {
+                    if (!isRecognizing && !isProcessing && !recognitionFailed && document.getElementById('gameScreen').style.display !== 'none') {
                         showHint('慢慢來，準備好再唸 🎤', true);
                         startListening();
                     }
@@ -429,18 +481,33 @@
 
             recognition.onend = () => {
                 isRecognizing = false;
-                // 如果正在處理答題或遊戲已結束，不要重新開始監聽
-                if (isProcessing || document.getElementById('gameScreen').style.display === 'none') {
+                document.getElementById('micIndicator').classList.remove('listening');
+                // 如果正在處理答題或遊戲已結束，不要重新開始監聯
+                if (isProcessing || recognitionFailed || document.getElementById('gameScreen').style.display === 'none') {
                     return;
                 }
                 // 延長等待時間，讓失語症患者有更多時間準備
                 setTimeout(() => {
-                    if (!isRecognizing && !isProcessing && document.getElementById('gameScreen').style.display !== 'none') {
+                    if (!isRecognizing && !isProcessing && !recognitionFailed && document.getElementById('gameScreen').style.display !== 'none') {
                         showHint('準備好了嗎？請唸出來 🎤', true);
                         startListening();
                     }
                 }, 2500);
             };
+        }
+
+        // 手動確認（麥克風不可用時使用）
+        function manualConfirm() {
+            speak('你會唸' + currentSymbol + '嗎？', () => {
+                if (confirm('你會唸「' + currentSymbol + '」嗎？\n\n點「確定」表示會唸，點「取消」再練習一下')) {
+                    handleCorrect();
+                } else {
+                    showHint('沒關係，再聽一次！', false);
+                    setTimeout(() => {
+                        playSound(currentSymbol);
+                    }, 500);
+                }
+            });
         }
 
         // 下一個符號
@@ -502,10 +569,12 @@
             try {
                 isRecognizing = true;
                 document.getElementById('hintMessage').classList.add('listening');
+                document.getElementById('micIndicator').classList.add('listening');
                 recognition.start();
             } catch (error) {
                 console.error('啟動辨識失敗:', error);
                 isRecognizing = false;
+                document.getElementById('micIndicator').classList.remove('listening');
             }
         }
 
@@ -687,14 +756,19 @@
         }
 
         // 語音合成
-        function speak(text) {
+        function speak(text, callback) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
                 utterance.rate = 0.9;
                 utterance.pitch = 1.1;
+                if (callback) {
+                    utterance.onend = callback;
+                }
                 window.speechSynthesis.speak(utterance);
+            } else if (callback) {
+                callback();
             }
         }
 

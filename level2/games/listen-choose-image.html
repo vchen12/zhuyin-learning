@@ -126,6 +126,11 @@
             font-size: 1.2rem;
             color: #333;
         }
+        .choice-btn .zhuyin {
+            font-size: 0.9rem;
+            color: #11998e;
+            margin-top: 5px;
+        }
         .choice-btn.correct {
             background: #4caf50;
             border-color: #4caf50;
@@ -329,7 +334,7 @@
             choices.forEach((word, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn';
-                btn.innerHTML = `<span class="emoji">${word.emoji}</span><span class="text">${word.text}</span>`;
+                btn.innerHTML = `<span class="emoji">${word.emoji}</span><span class="text">${word.text}</span><span class="zhuyin">${word.zhuyin}</span>`;
                 btn.onclick = () => checkAnswer(index);
                 grid.appendChild(btn);
             });

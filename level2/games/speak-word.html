@@ -95,6 +95,12 @@
             color: #11998e;
             letter-spacing: 3px;
         }
+        .word-zhuyin {
+            font-size: 1.5rem;
+            color: #11998e;
+            margin-top: 10px;
+            letter-spacing: 2px;
+        }
 
         /* 麥克風按鈕 */
         .mic-section {
@@ -102,14 +108,14 @@
             margin-bottom: 20px;
         }
         .mic-btn {
-            width: 120px;
-            height: 120px;
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             border: none;
-            font-size: 3.5rem;
+            font-size: 4.5rem;
             cursor: pointer;
-            box-shadow: 0 10px 30px rgba(240, 147, 251, 0.4);
+            box-shadow: 0 12px 40px rgba(240, 147, 251, 0.5);
             transition: transform 0.2s, box-shadow 0.2s;
         }
         .mic-btn:active {
@@ -230,7 +236,7 @@
         @media (max-width: 500px) {
             .image-emoji { font-size: 5rem; }
             .word-hint { font-size: 1.5rem; }
-            .mic-btn { width: 100px; height: 100px; font-size: 3rem; }
+            .mic-btn { width: 130px; height: 130px; font-size: 3.5rem; }
         }
     </style>
 </head>
@@ -251,10 +257,12 @@
         <div class="image-section">
             <div class="image-emoji" id="imageEmoji">🐕</div>
             <div class="word-hint" id="wordHint">＿＿</div>
+            <div class="word-zhuyin" id="wordZhuyin">ㄍㄡˇ</div>
         </div>
 
         <div class="mic-section">
             <button class="mic-btn" id="micBtn" onclick="startListening()">🎤</button>
+            <button class="mic-btn" id="manualMicBtn" onclick="manualConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅</button>
             <div class="mic-hint" id="micHint">點擊麥克風，說出這是什麼！</div>
         </div>
 
@@ -320,6 +328,8 @@
             nextRound();
         }
 
+        let recognitionFailed = false;
+
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -348,6 +358,15 @@
                     isListening = false;
                     document.getElementById('micBtn').classList.remove('listening');
                     document.getElementById('micBtn').disabled = false;
+                    console.error('語音辨識錯誤:', event.error);
+
+                    if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
+                        recognitionFailed = true;
+                        document.getElementById('micBtn').style.display = 'none';
+                        document.getElementById('manualMicBtn').style.display = 'inline-block';
+                        document.getElementById('micHint').textContent = '麥克風無法使用，請點綠色「✅我會唸」按鈕';
+                        return;
+                    }
 
                     if (event.error === 'no-speech') {
                         document.getElementById('micHint').textContent = '沒有聽到聲音，慢慢來，準備好再按麥克風！';
@@ -367,8 +386,21 @@
                     document.getElementById('micHint').textContent = '準備好了嗎？點擊麥克風再說一次！';
                 };
             } else {
-                document.getElementById('micHint').textContent = '您的瀏覽器不支援語音辨識，請點「看答案」後手動確認';
+                document.getElementById('micBtn').style.display = 'none';
+                document.getElementById('manualMicBtn').style.display = 'inline-block';
+                document.getElementById('micHint').textContent = '您的瀏覽器不支援語音辨識，請點「✅我會唸」按鈕';
             }
+        }
+
+        function manualConfirm() {
+            speak(currentWord.text, () => {
+                if (confirm('你會唸「' + currentWord.text + '」嗎？\n\n點「確定」表示會唸')) {
+                    handleCorrect();
+                } else {
+                    document.getElementById('resultMessage').textContent = '沒關係，再聽一次！';
+                    speak('沒關係，再聽一次！');
+                }
+            });
         }
 
         function nextRound() {
@@ -392,6 +424,7 @@
             document.getElementById('currentRound').textContent = currentRound;
             document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
             document.getElementById('imageEmoji').textContent = currentWord.emoji;
+            document.getElementById('wordZhuyin').textContent = currentWord.zhuyin;
         }
 
         function updateScore() {

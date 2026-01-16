@@ -456,8 +456,20 @@
             setTimeout(() => { container.innerHTML = ''; }, 2000);
         }
 
+        // 語音引導
+        let hasPlayedGuide = false;
+        function playGuide() {
+            if (hasPlayedGuide) return;
+            hasPlayedGuide = true;
+            speak('配對翻牌！點擊卡片翻開，找出兩張相同的注音符號配對成功！');
+        }
+
         // 啟動遊戲
         initGame();
+
+        // 首次點擊時播放引導
+        document.addEventListener('touchstart', playGuide, { once: true });
+        document.addEventListener('click', playGuide, { once: true });
     </script>
 </body>
 </html>
