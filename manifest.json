@@ -2,7 +2,7 @@
   "name": "注音符號學習樂園",
   "short_name": "注音樂園",
   "description": "專為失語症患者與學齡前兒童設計的注音符號學習 App",
-  "start_url": "./index.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#667eea",

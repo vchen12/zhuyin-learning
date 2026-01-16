@@ -1,63 +1,63 @@
 // 注音符號學習樂園 Service Worker
 // 版本號 - 更新此值會觸發快取更新
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.2.0';
 const CACHE_NAME = `zhuyin-learning-${CACHE_VERSION}`;
 
-// 需要快取的檔案清單（使用相對路徑以支援 GitHub Pages 子目錄部署）
+// 需要快取的檔案清單
 const CACHE_FILES = [
-  './',
-  './index.html',
-  './manifest.json',
-  './level0/index.html',
-  './level1/index.html',
-  './level2/index.html',
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/level0/index.html',
+  '/level1/index.html',
+  '/level2/index.html',
   // 音檔
-  './sounds/F1.mp3',
-  './sounds/F2.mp3',
-  './sounds/F3.mp3',
-  './sounds/F4.mp3',
-  './sounds/F5.mp3',
-  './sounds/F6.mp3',
-  './sounds/F7.mp3',
-  './sounds/F8.mp3',
-  './sounds/F9.mp3',
-  './sounds/F10.mp3',
-  './sounds/F11.mp3',
-  './sounds/F12.mp3',
-  './sounds/F13.mp3',
-  './sounds/F14.mp3',
-  './sounds/F15.mp3',
-  './sounds/F16.mp3',
-  './sounds/F17.mp3',
-  './sounds/F18.mp3',
-  './sounds/F19.mp3',
-  './sounds/F20.mp3',
-  './sounds/F21.mp3',
-  './sounds/F22.mp3',
-  './sounds/F23.mp3',
-  './sounds/F24.mp3',
-  './sounds/F25.mp3',
-  './sounds/F26.mp3',
-  './sounds/F27.mp3',
-  './sounds/F28.mp3',
-  './sounds/F29.mp3',
-  './sounds/F30.mp3',
-  './sounds/F31.mp3',
-  './sounds/F32.mp3',
-  './sounds/F33.mp3',
-  './sounds/F34.mp3',
-  './sounds/F35.mp3',
-  './sounds/F36.mp3',
-  './sounds/F37.mp3',
+  '/sounds/F1.mp3',
+  '/sounds/F2.mp3',
+  '/sounds/F3.mp3',
+  '/sounds/F4.mp3',
+  '/sounds/F5.mp3',
+  '/sounds/F6.mp3',
+  '/sounds/F7.mp3',
+  '/sounds/F8.mp3',
+  '/sounds/F9.mp3',
+  '/sounds/F10.mp3',
+  '/sounds/F11.mp3',
+  '/sounds/F12.mp3',
+  '/sounds/F13.mp3',
+  '/sounds/F14.mp3',
+  '/sounds/F15.mp3',
+  '/sounds/F16.mp3',
+  '/sounds/F17.mp3',
+  '/sounds/F18.mp3',
+  '/sounds/F19.mp3',
+  '/sounds/F20.mp3',
+  '/sounds/F21.mp3',
+  '/sounds/F22.mp3',
+  '/sounds/F23.mp3',
+  '/sounds/F24.mp3',
+  '/sounds/F25.mp3',
+  '/sounds/F26.mp3',
+  '/sounds/F27.mp3',
+  '/sounds/F28.mp3',
+  '/sounds/F29.mp3',
+  '/sounds/F30.mp3',
+  '/sounds/F31.mp3',
+  '/sounds/F32.mp3',
+  '/sounds/F33.mp3',
+  '/sounds/F34.mp3',
+  '/sounds/F35.mp3',
+  '/sounds/F36.mp3',
+  '/sounds/F37.mp3',
   // 圖示
-  './icons/icon-72.png',
-  './icons/icon-96.png',
-  './icons/icon-128.png',
-  './icons/icon-144.png',
-  './icons/icon-152.png',
-  './icons/icon-192.png',
-  './icons/icon-384.png',
-  './icons/icon-512.png'
+  '/icons/icon-72.png',
+  '/icons/icon-96.png',
+  '/icons/icon-128.png',
+  '/icons/icon-144.png',
+  '/icons/icon-152.png',
+  '/icons/icon-192.png',
+  '/icons/icon-384.png',
+  '/icons/icon-512.png'
 ];
 
 // 安裝事件 - 預先快取所有檔案
@@ -138,7 +138,7 @@ self.addEventListener('fetch', (event) => {
           .catch(() => {
             // 網路錯誤且無快取，返回離線頁面（如果是 HTML）
             if (event.request.headers.get('accept').includes('text/html')) {
-              return caches.match('./index.html');
+              return caches.match('/index.html');
             }
           });
       })

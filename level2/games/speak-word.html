@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#11998e">
+    <link rel="manifest" href="../../manifest.json">
+    <title>🎤 唸唸看</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .score-display {
+            font-size: 1.2rem;
+            color: #11998e;
+            font-weight: bold;
+        }
+
+        .container { max-width: 600px; margin: 0 auto; }
+
+        .progress-section {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.3);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s;
+        }
+        .progress-text {
+            color: white;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* 圖片區域 */
+        .image-section {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        .image-emoji {
+            font-size: 8rem;
+            margin-bottom: 15px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .word-hint {
+            font-size: 2rem;
+            color: #e0e0e0;
+            letter-spacing: 10px;
+            font-weight: bold;
+        }
+        .word-hint.revealed {
+            color: #11998e;
+            letter-spacing: 3px;
+        }
+
+        /* 麥克風按鈕 */
+        .mic-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .mic-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            font-size: 3.5rem;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(240, 147, 251, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .mic-btn:active {
+            transform: scale(0.95);
+        }
+        .mic-btn.listening {
+            animation: pulse 1s ease-in-out infinite;
+            box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7);
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7); }
+            70% { box-shadow: 0 0 0 30px rgba(240, 147, 251, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(240, 147, 251, 0); }
+        }
+        .mic-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .mic-hint {
+            color: white;
+            font-size: 1.2rem;
+            margin-top: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* 輔助按鈕 */
+        .helper-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .helper-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.4);
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .helper-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.8rem;
+            color: white;
+            margin-top: 15px;
+            min-height: 50px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .recognized-text {
+            text-align: center;
+            background: rgba(255,255,255,0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-top: 15px;
+            font-size: 1.3rem;
+            color: white;
+            display: none;
+        }
+        .recognized-text.show { display: block; }
+
+        .fireworks {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .complete-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show { display: flex; }
+        .complete-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
+        .complete-title { font-size: 2rem; color: #11998e; margin-bottom: 15px; }
+        .complete-score { font-size: 1.5rem; color: #666; margin-bottom: 25px; }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media (max-width: 500px) {
+            .image-emoji { font-size: 5rem; }
+            .word-hint { font-size: 1.5rem; }
+            .mic-btn { width: 100px; height: 100px; font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="score-display">得分：<span id="score">0</span></div>
+    </nav>
+
+    <div class="container">
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">第 <span id="currentRound">1</span> / <span id="totalRounds">10</span> 題</div>
+        </div>
+
+        <div class="image-section">
+            <div class="image-emoji" id="imageEmoji">🐕</div>
+            <div class="word-hint" id="wordHint">＿＿</div>
+        </div>
+
+        <div class="mic-section">
+            <button class="mic-btn" id="micBtn" onclick="startListening()">🎤</button>
+            <div class="mic-hint" id="micHint">點擊麥克風，說出這是什麼！</div>
+        </div>
+
+        <div class="helper-buttons">
+            <button class="helper-btn" onclick="playHint()">🔊 聽提示</button>
+            <button class="helper-btn" onclick="showAnswer()">👁️ 看答案</button>
+            <button class="helper-btn" onclick="skipWord()">⏭️ 跳過</button>
+        </div>
+
+        <div class="recognized-text" id="recognizedText">你說：</div>
+        <div class="result-message" id="resultMessage"></div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon">🎉</div>
+            <div class="complete-title">太棒了！</div>
+            <div class="complete-score" id="completeScore">得分：100 分</div>
+            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script src="../../js/vocabulary.js"></script>
+    <script>
+        const ENCOURAGEMENTS = ['太棒了！', '好厲害！', '答對了！', '真聰明！', '很棒喔！', '發音好標準！'];
+
+        let currentRound = 0;
+        let totalRounds = 10;
+        let score = 0;
+        let currentWord = null;
+        let questionQueue = [];
+        let recognition = null;
+        let isListening = false;
+
+        function getAllWords() {
+            let allWords = [];
+            for (const [catKey, cat] of Object.entries(VOCABULARY)) {
+                cat.words.forEach((word, index) => {
+                    allWords.push({ ...word, category: catKey, index });
+                });
+            }
+            return allWords;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function initGame() {
+            currentRound = 0;
+            score = 0;
+            const allWords = getAllWords();
+            questionQueue = shuffle(allWords).slice(0, totalRounds);
+            initSpeechRecognition();
+            updateScore();
+            nextRound();
+        }
+
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'zh-TW';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                // 增加候選結果數量，提高辨識準確度
+                recognition.maxAlternatives = 5;
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    document.getElementById('micBtn').classList.add('listening');
+                    document.getElementById('micHint').textContent = '正在聽你說...慢慢來沒關係！';
+                    document.getElementById('recognizedText').classList.remove('show');
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('recognizedText').textContent = '你說：' + transcript;
+                    document.getElementById('recognizedText').classList.add('show');
+                    checkResult(transcript);
+                };
+
+                recognition.onerror = (event) => {
+                    isListening = false;
+                    document.getElementById('micBtn').classList.remove('listening');
+                    document.getElementById('micBtn').disabled = false;
+
+                    if (event.error === 'no-speech') {
+                        document.getElementById('micHint').textContent = '沒有聽到聲音，慢慢來，準備好再按麥克風！';
+                        // 延長等待時間後再給提示
+                        setTimeout(() => {
+                            speak('沒關係，準備好再按麥克風說一次！');
+                        }, 500);
+                    } else {
+                        document.getElementById('micHint').textContent = '發生錯誤，請再試一次！';
+                    }
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    document.getElementById('micBtn').classList.remove('listening');
+                    document.getElementById('micBtn').disabled = false;
+                    document.getElementById('micHint').textContent = '準備好了嗎？點擊麥克風再說一次！';
+                };
+            } else {
+                document.getElementById('micHint').textContent = '您的瀏覽器不支援語音辨識，請點「看答案」後手動確認';
+            }
+        }
+
+        function nextRound() {
+            if (currentRound >= totalRounds) {
+                endGame();
+                return;
+            }
+
+            currentWord = questionQueue[currentRound];
+            currentRound++;
+
+            updateUI();
+            document.getElementById('wordHint').textContent = '＿'.repeat(currentWord.text.length);
+            document.getElementById('wordHint').classList.remove('revealed');
+            document.getElementById('resultMessage').textContent = '';
+            document.getElementById('recognizedText').classList.remove('show');
+            document.getElementById('micHint').textContent = '點擊麥克風，說出這是什麼！';
+        }
+
+        function updateUI() {
+            document.getElementById('currentRound').textContent = currentRound;
+            document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
+            document.getElementById('imageEmoji').textContent = currentWord.emoji;
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function startListening() {
+            if (!recognition) {
+                // 沒有語音辨識，用手動確認
+                if (confirm(`你說的是「${currentWord.text}」嗎？`)) {
+                    handleCorrect();
+                }
+                return;
+            }
+
+            if (isListening) return;
+
+            document.getElementById('micBtn').disabled = true;
+            try {
+                recognition.start();
+            } catch (error) {
+                document.getElementById('micBtn').disabled = false;
+                console.error('啟動辨識失敗:', error);
+            }
+        }
+
+        function checkResult(transcript) {
+            const target = currentWord.text;
+
+            // 檢查是否匹配
+            const isCorrect = transcript.includes(target) ||
+                              target.includes(transcript) ||
+                              isSimilar(transcript, target);
+
+            if (isCorrect) {
+                handleCorrect();
+            } else {
+                document.getElementById('resultMessage').textContent = '再試一次！';
+                document.getElementById('micHint').textContent = '再說一次看看！';
+                speak('再試一次！');
+            }
+        }
+
+        function isSimilar(a, b) {
+            // 簡單相似度檢查
+            const aChars = a.split('');
+            const bChars = b.split('');
+            let matches = 0;
+            for (const char of aChars) {
+                if (bChars.includes(char)) matches++;
+            }
+            return matches >= Math.min(a.length, b.length) * 0.5;
+        }
+
+        function handleCorrect() {
+            score += 10;
+            updateScore();
+
+            const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+            document.getElementById('resultMessage').textContent = encouragement + ' 「' + currentWord.text + '」';
+            document.getElementById('wordHint').textContent = currentWord.text + ' (' + currentWord.zhuyin + ')';
+            document.getElementById('wordHint').classList.add('revealed');
+            document.getElementById('micHint').textContent = '太棒了！';
+
+            // 延遲播放鼓勵語，避免與使用者發音重疊
+            setTimeout(() => {
+                speak(encouragement);
+            }, 800);
+            createFireworks(20);
+            saveMastered(currentWord);
+
+            // 延長等待時間，讓使用者有時間感受成就感
+            setTimeout(nextRound, 3500);
+        }
+
+        function playHint() {
+            speak(currentWord.text);
+        }
+
+        function showAnswer() {
+            document.getElementById('wordHint').textContent = currentWord.text + ' (' + currentWord.zhuyin + ')';
+            document.getElementById('wordHint').classList.add('revealed');
+            speak(currentWord.text);
+        }
+
+        function skipWord() {
+            document.getElementById('resultMessage').textContent = '跳過！答案是：' + currentWord.text;
+            speak(currentWord.text);
+            setTimeout(nextRound, 1500);
+        }
+
+        function saveMastered(word) {
+            let mastered = JSON.parse(localStorage.getItem('masteredWords_level2') || '{}');
+            if (!mastered[word.category]) mastered[word.category] = {};
+            mastered[word.category][word.index] = true;
+            localStorage.setItem('masteredWords_level2', JSON.stringify(mastered));
+        }
+
+        function endGame() {
+            document.getElementById('completeScore').textContent = `得分：${score} 分`;
+            document.getElementById('completeOverlay').classList.add('show');
+            createFireworks(50);
+            speak(`太棒了！你得了${score}分！`);
+        }
+
+        function restartGame() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            initGame();
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

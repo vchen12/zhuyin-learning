@@ -7,12 +7,12 @@
     <meta name="theme-color" content="#667eea">
     <link rel="manifest" href="../manifest.json">
     <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
-    <title>🖼️ 第二關：圖片識字</title>
+    <title>📝 第三關：句子與閱讀</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
             padding: 20px;
         }
@@ -28,7 +28,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -39,12 +39,12 @@
         }
         .nav-title {
             font-size: 1.3rem;
-            color: #11998e;
+            color: #f5576c;
             font-weight: bold;
         }
         .progress-info {
             font-size: 1rem;
-            color: #38ef7d;
+            color: #f093fb;
             font-weight: bold;
         }
 
@@ -67,7 +67,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 25px;
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
@@ -82,6 +82,7 @@
             text-decoration: none;
             color: inherit;
             display: block;
+            position: relative;
         }
         .game-card:hover {
             transform: translateY(-8px);
@@ -94,7 +95,7 @@
         }
         .game-name {
             font-size: 1.5rem;
-            color: #11998e;
+            color: #f5576c;
             font-weight: bold;
             margin-bottom: 10px;
         }
@@ -114,50 +115,28 @@
         .badge-easy { background: #e8f5e9; color: #4caf50; }
         .badge-medium { background: #fff3e0; color: #ff9800; }
         .badge-hard { background: #fce4ec; color: #e91e63; }
+        .badge-special { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
 
-        /* 分類選擇區 */
-        .category-section {
-            background: rgba(255,255,255,0.15);
-            border-radius: 20px;
-            padding: 25px;
-            margin-top: 40px;
-            max-width: 1000px;
-            margin-left: auto;
-            margin-right: auto;
+        .game-card.special {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        .category-section h3 {
+        .game-card.special .game-name,
+        .game-card.special .game-desc {
             color: white;
-            font-size: 1.3rem;
-            margin-bottom: 20px;
+        }
+        .game-card.special .game-badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        /* 分隔線 */
+        .section-divider {
             text-align: center;
-        }
-        .category-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-        }
-        .category-chip {
-            background: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .category-chip:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        .category-chip .count {
-            background: #e0e0e0;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            color: #666;
+            color: white;
+            margin: 40px 0 30px 0;
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         @media (max-width: 768px) {
@@ -170,115 +149,110 @@
 <body>
     <nav class="nav-bar">
         <a href="../index.html" class="back-btn">← 返回首頁</a>
-        <div class="nav-title">第二關</div>
-        <div class="progress-info">已學會：<span id="masteredCount">0</span> 詞</div>
+        <div class="nav-title">第三關</div>
+        <div class="progress-info">大師級</div>
     </nav>
 
     <div class="page-title">
-        <h1>🖼️ 圖片識字</h1>
-        <p>將注音與實際詞彙、圖像連結</p>
+        <h1>📝 句子與閱讀</h1>
+        <p>從詞彙進階到句子表達與閱讀理解</p>
     </div>
 
     <div class="games-grid">
-        <!-- 2-1 看圖學詞 -->
-        <a href="games/learn-words.html" class="game-card">
-            <div class="game-icon">📚</div>
-            <div class="game-name">看圖學詞</div>
-            <div class="game-desc">看圖片和注音<br>聽發音，跟著唸</div>
+        <!-- 3-1 看圖說話 -->
+        <a href="games/picture-talk.html" class="game-card">
+            <div class="game-icon">🖼️</div>
+            <div class="game-name">看圖說話</div>
+            <div class="game-desc">看情境圖片<br>練習說出簡單句子</div>
             <span class="game-badge badge-easy">入門</span>
         </a>
 
-        <!-- 2-2 聽音選圖 -->
-        <a href="games/listen-choose-image.html" class="game-card">
+        <!-- 3-2 句子填空 -->
+        <a href="games/fill-blank.html" class="game-card">
+            <div class="game-icon">✏️</div>
+            <div class="game-name">句子填空</div>
+            <div class="game-desc">從選項中選正確詞彙<br>填入句子空格</div>
+            <span class="game-badge badge-easy">入門</span>
+        </a>
+
+        <!-- 3-3 詞彙排序 -->
+        <a href="games/word-order.html" class="game-card">
+            <div class="game-icon">🔤</div>
+            <div class="game-name">詞彙排序</div>
+            <div class="game-desc">將打亂的詞彙<br>排成正確句子</div>
+            <span class="game-badge badge-medium">進階</span>
+        </a>
+
+        <!-- 3-4 聽句選圖 -->
+        <a href="games/listen-sentence.html" class="game-card">
             <div class="game-icon">👂</div>
-            <div class="game-name">聽音選圖</div>
-            <div class="game-desc">聽詞彙發音<br>從四張圖中選正確的</div>
-            <span class="game-badge badge-easy">入門</span>
-        </a>
-
-        <!-- 2-3 看圖選字 -->
-        <a href="games/image-choose-word.html" class="game-card">
-            <div class="game-icon">🔍</div>
-            <div class="game-name">看圖選字</div>
-            <div class="game-desc">看圖片<br>從四個詞彙中選正確的</div>
+            <div class="game-name">聽句選圖</div>
+            <div class="game-desc">聽句子描述<br>選出對應的情境圖</div>
             <span class="game-badge badge-medium">進階</span>
         </a>
 
-        <!-- 2-4 圖文配對 -->
-        <a href="games/drag-match.html" class="game-card">
-            <div class="game-icon">🎯</div>
-            <div class="game-name">圖文配對</div>
-            <div class="game-desc">拖曳圖片<br>配對到正確的詞彙</div>
+        <!-- 3-5 故事接龍 -->
+        <a href="games/story-chain.html" class="game-card">
+            <div class="game-icon">📖</div>
+            <div class="game-name">故事接龍</div>
+            <div class="game-desc">看圖說故事<br>描述連續事件</div>
             <span class="game-badge badge-medium">進階</span>
         </a>
 
-        <!-- 2-5 記憶翻牌 -->
-        <a href="games/memory-image.html" class="game-card">
-            <div class="game-icon">🃏</div>
-            <div class="game-name">記憶翻牌</div>
-            <div class="game-desc">翻牌配對<br>圖片與詞彙的記憶遊戲</div>
+        <!-- 3-6 問答練習 -->
+        <a href="games/qa-practice.html" class="game-card">
+            <div class="game-icon">❓</div>
+            <div class="game-name">問答練習</div>
+            <div class="game-desc">「這是什麼？」<br>練習回答問題</div>
             <span class="game-badge badge-medium">進階</span>
         </a>
 
-        <!-- 2-6 唸唸看 -->
-        <a href="games/speak-word.html" class="game-card">
-            <div class="game-icon">🎤</div>
-            <div class="game-name">唸唸看</div>
-            <div class="game-desc">看圖說出詞彙<br>語音辨識即時回饋</div>
+        <!-- 3-7 生活對話 -->
+        <a href="games/daily-dialog.html" class="game-card">
+            <div class="game-icon">💬</div>
+            <div class="game-name">生活對話</div>
+            <div class="game-desc">模擬生活情境<br>練習實用對話</div>
             <span class="game-badge badge-hard">挑戰</span>
         </a>
 
-        <!-- 2-7 數字練習 -->
+        <!-- 3-8 朗讀練習 -->
+        <a href="games/read-aloud.html" class="game-card">
+            <div class="game-icon">📢</div>
+            <div class="game-name">朗讀練習</div>
+            <div class="game-desc">簡單短文朗讀<br>語音即時回饋</div>
+            <span class="game-badge badge-hard">挑戰</span>
+        </a>
+
+        <!-- 3-9 數字練習 -->
         <a href="games/number-practice.html" class="game-card">
             <div class="game-icon">🔢</div>
             <div class="game-name">數字練習</div>
-            <div class="game-desc">學習數字 0-30 的發音<br>聽音選數、看數唸出</div>
+            <div class="game-desc">學習數字 0-99 的發音<br>可選範圍練習</div>
             <span class="game-badge badge-medium">進階</span>
         </a>
     </div>
 
-    <div class="category-section">
-        <h3>📂 詞彙分類</h3>
-        <div class="category-chips" id="categoryChips"></div>
+    <div class="section-divider">🏆 競賽模式 🏆</div>
+
+    <div class="games-grid">
+        <!-- 3-9 賽車衝刺 -->
+        <a href="games/racing.html" class="game-card special">
+            <div class="game-icon">🏎️</div>
+            <div class="game-name">賽車衝刺</div>
+            <div class="game-desc">答對題目車子前進<br>與電腦比賽到終點！</div>
+            <span class="game-badge badge-special">競賽</span>
+        </a>
+
+        <!-- 3-10 寶物獵人 -->
+        <a href="games/treasure-hunter.html" class="game-card special">
+            <div class="game-icon">💎</div>
+            <div class="game-name">寶物獵人</div>
+            <div class="game-desc">答對題目獲得寶物<br>收集滿寶物箱獲勝！</div>
+            <span class="game-badge badge-special">競賽</span>
+        </a>
     </div>
 
     <script>
-        const CATEGORIES = {
-            family: { name: '家人', icon: '👨‍👩‍👧', count: 12 },
-            animals: { name: '動物', icon: '🐾', count: 14 },
-            fruits: { name: '水果', icon: '🍎', count: 12 },
-            items: { name: '日常用品', icon: '📦', count: 12 },
-            food: { name: '食物', icon: '🍜', count: 12 },
-            actions: { name: '動作', icon: '🏃', count: 12 },
-            body: { name: '身體', icon: '🧍', count: 10 },
-            nature: { name: '自然', icon: '🌳', count: 12 }
-        };
-
-        function loadProgress() {
-            const mastered = JSON.parse(localStorage.getItem('masteredWords_level2') || '{}');
-            let total = 0;
-            for (const cat of Object.keys(mastered)) {
-                total += Object.keys(mastered[cat]).length;
-            }
-            document.getElementById('masteredCount').textContent = total;
-        }
-
-        function renderCategories() {
-            const container = document.getElementById('categoryChips');
-            container.innerHTML = '';
-
-            for (const [key, cat] of Object.entries(CATEGORIES)) {
-                const chip = document.createElement('div');
-                chip.className = 'category-chip';
-                chip.innerHTML = `${cat.icon} ${cat.name} <span class="count">${cat.count}</span>`;
-                chip.onclick = () => {
-                    localStorage.setItem('selectedCategory', key);
-                    location.href = 'games/learn-words.html';
-                };
-                container.appendChild(chip);
-            }
-        }
-
         // 語音合成說話功能
         function speak(text, callback) {
             if ('speechSynthesis' in window) {
@@ -308,16 +282,14 @@
             if (hasPlayedWelcome) return;
             hasPlayedWelcome = true;
             setTimeout(() => {
-                speak('歡迎來到第二關，圖片識字！這裡有七個遊戲，幫助你認識詞彙和圖片。', () => {
+                speak('歡迎來到第三關，句子與閱讀！這是最高級的關卡，有十一個遊戲等著你挑戰。', () => {
                     setTimeout(() => {
-                        speak('建議從「看圖學詞」開始，看圖片、聽發音、學詞彙！');
+                        speak('建議從「看圖說話」開始，練習說句子！如果想要刺激一點，可以試試下方的賽車衝刺或寶物獵人！');
                     }, 800);
                 });
             }, 500);
         }
 
-        loadProgress();
-        renderCategories();
         initVoices();
         // 所有瀏覽器都需要用戶互動才能播放語音
         document.addEventListener('touchstart', welcomeGuide, { once: true });

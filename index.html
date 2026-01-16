@@ -28,28 +28,66 @@
         .header {
             text-align: center;
             color: white;
-            margin-bottom: 50px;
-            padding: 40px 20px;
+            margin-bottom: 30px;
+            padding: 30px 20px;
         }
         .header h1 {
-            font-size: 3.5rem;
+            font-size: 3rem;
             text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
             margin-bottom: 15px;
         }
         .header .subtitle {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             opacity: 0.9;
         }
+        .header .version {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+
+        /* 進度總覽 */
+        .progress-overview {
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .progress-overview h3 {
+            color: white;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        .progress-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        .progress-stat {
+            text-align: center;
+            color: white;
+        }
+        .progress-stat .value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .progress-stat .label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
         .levels {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 50px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
         }
         .level-card {
             background: white;
             border-radius: 25px;
-            padding: 40px;
+            padding: 35px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             transition: transform 0.3s, box-shadow 0.3s;
@@ -57,68 +95,95 @@
             text-decoration: none;
             color: inherit;
             display: block;
+            position: relative;
+            overflow: hidden;
         }
         .level-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-8px);
             box-shadow: 0 15px 40px rgba(0,0,0,0.3);
         }
+        .level-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+        }
+        .level-card.level0::before { background: linear-gradient(90deg, #4caf50, #8bc34a); }
+        .level-card.level1::before { background: linear-gradient(90deg, #667eea, #764ba2); }
+        .level-card.level2::before { background: linear-gradient(90deg, #11998e, #38ef7d); }
+        .level-card.level3::before { background: linear-gradient(90deg, #f093fb, #f5576c); }
+
         .level-icon {
-            font-size: 5rem;
-            margin-bottom: 20px;
+            font-size: 4rem;
+            margin-bottom: 15px;
         }
         .level-title {
-            font-size: 2rem;
-            color: #667eea;
-            margin-bottom: 15px;
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 10px;
             font-weight: bold;
         }
         .level-desc {
             color: #666;
-            font-size: 1.1rem;
-            margin-bottom: 20px;
-            line-height: 1.6;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            line-height: 1.5;
         }
         .level-badge {
             display: inline-block;
-            padding: 8px 20px;
+            padding: 6px 18px;
             border-radius: 20px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: bold;
-            margin-top: 10px;
         }
-        .badge-beginner {
-            background: #e8f5e9;
-            color: #4caf50;
+        .badge-beginner { background: #e8f5e9; color: #4caf50; }
+        .badge-intermediate { background: #e3f2fd; color: #2196f3; }
+        .badge-advanced { background: #fff3e0; color: #ff9800; }
+        .badge-master { background: #fce4ec; color: #e91e63; }
+
+        .game-count {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #999;
         }
-        .badge-intermediate {
-            background: #fff3e0;
-            color: #ff9800;
+        .game-count span {
+            background: #f0f0f0;
+            padding: 3px 10px;
+            border-radius: 10px;
         }
-        .badge-advanced {
-            background: #fce4ec;
-            color: #e91e63;
+
+        /* 標籤 */
+        .tag {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: white;
         }
+        .tag-new { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .tag-wip { background: #ff9800; }
+
         .footer {
             text-align: center;
             color: white;
-            padding: 30px;
+            padding: 25px;
             opacity: 0.8;
         }
         .footer a {
             color: white;
             text-decoration: underline;
         }
-        
+
         @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2.5rem;
-            }
-            .level-icon {
-                font-size: 4rem;
-            }
-            .level-title {
-                font-size: 1.5rem;
-            }
+            .header h1 { font-size: 2.2rem; }
+            .level-icon { font-size: 3.5rem; }
+            .level-title { font-size: 1.3rem; }
+            .progress-stat .value { font-size: 1.6rem; }
         }
     </style>
 </head>
@@ -127,11 +192,31 @@
         <div class="header">
             <h1>🌟 注音符號學習樂園 🌟</h1>
             <div class="subtitle">專為失語症患者與學齡前兒童設計</div>
+            <div class="version">v2.0.1</div>
         </div>
-        
+
+        <!-- 進度總覽 -->
+        <div class="progress-overview">
+            <h3>📊 學習進度</h3>
+            <div class="progress-stats">
+                <div class="progress-stat">
+                    <div class="value" id="zhuyinCount">0/37</div>
+                    <div class="label">注音符號</div>
+                </div>
+                <div class="progress-stat">
+                    <div class="value" id="wordsCount">0</div>
+                    <div class="label">詞彙</div>
+                </div>
+                <div class="progress-stat">
+                    <div class="value">22</div>
+                    <div class="label">小遊戲</div>
+                </div>
+            </div>
+        </div>
+
         <div class="levels">
             <!-- 第0關 -->
-            <a href="level0/index.html" class="level-card">
+            <a href="level0/index.html" class="level-card level0">
                 <div class="level-icon">📖</div>
                 <div class="level-title">第0關：基礎認識</div>
                 <div class="level-desc">
@@ -140,69 +225,156 @@
                     建立基礎認知
                 </div>
                 <span class="level-badge badge-beginner">入門級</span>
+                <div class="game-count">遊戲數：<span>1</span></div>
             </a>
-            
+
             <!-- 第一關 -->
-            <a href="level1/index.html" class="level-card">
+            <a href="level1/index.html" class="level-card level1">
+                <span class="tag tag-new">✨ NEW</span>
                 <div class="level-icon">🎯</div>
-                <div class="level-title">第一關：射擊挑戰</div>
+                <div class="level-title">第一關：注音符號基礎</div>
                 <div class="level-desc">
-                    語音辨識互動<br>
-                    大聲唸出注音符號<br>
-                    訓練精準發音
+                    聽音選字、配對翻牌<br>
+                    射擊挑戰（語音辨識）<br>
+                    訓練符號辨識能力
                 </div>
                 <span class="level-badge badge-intermediate">進階級</span>
+                <div class="game-count">遊戲數：<span>4</span></div>
             </a>
-            
+
             <!-- 第二關 -->
-            <a href="level2/index.html" class="level-card">
+            <a href="level2/index.html" class="level-card level2">
+                <span class="tag tag-new">✨ NEW</span>
                 <div class="level-icon">🖼️</div>
                 <div class="level-title">第二關：圖片識字</div>
                 <div class="level-desc">
-                    看圖學單字<br>
-                    注音+圖片+發音<br>
+                    看圖學詞、聽音選圖<br>
+                    圖文配對、記憶翻牌<br>
                     實用詞彙學習
                 </div>
                 <span class="level-badge badge-advanced">實戰級</span>
+                <div class="game-count">遊戲數：<span>7</span></div>
+            </a>
+
+            <!-- 第三關 -->
+            <a href="level3/index.html" class="level-card level3">
+                <span class="tag tag-new">✨ NEW</span>
+                <div class="level-icon">📝</div>
+                <div class="level-title">第三關：句子與閱讀</div>
+                <div class="level-desc">
+                    看圖說話、句子填空<br>
+                    賽車衝刺、寶物獵人<br>
+                    進階表達訓練
+                </div>
+                <span class="level-badge badge-master">大師級</span>
+                <div class="game-count">遊戲數：<span>11</span></div>
             </a>
         </div>
-        
+
+        <!-- 設定按鈕 -->
+            <a href="settings.html" class="level-card" style="background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%); max-width: 300px; margin: 0 auto;">
+                <div class="level-icon" style="font-size: 3rem;">⚙️</div>
+                <div class="level-title" style="color: white;">個人化設定</div>
+                <div class="level-desc" style="color: rgba(255,255,255,0.9);">
+                    自訂角色名稱<br>上傳家人照片
+                </div>
+            </a>
+        </div>
+
         <div class="footer">
             <p>音檔來源：教育部《國語注音符號手冊》</p>
             <p style="margin-top: 10px;">授權：創用CC 姓名標示 4.0 國際版本</p>
-            <p style="margin-top: 20px; font-size: 0.9rem;">
-                建議使用Chrome瀏覽器以獲得最佳體驗<br>
+            <p style="margin-top: 15px; font-size: 0.9rem;">
+                建議使用 Chrome 瀏覽器以獲得最佳體驗<br>
                 iPad用戶：請點「分享」→「加入主畫面」
             </p>
         </div>
     </div>
 
     <script>
+        // 載入進度
+        function loadProgress() {
+            const masteredZhuyin = JSON.parse(localStorage.getItem('masteredZhuyin') || '[]');
+            document.getElementById('zhuyinCount').textContent = masteredZhuyin.length + '/37';
+
+            const masteredWords = JSON.parse(localStorage.getItem('masteredWords_level2') || '{}');
+            let wordsTotal = 0;
+            for (const cat of Object.keys(masteredWords)) {
+                wordsTotal += Object.keys(masteredWords[cat]).length;
+            }
+            document.getElementById('wordsCount').textContent = wordsTotal;
+        }
+
+        loadProgress();
+
+        // 語音合成說話功能
+        let voicesReady = false;
+        function speak(text, callback) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.1;
+                if (callback) {
+                    utterance.onend = callback;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 預先載入語音引擎
+        function initVoices() {
+            if ('speechSynthesis' in window) {
+                // 強制初始化語音引擎
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => {
+                    voicesReady = true;
+                };
+                // 某些瀏覽器不會觸發 onvoiceschanged
+                setTimeout(() => { voicesReady = true; }, 500);
+            }
+        }
+
+        // 歡迎語音引導
+        let hasPlayedWelcome = false;
+        function welcomeGuide() {
+            if (hasPlayedWelcome) return;
+            hasPlayedWelcome = true;
+            // 確保語音引擎已就緒
+            setTimeout(() => {
+                speak('歡迎來到注音符號學習樂園！請選擇一個關卡開始學習。', () => {
+                    setTimeout(() => {
+                        speak('建議從第零關開始，熟悉注音符號！');
+                    }, 800);
+                });
+            }, 500);
+        }
+
+        // 初始化語音引擎
+        initVoices();
+
+        // 所有瀏覽器都需要用戶互動才能播放語音
+        document.addEventListener('touchstart', welcomeGuide, { once: true });
+        document.addEventListener('click', welcomeGuide, { once: true });
+
         // 註冊 Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                navigator.serviceWorker.register('/sw.js')
                     .then(reg => console.log('SW 註冊成功:', reg.scope))
                     .catch(err => console.log('SW 註冊失敗:', err));
             });
         }
 
-        // PWA 安裝提示
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // 可以在這裡顯示「安裝 App」按鈕
-        });
-
         // 防止頁面縮放
         document.addEventListener('gesturestart', function(e) {
             e.preventDefault();
         });
-        
+
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function(event) {
-            const now = (new Date()).getTime();
+            const now = Date.now();
             if (now - lastTouchEnd <= 300) {
                 event.preventDefault();
             }

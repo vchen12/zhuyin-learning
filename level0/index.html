@@ -224,8 +224,20 @@
             box-shadow: 0 6px 12px rgba(0,0,0,0.2);
         }
         .symbol-card.mastered {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            border: 2px solid #4caf50;
+            background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+            border: 3px solid #2e7d32;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+            position: relative;
+        }
+        .symbol-card.mastered::after {
+            content: '✓';
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            font-size: 1rem;
+            color: white;
         }
         .notice {
             background: #fff3cd;
@@ -256,6 +268,7 @@
 
         <!-- 階段選單 -->
         <div id="stageMenu">
+            <a href="../index.html" class="back-btn" style="display: inline-block; margin-bottom: 20px; text-decoration: none;">← 返回首頁</a>
             <div class="stage-menu">
                 <div class="stage-card" id="stage1Card" onclick="selectStage(1)">
                     <div class="stage-icon">📖</div>
@@ -388,19 +401,24 @@
         function selectStage(stage) {
             const card = document.getElementById(`stage${stage}Card`);
             if (card.classList.contains('locked')) {
-                alert('請先完成前一個階段！');
+                speak('請先完成前一個階段喔！');
                 return;
             }
-            
+
             if (stage === 3) {
                 startGame();
                 return;
             }
-            
+
             currentStage = stage;
             showScreen('learnScreen');
             displaySymbolsGrid();
-            nextSymbol();
+
+            // 進入學習模式時的語音引導
+            const stageName = stage === 1 ? '聲母' : '韻母';
+            speak(`開始學習${stageName}！聽完發音後，請跟著唸一遍。覺得學會了就按「我學會了」。`, () => {
+                nextSymbol();
+            });
         }
 
         function displaySymbolsGrid() {
@@ -566,8 +584,49 @@
             document.getElementById('gameArea').innerHTML = '';
         }
 
+        // 語音合成說話功能
+        function speak(text, callback) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.1;
+                if (callback) {
+                    utterance.onend = callback;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 預先載入語音引擎
+        function initVoices() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => {};
+            }
+        }
+
+        // 歡迎語音引導
+        let hasPlayedWelcome = false;
+        function welcomeGuide() {
+            if (hasPlayedWelcome) return;
+            hasPlayedWelcome = true;
+            setTimeout(() => {
+                speak('歡迎來到注音符號學習樂園！請點選第一階段開始學習聲母。', () => {
+                    setTimeout(() => {
+                        speak('點擊下方的卡片，開始你的學習之旅！');
+                    }, 1000);
+                });
+            }, 500);
+        }
+
         window.onload = () => {
             init();
+            initVoices();
+            // 所有瀏覽器都需要用戶互動才能播放語音
+            document.addEventListener('touchstart', welcomeGuide, { once: true });
+            document.addEventListener('click', welcomeGuide, { once: true });
         };
     </script>
 </body>

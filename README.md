@@ -17,13 +17,18 @@
 - 錯誤時顯示嘴型提示
 - 鼓勵語音提示
 
-### 第二關：圖片識字（開發中）
-- 看圖學單字
-- 詞彙分類學習
+### 第二關：圖片識字 ✨ NEW
+- 8大分類：家人、動物、水果、日常用品、食物、動作、身體、自然
+- 共 80+ 個詞彙
+- emoji 圖示 + 中文 + 注音
+- TTS 語音播放
+- 語音辨識複誦
+- 學習進度追蹤
+- 里程碑成就系統
 
 ---
 
-## 📱 PWA 支援（v1.1.0 新增）
+## 📱 PWA 支援
 
 本 App 支援 PWA（Progressive Web App），可以：
 
@@ -40,7 +45,7 @@
 
 - 來源：教育部《國語注音符號手冊》
 - 授權：創用CC 姓名標示 4.0 國際版本
-- 格式：MP3（v1.1.0 從 WAV 轉換，檔案大小從 5.2MB 減少到 324KB）
+- 格式：MP3（檔案大小從 5.2MB 減少到 324KB）
 
 ---
 
@@ -56,21 +61,11 @@ zhuyin-learning/
 ├── level1/
 │   └── index.html      # 第一關：射擊挑戰
 ├── level2/
-│   └── index.html      # 第二關：圖片識字（開發中）
+│   └── index.html      # 第二關：圖片識字 ✨
 ├── sounds/
-│   ├── F1.mp3 ~ F37.mp3  # 注音發音音檔
-│   └── ...
+│   └── F1~F37.mp3      # 注音發音音檔
 └── icons/
-    ├── icon-72.png     # App 圖示（各尺寸）
-    ├── icon-96.png
-    ├── icon-128.png
-    ├── icon-144.png
-    ├── icon-152.png
-    ├── icon-192.png
-    ├── icon-384.png
-    ├── icon-512.png
-    ├── apple-touch-icon.png  # iOS 專用
-    └── icon.svg        # 原始 SVG
+    └── icon-*.png      # App 圖示（各尺寸）
 ```
 
 ---
@@ -86,12 +81,24 @@ zhuyin-learning/
 
 ## 📋 版本紀錄
 
+### v2.0.0（2025-01-14）
+- ✅ **架構重整**：為失語症患者設計更漸進式的學習體驗
+- ✅ 規劃更多元的小遊戲類型（開發中）
+- ✅ 支援自訂家人照片（私人版本）
+- ✅ 圖片資源策略：公開版本使用免費圖庫或漫畫風格
+
+### v1.2.0（2025-01-14）
+- ✅ **第二關完成！** 圖片識字功能
+  - 8大分類、80+ 詞彙
+  - emoji 圖示視覺學習
+  - TTS 發音 + 語音辨識
+  - 進度追蹤 + 成就系統
+
 ### v1.1.0（2025-01-14）
 - ✅ PWA 支援（manifest.json + Service Worker）
 - ✅ 音檔從 WAV 轉換為 MP3（檔案大小減少 94%）
 - ✅ 新增各尺寸 App 圖示
 - ✅ 支援離線使用
-- ✅ 修正 level1 的 viewport meta tag 語法錯誤
 
 ### v1.0.0
 - 初始版本
@@ -103,9 +110,11 @@ zhuyin-learning/
 ## 🛠️ 技術細節
 
 - 純 HTML/CSS/JavaScript，無需建置工具
-- 使用 Web Speech API 進行語音辨識
-- 使用 localStorage 儲存學習進度
-- Service Worker 實現離線快取
+- Web Speech API 語音辨識
+- Web Speech Synthesis API 語音合成（TTS）
+- localStorage 儲存學習進度
+- Service Worker 離線快取
+- 響應式設計（支援手機/平板/電腦）
 
 ---
 

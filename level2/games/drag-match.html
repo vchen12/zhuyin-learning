@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#11998e">
+    <link rel="manifest" href="../../manifest.json">
+    <title>🎯 圖文配對</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+            touch-action: none;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .score-display {
+            font-size: 1.2rem;
+            color: #11998e;
+            font-weight: bold;
+        }
+
+        .container { max-width: 800px; margin: 0 auto; }
+
+        .round-info {
+            text-align: center;
+            color: white;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 25px;
+        }
+
+        .zone-title {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        /* 圖片區域 */
+        .images-zone {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .drag-item {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            cursor: grab;
+            transition: all 0.2s;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            user-select: none;
+        }
+        .drag-item:active { cursor: grabbing; }
+        .drag-item.dragging {
+            opacity: 0.6;
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .drag-item.matched {
+            background: #4caf50;
+            cursor: default;
+            opacity: 0.7;
+        }
+        .drag-item .emoji {
+            font-size: 3rem;
+        }
+
+        /* 詞彙區域 */
+        .words-zone {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .drop-target {
+            background: rgba(255,255,255,0.3);
+            border: 4px dashed rgba(255,255,255,0.6);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            min-height: 100px;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .drop-target.over {
+            background: rgba(255,255,255,0.5);
+            border-color: #4caf50;
+            transform: scale(1.02);
+        }
+        .drop-target.matched {
+            background: #4caf50;
+            border-style: solid;
+            border-color: #4caf50;
+        }
+        .drop-target .word {
+            font-size: 1.8rem;
+            color: white;
+            font-weight: bold;
+        }
+        .drop-target .zhuyin {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.9);
+            margin-top: 5px;
+        }
+        .drop-target .matched-emoji {
+            font-size: 2.5rem;
+            margin-top: 10px;
+        }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.8rem;
+            color: white;
+            margin-top: 25px;
+            min-height: 50px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .fireworks {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .complete-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show { display: flex; }
+        .complete-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
+        .complete-title { font-size: 2rem; color: #11998e; margin-bottom: 15px; }
+        .complete-score { font-size: 1.5rem; color: #666; margin-bottom: 25px; }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .game-area {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .drag-item .emoji { font-size: 2.5rem; }
+            .drop-target .word { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="score-display">得分：<span id="score">0</span></div>
+    </nav>
+
+    <div class="container">
+        <div class="round-info">第 <span id="currentRound">1</span> / <span id="totalRounds">3</span> 輪 - 配對完成：<span id="matchedCount">0</span>/4</div>
+
+        <div class="game-area">
+            <div>
+                <div class="zone-title">📷 圖片</div>
+                <div class="images-zone" id="imagesZone"></div>
+            </div>
+            <div>
+                <div class="zone-title">📝 詞彙</div>
+                <div class="words-zone" id="wordsZone"></div>
+            </div>
+        </div>
+
+        <div class="result-message" id="resultMessage">拖曳圖片到對應的詞彙上！</div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon">🎉</div>
+            <div class="complete-title">太棒了！</div>
+            <div class="complete-score" id="completeScore">得分：100 分</div>
+            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script src="../../js/vocabulary.js"></script>
+    <script>
+        const ITEMS_PER_ROUND = 4;
+        const TOTAL_ROUNDS = 3;
+
+        let currentRound = 0;
+        let score = 0;
+        let matchedCount = 0;
+        let roundWords = [];
+        let draggedItem = null;
+
+        function getAllWords() {
+            let allWords = [];
+            for (const [catKey, cat] of Object.entries(VOCABULARY)) {
+                cat.words.forEach((word, index) => {
+                    allWords.push({ ...word, category: catKey, index });
+                });
+            }
+            return allWords;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function initGame() {
+            currentRound = 0;
+            score = 0;
+            nextRound();
+        }
+
+        function nextRound() {
+            currentRound++;
+            matchedCount = 0;
+
+            if (currentRound > TOTAL_ROUNDS) {
+                endGame();
+                return;
+            }
+
+            const allWords = getAllWords();
+            roundWords = shuffle(allWords).slice(0, ITEMS_PER_ROUND);
+
+            updateUI();
+            renderRound();
+            document.getElementById('resultMessage').textContent = '拖曳圖片到對應的詞彙上！';
+        }
+
+        function updateUI() {
+            document.getElementById('currentRound').textContent = currentRound;
+            document.getElementById('totalRounds').textContent = TOTAL_ROUNDS;
+            document.getElementById('matchedCount').textContent = matchedCount;
+            document.getElementById('score').textContent = score;
+        }
+
+        function renderRound() {
+            const imagesZone = document.getElementById('imagesZone');
+            const wordsZone = document.getElementById('wordsZone');
+
+            imagesZone.innerHTML = '';
+            wordsZone.innerHTML = '';
+
+            // 打亂圖片順序
+            const shuffledImages = shuffle([...roundWords]);
+
+            // 渲染圖片
+            shuffledImages.forEach((word, index) => {
+                const item = document.createElement('div');
+                item.className = 'drag-item';
+                item.dataset.text = word.text;
+                item.innerHTML = `<span class="emoji">${word.emoji}</span>`;
+
+                // 拖曳事件
+                item.draggable = true;
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+
+                // 觸控事件
+                item.addEventListener('touchstart', handleTouchStart, { passive: false });
+                item.addEventListener('touchmove', handleTouchMove, { passive: false });
+                item.addEventListener('touchend', handleTouchEnd);
+
+                imagesZone.appendChild(item);
+            });
+
+            // 渲染詞彙目標
+            roundWords.forEach((word, index) => {
+                const target = document.createElement('div');
+                target.className = 'drop-target';
+                target.dataset.text = word.text;
+                target.innerHTML = `<span class="word">${word.text}</span><span class="zhuyin">${word.zhuyin}</span>`;
+
+                // 拖放事件
+                target.addEventListener('dragover', handleDragOver);
+                target.addEventListener('dragleave', handleDragLeave);
+                target.addEventListener('drop', handleDrop);
+
+                wordsZone.appendChild(target);
+            });
+        }
+
+        // 拖曳處理
+        function handleDragStart(e) {
+            draggedItem = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedItem = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            if (!e.target.classList.contains('matched')) {
+                e.target.classList.add('over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.target.classList.remove('over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.target.classList.remove('over');
+
+            if (e.target.classList.contains('matched') || !draggedItem) return;
+
+            const draggedText = draggedItem.dataset.text;
+            const targetText = e.target.dataset.text;
+
+            if (draggedText === targetText) {
+                // 正確配對
+                handleCorrectMatch(draggedItem, e.target, draggedText);
+            } else {
+                // 錯誤配對
+                handleWrongMatch();
+            }
+        }
+
+        // 觸控處理
+        let touchStartX, touchStartY;
+        let currentTouchItem = null;
+        let touchClone = null;
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            currentTouchItem = e.target.closest('.drag-item');
+
+            if (!currentTouchItem || currentTouchItem.classList.contains('matched')) return;
+
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+
+            currentTouchItem.classList.add('dragging');
+
+            // 創建跟隨手指的複製元素
+            touchClone = currentTouchItem.cloneNode(true);
+            touchClone.style.position = 'fixed';
+            touchClone.style.pointerEvents = 'none';
+            touchClone.style.zIndex = '1000';
+            touchClone.style.opacity = '0.8';
+            touchClone.style.width = currentTouchItem.offsetWidth + 'px';
+            document.body.appendChild(touchClone);
+
+            updateTouchClonePosition(touch.clientX, touch.clientY);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!currentTouchItem || !touchClone) return;
+
+            const touch = e.touches[0];
+            updateTouchClonePosition(touch.clientX, touch.clientY);
+
+            // 檢查是否在目標上方
+            const targets = document.querySelectorAll('.drop-target:not(.matched)');
+            targets.forEach(target => {
+                const rect = target.getBoundingClientRect();
+                if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                    touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                    target.classList.add('over');
+                } else {
+                    target.classList.remove('over');
+                }
+            });
+        }
+
+        function handleTouchEnd(e) {
+            if (!currentTouchItem) return;
+
+            currentTouchItem.classList.remove('dragging');
+
+            if (touchClone) {
+                touchClone.remove();
+                touchClone = null;
+            }
+
+            // 找到目標
+            const targets = document.querySelectorAll('.drop-target.over');
+            if (targets.length > 0) {
+                const target = targets[0];
+                target.classList.remove('over');
+
+                const draggedText = currentTouchItem.dataset.text;
+                const targetText = target.dataset.text;
+
+                if (draggedText === targetText) {
+                    handleCorrectMatch(currentTouchItem, target, draggedText);
+                } else {
+                    handleWrongMatch();
+                }
+            }
+
+            currentTouchItem = null;
+        }
+
+        function updateTouchClonePosition(x, y) {
+            if (touchClone) {
+                touchClone.style.left = (x - touchClone.offsetWidth / 2) + 'px';
+                touchClone.style.top = (y - touchClone.offsetHeight / 2) + 'px';
+            }
+        }
+
+        function handleCorrectMatch(dragItem, dropTarget, wordText) {
+            dragItem.classList.add('matched');
+            dragItem.draggable = false;
+            dropTarget.classList.add('matched');
+
+            // 在目標區顯示 emoji
+            const word = roundWords.find(w => w.text === wordText);
+            dropTarget.innerHTML += `<span class="matched-emoji">${word.emoji}</span>`;
+
+            matchedCount++;
+            score += 10;
+            updateUI();
+
+            const encouragement = ['太棒了！', '好厲害！', '真聰明！'][Math.floor(Math.random() * 3)];
+            document.getElementById('resultMessage').textContent = encouragement + ' ' + wordText;
+            speak(encouragement);
+            createFireworks(15);
+
+            saveMastered(word);
+
+            if (matchedCount >= ITEMS_PER_ROUND) {
+                setTimeout(nextRound, 1500);
+            }
+        }
+
+        function handleWrongMatch() {
+            document.getElementById('resultMessage').textContent = '再試一次！';
+            speak('再試一次！');
+        }
+
+        function saveMastered(word) {
+            let mastered = JSON.parse(localStorage.getItem('masteredWords_level2') || '{}');
+            if (!mastered[word.category]) mastered[word.category] = {};
+            mastered[word.category][word.index] = true;
+            localStorage.setItem('masteredWords_level2', JSON.stringify(mastered));
+        }
+
+        function endGame() {
+            document.getElementById('completeScore').textContent = `得分：${score} 分`;
+            document.getElementById('completeOverlay').classList.add('show');
+            createFireworks(50);
+            speak(`太棒了！你得了${score}分！`);
+        }
+
+        function restartGame() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            initGame();
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

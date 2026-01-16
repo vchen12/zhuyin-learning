@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="../../manifest.json">
+    <title>🏎️ 賽車衝刺</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .race-info {
+            font-size: 1rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .container { max-width: 700px; margin: 0 auto; }
+
+        /* 賽道區 */
+        .race-track-section {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .track-title {
+            text-align: center;
+            font-size: 1.3rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        /* 賽道 */
+        .race-track {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .track-lane {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .lane-label {
+            width: 60px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .lane-label.player { color: #4caf50; }
+        .lane-label.computer { color: #f44336; }
+
+        .lane-track {
+            flex: 1;
+            display: flex;
+            background: #f5f5f5;
+            border-radius: 10px;
+            height: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        .track-cell {
+            flex: 1;
+            border-right: 2px dashed #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .track-cell:last-child {
+            border-right: none;
+            background: linear-gradient(135deg, #ffd700, #ffed4a);
+        }
+        .track-cell:last-child::after {
+            content: '🏁';
+            font-size: 1.5rem;
+        }
+
+        .car {
+            position: absolute;
+            font-size: 2rem;
+            transition: left 0.5s ease-out;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* 題目區 */
+        .question-section {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .question-image {
+            font-size: 5rem;
+            margin-bottom: 15px;
+        }
+        .question-text {
+            font-size: 1.3rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        /* 選項 */
+        .choices-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .choice-btn {
+            background: #f5f5f5;
+            border: 4px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 15px;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .choice-btn:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        .choice-btn.correct {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: white;
+        }
+        .choice-btn.wrong {
+            background: #f44336;
+            border-color: #f44336;
+            color: white;
+        }
+        .choice-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-top: 20px;
+            min-height: 45px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .fireworks {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .complete-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show { display: flex; }
+        .complete-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
+        .complete-title { font-size: 2rem; color: #667eea; margin-bottom: 15px; }
+        .complete-message { font-size: 1.3rem; color: #666; margin-bottom: 25px; }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media (max-width: 500px) {
+            .question-image { font-size: 4rem; }
+            .choice-btn { font-size: 1.1rem; }
+            .car { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="race-info">🏎️ 賽車衝刺</div>
+    </nav>
+
+    <div class="container">
+        <div class="race-track-section">
+            <div class="track-title">🏁 衝向終點！答對題目讓車子前進！</div>
+
+            <div class="race-track">
+                <div class="track-lane">
+                    <div class="lane-label player">你 🧑</div>
+                    <div class="lane-track" id="playerLane">
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="car" id="playerCar">🚗</div>
+                    </div>
+                </div>
+                <div class="track-lane">
+                    <div class="lane-label computer">電腦 🤖</div>
+                    <div class="lane-track" id="computerLane">
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="track-cell"></div>
+                        <div class="car" id="computerCar">🚙</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="question-section">
+            <div class="question-image" id="questionImage">🍎</div>
+            <div class="question-text" id="questionText">這是什麼？</div>
+            <div class="choices-grid" id="choicesGrid"></div>
+        </div>
+
+        <div class="result-message" id="resultMessage"></div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon" id="completeIcon">🏆</div>
+            <div class="complete-title" id="completeTitle">比賽結束！</div>
+            <div class="complete-message" id="completeMessage">你贏了！</div>
+            <button class="complete-btn" onclick="restartGame()">🔄 再比一次</button>
+            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script src="../../js/vocabulary.js"></script>
+    <script>
+        const TRACK_LENGTH = 10;
+        const ENCOURAGEMENTS = ['太棒了！', '好厲害！', '衝啊！', '加油！', '很棒！'];
+
+        let playerPosition = 0;
+        let computerPosition = 0;
+        let currentQuestion = null;
+        let choices = [];
+        let answered = false;
+        let gameOver = false;
+        let questionQueue = [];
+
+        function getAllWords() {
+            let allWords = [];
+            for (const [catKey, cat] of Object.entries(VOCABULARY)) {
+                cat.words.forEach((word, index) => {
+                    allWords.push({ ...word, category: catKey, index });
+                });
+            }
+            return allWords;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function initGame() {
+            playerPosition = 0;
+            computerPosition = 0;
+            gameOver = false;
+            answered = false;
+
+            const allWords = getAllWords();
+            questionQueue = shuffle(allWords);
+
+            updateCarPositions();
+            nextQuestion();
+        }
+
+        function updateCarPositions() {
+            const playerCar = document.getElementById('playerCar');
+            const computerCar = document.getElementById('computerCar');
+
+            const playerLane = document.getElementById('playerLane');
+            const cellWidth = playerLane.offsetWidth / TRACK_LENGTH;
+
+            playerCar.style.left = (playerPosition * cellWidth) + 'px';
+            computerCar.style.left = (computerPosition * cellWidth) + 'px';
+        }
+
+        function nextQuestion() {
+            if (gameOver) return;
+
+            answered = false;
+
+            if (questionQueue.length === 0) {
+                const allWords = getAllWords();
+                questionQueue = shuffle(allWords);
+            }
+
+            currentQuestion = questionQueue.pop();
+
+            // 準備選項
+            const allWords = getAllWords();
+            const otherWords = allWords.filter(w => w.text !== currentQuestion.text);
+            choices = [currentQuestion, ...shuffle(otherWords).slice(0, 3)];
+            choices = shuffle(choices);
+
+            updateQuestionUI();
+            renderChoices();
+            document.getElementById('resultMessage').textContent = '';
+
+            // 電腦延遲答題（模擬思考）
+            setTimeout(() => {
+                if (!answered && !gameOver) {
+                    computerAnswer();
+                }
+            }, 2000 + Math.random() * 2000);
+        }
+
+        function updateQuestionUI() {
+            document.getElementById('questionImage').textContent = currentQuestion.emoji;
+            document.getElementById('questionText').textContent = '這是什麼？選出正確的詞彙';
+        }
+
+        function renderChoices() {
+            const grid = document.getElementById('choicesGrid');
+            grid.innerHTML = '';
+
+            choices.forEach((word, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.textContent = word.text;
+                btn.onclick = () => playerAnswer(index);
+                grid.appendChild(btn);
+            });
+        }
+
+        function playerAnswer(index) {
+            if (answered || gameOver) return;
+            answered = true;
+
+            const buttons = document.querySelectorAll('.choice-btn');
+            buttons.forEach(btn => btn.disabled = true);
+
+            const selected = choices[index];
+            const correctIndex = choices.findIndex(w => w.text === currentQuestion.text);
+
+            if (selected.text === currentQuestion.text) {
+                buttons[index].classList.add('correct');
+                playerPosition++;
+                updateCarPositions();
+
+                const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+                document.getElementById('resultMessage').textContent = encouragement + ' 🚗💨';
+                speak(encouragement);
+                createFireworks(15);
+
+                checkWin();
+            } else {
+                buttons[index].classList.add('wrong');
+                buttons[correctIndex].classList.add('correct');
+                document.getElementById('resultMessage').textContent = '答案是「' + currentQuestion.text + '」';
+                speak('加油！');
+            }
+
+            if (!gameOver) {
+                setTimeout(nextQuestion, 2000);
+            }
+        }
+
+        function computerAnswer() {
+            if (answered || gameOver) return;
+
+            // 電腦有 70% 機率答對
+            if (Math.random() < 0.7) {
+                computerPosition++;
+                updateCarPositions();
+                document.getElementById('resultMessage').textContent = '電腦答對了！🚙💨';
+
+                checkWin();
+            } else {
+                document.getElementById('resultMessage').textContent = '電腦答錯了！';
+            }
+        }
+
+        function checkWin() {
+            if (playerPosition >= TRACK_LENGTH) {
+                gameOver = true;
+                showResult('win');
+            } else if (computerPosition >= TRACK_LENGTH) {
+                gameOver = true;
+                showResult('lose');
+            }
+        }
+
+        function showResult(result) {
+            if (result === 'win') {
+                document.getElementById('completeIcon').textContent = '🏆';
+                document.getElementById('completeTitle').textContent = '恭喜獲勝！';
+                document.getElementById('completeMessage').textContent = '你比電腦更快到達終點！';
+                createFireworks(50);
+                speak('恭喜你贏了！');
+            } else {
+                document.getElementById('completeIcon').textContent = '😅';
+                document.getElementById('completeTitle').textContent = '電腦贏了！';
+                document.getElementById('completeMessage').textContent = '再試一次，你可以的！';
+                speak('加油，再試一次！');
+            }
+
+            document.getElementById('completeOverlay').classList.add('show');
+        }
+
+        function restartGame() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            initGame();
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        // 視窗大小改變時更新車子位置
+        window.addEventListener('resize', updateCarPositions);
+
+        initGame();
+    </script>
+</body>
+</html>

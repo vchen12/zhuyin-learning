@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="../../manifest.json">
+    <title>🃏 配對翻牌</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .game-stats {
+            display: flex;
+            gap: 20px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #999;
+        }
+        .stat-value {
+            font-size: 1.2rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .game-title {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .game-title h1 {
+            font-size: 1.8rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .game-title p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* 卡片網格 */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding: 10px;
+        }
+
+        /* 卡片 */
+        .card {
+            aspect-ratio: 1;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s;
+            transform-style: preserve-3d;
+        }
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backface-visibility: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .card-front {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            font-size: 2.5rem;
+        }
+        .card-back {
+            background: white;
+            transform: rotateY(180deg);
+            font-size: 3rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .card.matched .card-back {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+        .card.matched {
+            pointer-events: none;
+        }
+
+        /* 結果訊息 */
+        .message {
+            text-align: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-top: 20px;
+            min-height: 40px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* 煙火 */
+        .fireworks {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* 完成畫面 */
+        .complete-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show {
+            display: flex;
+        }
+        .complete-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .complete-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        .complete-title {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .complete-stats {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 25px;
+        }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media (max-width: 500px) {
+            .cards-grid { gap: 8px; }
+            .card-back { font-size: 2.2rem; }
+            .card-front { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="game-stats">
+            <div class="stat-item">
+                <div class="stat-label">翻牌次數</div>
+                <div class="stat-value" id="moves">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">配對成功</div>
+                <div class="stat-value"><span id="matches">0</span>/6</div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="game-container">
+        <div class="game-title">
+            <h1>🃏 配對翻牌</h1>
+            <p>找出相同的注音符號配對</p>
+        </div>
+
+        <div class="cards-grid" id="cardsGrid"></div>
+
+        <div class="message" id="message"></div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon">🏆</div>
+            <div class="complete-title">全部配對成功！</div>
+            <div class="complete-stats" id="completeStats">翻牌次數：0</div>
+            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script>
+        // 注音符號
+        const ALL_SYMBOLS = [
+            'ㄅ', 'ㄆ', 'ㄇ', 'ㄈ', 'ㄉ', 'ㄊ', 'ㄋ', 'ㄌ', 'ㄍ', 'ㄎ', 'ㄏ',
+            'ㄐ', 'ㄑ', 'ㄒ', 'ㄓ', 'ㄔ', 'ㄕ', 'ㄖ', 'ㄗ', 'ㄘ', 'ㄙ',
+            'ㄚ', 'ㄛ', 'ㄜ', 'ㄝ', 'ㄞ', 'ㄟ', 'ㄠ', 'ㄡ', 'ㄢ', 'ㄣ', 'ㄤ', 'ㄥ', 'ㄦ', 'ㄧ', 'ㄨ', 'ㄩ'
+        ];
+
+        const SOUND_MAP = {
+            'ㄅ': 'F1', 'ㄆ': 'F2', 'ㄇ': 'F3', 'ㄈ': 'F4', 'ㄉ': 'F5', 'ㄊ': 'F6', 'ㄋ': 'F7', 'ㄌ': 'F8',
+            'ㄍ': 'F9', 'ㄎ': 'F10', 'ㄏ': 'F11', 'ㄐ': 'F12', 'ㄑ': 'F13', 'ㄒ': 'F14', 'ㄓ': 'F15', 'ㄔ': 'F16',
+            'ㄕ': 'F17', 'ㄖ': 'F18', 'ㄗ': 'F19', 'ㄘ': 'F20', 'ㄙ': 'F21',
+            'ㄚ': 'F22', 'ㄛ': 'F23', 'ㄜ': 'F24', 'ㄝ': 'F25', 'ㄞ': 'F26', 'ㄟ': 'F27', 'ㄠ': 'F28', 'ㄡ': 'F29',
+            'ㄢ': 'F30', 'ㄣ': 'F31', 'ㄤ': 'F32', 'ㄥ': 'F33', 'ㄦ': 'F34', 'ㄧ': 'F35', 'ㄨ': 'F36', 'ㄩ': 'F37'
+        };
+
+        const ENCOURAGEMENTS = ['太棒了！', '好厲害！', '配對成功！', '真聰明！', '記憶力真好！'];
+        const PAIR_COUNT = 6;
+
+        // 遊戲狀態
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let isProcessing = false;
+
+        // 洗牌
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 初始化遊戲
+        function initGame() {
+            matchedPairs = 0;
+            moves = 0;
+            flippedCards = [];
+            isProcessing = false;
+
+            // 選取隨機符號並複製一份
+            const selectedSymbols = shuffle([...ALL_SYMBOLS]).slice(0, PAIR_COUNT);
+            cards = shuffle([...selectedSymbols, ...selectedSymbols]);
+
+            renderCards();
+            updateStats();
+            document.getElementById('message').textContent = '';
+        }
+
+        // 渲染卡片
+        function renderCards() {
+            const grid = document.getElementById('cardsGrid');
+            grid.innerHTML = '';
+
+            cards.forEach((symbol, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.index = index;
+                card.dataset.symbol = symbol;
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">❓</div>
+                        <div class="card-back">${symbol}</div>
+                    </div>
+                `;
+                card.onclick = () => flipCard(card);
+                grid.appendChild(card);
+            });
+        }
+
+        // 翻牌
+        function flipCard(card) {
+            if (isProcessing) return;
+            if (card.classList.contains('flipped')) return;
+            if (card.classList.contains('matched')) return;
+            if (flippedCards.length >= 2) return;
+
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            // 播放音檔
+            playSound(card.dataset.symbol);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                updateStats();
+                checkMatch();
+            }
+        }
+
+        // 播放音檔
+        function playSound(symbol) {
+            const fileNum = SOUND_MAP[symbol];
+            if (fileNum) {
+                const audio = new Audio(`../../sounds/${fileNum}.mp3`);
+                audio.play().catch(err => console.error('播放失敗:', err));
+            }
+        }
+
+        // 檢查配對
+        function checkMatch() {
+            isProcessing = true;
+            const [card1, card2] = flippedCards;
+
+            if (card1.dataset.symbol === card2.dataset.symbol) {
+                // 配對成功
+                setTimeout(() => {
+                    card1.classList.add('matched');
+                    card2.classList.add('matched');
+                    matchedPairs++;
+                    updateStats();
+
+                    const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+                    showMessage(encouragement);
+                    speak(encouragement);
+                    createFireworks(15);
+
+                    // 儲存進度
+                    saveMastered(card1.dataset.symbol);
+
+                    flippedCards = [];
+                    isProcessing = false;
+
+                    // 檢查是否全部完成
+                    if (matchedPairs === PAIR_COUNT) {
+                        setTimeout(endGame, 1000);
+                    }
+                }, 500);
+            } else {
+                // 配對失敗
+                setTimeout(() => {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    showMessage('再試試看！');
+                    flippedCards = [];
+                    isProcessing = false;
+                }, 1000);
+            }
+        }
+
+        // 更新統計
+        function updateStats() {
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('matches').textContent = matchedPairs;
+        }
+
+        // 顯示訊息
+        function showMessage(text) {
+            document.getElementById('message').textContent = text;
+        }
+
+        // 儲存已掌握
+        function saveMastered(symbol) {
+            let mastered = JSON.parse(localStorage.getItem('masteredZhuyin') || '[]');
+            if (!mastered.includes(symbol)) {
+                mastered.push(symbol);
+                localStorage.setItem('masteredZhuyin', JSON.stringify(mastered));
+            }
+        }
+
+        // 結束遊戲
+        function endGame() {
+            document.getElementById('completeStats').textContent = `翻牌次數：${moves} 次`;
+            document.getElementById('completeOverlay').classList.add('show');
+            createFireworks(50);
+            speak(`太棒了！你用${moves}次就完成了！`);
+        }
+
+        // 重新開始
+        function restartGame() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            initGame();
+        }
+
+        // 語音合成
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 煙火效果
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        // 啟動遊戲
+        initGame();
+    </script>
+</body>
+</html>

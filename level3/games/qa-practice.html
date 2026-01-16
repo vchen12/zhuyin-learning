@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f5576c">
+    <link rel="manifest" href="../../manifest.json">
+    <title>❓ 問答練習</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .score-display {
+            font-size: 1.2rem;
+            color: #f5576c;
+            font-weight: bold;
+        }
+
+        .container { max-width: 600px; margin: 0 auto; }
+
+        .progress-section {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.3);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s;
+        }
+        .progress-text {
+            color: white;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* 問答區 */
+        .qa-section {
+            background: white;
+            border-radius: 25px;
+            padding: 35px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .qa-image {
+            font-size: 6rem;
+            margin-bottom: 20px;
+        }
+        .qa-question {
+            font-size: 1.8rem;
+            color: #f5576c;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #fff3e0;
+            border-radius: 15px;
+        }
+        .qa-answer {
+            font-size: 1.5rem;
+            color: #4caf50;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 15px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .qa-answer.show {
+            opacity: 1;
+        }
+
+        /* 按鈕區 */
+        .buttons-section {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .action-btn {
+            background: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.2s;
+        }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn.question {
+            background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+            color: white;
+        }
+        .action-btn.speak {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .action-btn.next {
+            background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+            color: white;
+        }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.5rem;
+            color: white;
+            min-height: 45px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .recognized-text {
+            text-align: center;
+            background: rgba(255,255,255,0.2);
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-top: 15px;
+            font-size: 1.2rem;
+            color: white;
+            display: none;
+        }
+        .recognized-text.show { display: block; }
+
+        .fireworks {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .complete-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show { display: flex; }
+        .complete-content {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
+        .complete-title { font-size: 2rem; color: #f5576c; margin-bottom: 15px; }
+        .complete-score { font-size: 1.5rem; color: #666; margin-bottom: 25px; }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media (max-width: 500px) {
+            .qa-image { font-size: 4rem; }
+            .qa-question { font-size: 1.4rem; }
+            .qa-answer { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="score-display">得分：<span id="score">0</span></div>
+    </nav>
+
+    <div class="container">
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">第 <span id="currentRound">1</span> / <span id="totalRounds">10</span> 題</div>
+        </div>
+
+        <div class="qa-section">
+            <div class="qa-image" id="qaImage">🍎</div>
+            <div class="qa-question" id="qaQuestion">這是什麼？</div>
+            <div class="qa-answer" id="qaAnswer">這是蘋果</div>
+        </div>
+
+        <div class="buttons-section">
+            <button class="action-btn question" onclick="playQuestion()">❓ 聽問題</button>
+            <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來答</button>
+            <button class="action-btn" onclick="showAnswer()">👁️ 看答案</button>
+            <button class="action-btn next" onclick="skipToNext()">⏭️ 下一題</button>
+        </div>
+
+        <div class="recognized-text" id="recognizedText">你說：</div>
+        <div class="result-message" id="resultMessage"></div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon">🎉</div>
+            <div class="complete-title">太棒了！</div>
+            <div class="complete-score" id="completeScore">得分：100 分</div>
+            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script>
+        // 問答資料
+        const QA_DATA = [
+            { image: '🍎', question: '這是什麼？', answer: '這是蘋果', keyword: '蘋果' },
+            { image: '🐕', question: '這是什麼動物？', answer: '這是狗', keyword: '狗' },
+            { image: '👨', question: '這是誰？', answer: '這是爸爸', keyword: '爸爸' },
+            { image: '👩', question: '這是誰？', answer: '這是媽媽', keyword: '媽媽' },
+            { image: '🐱', question: '這是什麼動物？', answer: '這是貓', keyword: '貓' },
+            { image: '🍌', question: '這是什麼水果？', answer: '這是香蕉', keyword: '香蕉' },
+            { image: '📚', question: '這是什麼？', answer: '這是書', keyword: '書' },
+            { image: '✏️', question: '這是什麼？', answer: '這是筆', keyword: '筆' },
+            { image: '🐟', question: '這是什麼動物？', answer: '這是魚', keyword: '魚' },
+            { image: '🐦', question: '這是什麼動物？', answer: '這是鳥', keyword: '鳥' },
+            { image: '☀️', question: '這是什麼？', answer: '這是太陽', keyword: '太陽' },
+            { image: '🌙', question: '這是什麼？', answer: '這是月亮', keyword: '月亮' },
+            { image: '🚗', question: '這是什麼？', answer: '這是車子', keyword: '車' },
+            { image: '🏠', question: '這是什麼？', answer: '這是房子', keyword: '房' },
+            { image: '👵', question: '這是誰？', answer: '這是奶奶', keyword: '奶奶' }
+        ];
+
+        let currentRound = 0;
+        let totalRounds = 10;
+        let score = 0;
+        let currentQA = null;
+        let questionQueue = [];
+        let recognition = null;
+        let isListening = false;
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function initGame() {
+            currentRound = 0;
+            score = 0;
+            questionQueue = shuffle([...QA_DATA]).slice(0, totalRounds);
+            initSpeechRecognition();
+            updateScore();
+            nextRound();
+        }
+
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'zh-TW';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    document.getElementById('speakBtn').textContent = '🎤 聽你說...';
+                    document.getElementById('speakBtn').disabled = true;
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('recognizedText').textContent = '你說：' + transcript;
+                    document.getElementById('recognizedText').classList.add('show');
+                    checkResult(transcript);
+                };
+
+                recognition.onerror = (event) => {
+                    isListening = false;
+                    document.getElementById('speakBtn').textContent = '🎤 我來答';
+                    document.getElementById('speakBtn').disabled = false;
+                    document.getElementById('resultMessage').textContent = '沒有聽到，請再試一次！';
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    document.getElementById('speakBtn').textContent = '🎤 我來答';
+                    document.getElementById('speakBtn').disabled = false;
+                };
+            }
+        }
+
+        function nextRound() {
+            if (currentRound >= totalRounds) {
+                endGame();
+                return;
+            }
+
+            currentQA = questionQueue[currentRound];
+            currentRound++;
+
+            updateUI();
+            document.getElementById('qaAnswer').classList.remove('show');
+            document.getElementById('resultMessage').textContent = '';
+            document.getElementById('recognizedText').classList.remove('show');
+
+            // 自動播放問題
+            setTimeout(() => playQuestion(), 500);
+        }
+
+        function updateUI() {
+            document.getElementById('currentRound').textContent = currentRound;
+            document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
+            document.getElementById('qaImage').textContent = currentQA.image;
+            document.getElementById('qaQuestion').textContent = currentQA.question;
+            document.getElementById('qaAnswer').textContent = currentQA.answer;
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function playQuestion() {
+            speak(currentQA.question);
+        }
+
+        function showAnswer() {
+            document.getElementById('qaAnswer').classList.add('show');
+            speak(currentQA.answer);
+        }
+
+        function startListening() {
+            if (!recognition) {
+                if (confirm(`你的答案是「${currentQA.answer}」嗎？`)) {
+                    handleCorrect();
+                }
+                return;
+            }
+
+            if (isListening) return;
+
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('啟動辨識失敗:', error);
+            }
+        }
+
+        function checkResult(transcript) {
+            // 檢查是否包含關鍵詞
+            const isCorrect = transcript.includes(currentQA.keyword) ||
+                              transcript.includes(currentQA.answer) ||
+                              currentQA.answer.includes(transcript);
+
+            if (isCorrect) {
+                handleCorrect();
+            } else {
+                document.getElementById('resultMessage').textContent = '再試一次！';
+                speak('再試一次！');
+            }
+        }
+
+        function handleCorrect() {
+            score += 10;
+            updateScore();
+
+            document.getElementById('qaAnswer').classList.add('show');
+            document.getElementById('resultMessage').textContent = '太棒了！回答正確！';
+            speak('太棒了！' + currentQA.answer);
+            createFireworks(20);
+
+            setTimeout(nextRound, 2500);
+        }
+
+        function skipToNext() {
+            document.getElementById('qaAnswer').classList.add('show');
+            document.getElementById('resultMessage').textContent = '答案是：' + currentQA.answer;
+            speak(currentQA.answer);
+            setTimeout(nextRound, 2000);
+        }
+
+        function endGame() {
+            document.getElementById('completeScore').textContent = `得分：${score} 分`;
+            document.getElementById('completeOverlay').classList.add('show');
+            createFireworks(50);
+            speak(`太棒了！你得了${score}分！`);
+        }
+
+        function restartGame() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            initGame();
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

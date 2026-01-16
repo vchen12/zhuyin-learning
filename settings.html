@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="manifest.json">
+    <title>⚙️ 設定 - 注音學習樂園</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .nav-title {
+            font-size: 1.3rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .container { max-width: 800px; margin: 0 auto; }
+
+        .page-title {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        .page-title h1 {
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* 設定區塊 */
+        .settings-section {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .section-title {
+            font-size: 1.4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        /* 角色選擇 */
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        .character-item {
+            background: #f5f5f5;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .character-item:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+        }
+        .character-item.selected {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+        .character-item.disabled {
+            opacity: 0.5;
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        .character-item .emoji {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .character-item .name {
+            font-size: 1rem;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .character-item .status {
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        /* 編輯按鈕 */
+        .edit-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+        .edit-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .edit-btn.delete {
+            background: #f44336;
+        }
+        .edit-btn.rename {
+            background: #ff9800;
+        }
+
+        /* 新增角色按鈕 */
+        .add-character {
+            background: #e0e0e0;
+            border: 3px dashed #bbb;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .add-character:hover {
+            background: #d0d0d0;
+            border-color: #667eea;
+        }
+        .add-character .icon {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        /* 圖片上傳區 */
+        .upload-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+        .upload-area {
+            background: #f9f9f9;
+            border: 3px dashed #ddd;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        .upload-area.dragover {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        .upload-text {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .upload-hint {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        /* 已上傳圖片預覽 */
+        .uploaded-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .uploaded-image {
+            position: relative;
+            background: #f5f5f5;
+            border-radius: 15px;
+            overflow: hidden;
+            aspect-ratio: 1;
+        }
+        .uploaded-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .uploaded-image .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            border: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .uploaded-image .label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        /* 重置按鈕 */
+        .reset-section {
+            text-align: center;
+            padding-top: 20px;
+        }
+        .reset-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .save-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        /* 隱藏的文件輸入 */
+        .hidden-input {
+            display: none;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 25px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .modal-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .modal-btn.confirm {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            color: white;
+        }
+        .modal-btn.cancel {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        /* 通知 */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1rem;
+            z-index: 1001;
+            display: none;
+        }
+        .toast.show { display: block; }
+        .toast.success { background: #4caf50; }
+        .toast.error { background: #f44336; }
+
+        @media (max-width: 600px) {
+            .character-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .character-item .emoji { font-size: 2rem; }
+            .character-item .name { font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="index.html" class="back-btn">← 返回首頁</a>
+        <div class="nav-title">⚙️ 設定</div>
+        <div></div>
+    </nav>
+
+    <div class="container">
+        <div class="page-title">
+            <h1>⚙️ 個人化設定</h1>
+        </div>
+
+        <!-- 角色選擇 -->
+        <div class="settings-section">
+            <div class="section-title">👨‍👩‍👧 家人角色設定</div>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                點選角色進行啟用/停用。停用的角色不會出現在遊戲中。<br>
+                你可以重新命名角色，例如將「爸爸」改成實際稱呼。
+            </p>
+            <div class="character-grid" id="familyGrid"></div>
+        </div>
+
+        <!-- 圖片上傳 -->
+        <div class="settings-section">
+            <div class="section-title">📷 自訂圖片</div>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                上傳真實照片來替換預設的 emoji 圖示。<br>
+                系統會自動裁切並處理圖片。
+            </p>
+
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
+                <div class="upload-icon">📤</div>
+                <div class="upload-text">點擊或拖曳圖片到這裡上傳</div>
+                <div class="upload-hint">支援 JPG、PNG 格式，建議正方形圖片</div>
+            </div>
+            <input type="file" id="imageInput" class="hidden-input" accept="image/*" multiple>
+
+            <div class="uploaded-images" id="uploadedImages"></div>
+
+            <div class="upload-section">
+                <p style="color: #666; margin-bottom: 10px; font-size: 0.9rem;">圖片對應設定：上傳後選擇要替換的角色</p>
+            </div>
+        </div>
+
+        <!-- 重置與儲存 -->
+        <div class="settings-section">
+            <div class="section-title">🔄 資料管理</div>
+            <div class="reset-section">
+                <button class="save-btn" onclick="saveSettings()">💾 儲存設定</button>
+                <button class="reset-btn" onclick="resetProgress()">🗑️ 重置學習進度</button>
+                <button class="reset-btn" onclick="resetAll()" style="background: #9e9e9e;">↩️ 還原預設值</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重命名 Modal -->
+    <div class="modal" id="renameModal">
+        <div class="modal-content">
+            <div class="modal-title">✏️ 重新命名</div>
+            <input type="text" class="modal-input" id="renameInput" placeholder="輸入新名稱">
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmRename()">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 圖片選擇 Modal -->
+    <div class="modal" id="assignModal">
+        <div class="modal-content">
+            <div class="modal-title">🎯 選擇要替換的角色</div>
+            <div class="character-grid" id="assignGrid" style="max-height: 300px; overflow-y: auto;"></div>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button class="modal-btn cancel" onclick="closeAssignModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div class="toast" id="toast">設定已儲存</div>
+
+    <script>
+        // 預設家人資料
+        const DEFAULT_FAMILY = [
+            { id: 'dad', emoji: '👨', name: '爸爸', enabled: true, customImage: null },
+            { id: 'mom', emoji: '👩', name: '媽媽', enabled: true, customImage: null },
+            { id: 'grandpa', emoji: '👴', name: '爺爺', enabled: true, customImage: null },
+            { id: 'grandma', emoji: '👵', name: '奶奶', enabled: true, customImage: null },
+            { id: 'grandpa2', emoji: '👴', name: '外公', enabled: true, customImage: null },
+            { id: 'grandma2', emoji: '👵', name: '外婆', enabled: true, customImage: null },
+            { id: 'brother', emoji: '👦', name: '哥哥', enabled: true, customImage: null },
+            { id: 'sister', emoji: '👧', name: '姐姐', enabled: true, customImage: null },
+            { id: 'young_brother', emoji: '👦', name: '弟弟', enabled: true, customImage: null },
+            { id: 'young_sister', emoji: '👧', name: '妹妹', enabled: true, customImage: null },
+            { id: 'uncle', emoji: '👨', name: '叔叔', enabled: true, customImage: null },
+            { id: 'aunt', emoji: '👩', name: '阿姨', enabled: true, customImage: null }
+        ];
+
+        let familySettings = [];
+        let uploadedImages = [];
+        let currentEditingId = null;
+        let currentAssigningImage = null;
+
+        // 初始化
+        function init() {
+            loadSettings();
+            renderFamilyGrid();
+            renderUploadedImages();
+            setupUploadEvents();
+        }
+
+        // 載入設定
+        function loadSettings() {
+            const saved = localStorage.getItem('familySettings');
+            if (saved) {
+                familySettings = JSON.parse(saved);
+            } else {
+                familySettings = JSON.parse(JSON.stringify(DEFAULT_FAMILY));
+            }
+
+            const savedImages = localStorage.getItem('uploadedImages');
+            if (savedImages) {
+                uploadedImages = JSON.parse(savedImages);
+            }
+        }
+
+        // 渲染家人網格
+        function renderFamilyGrid() {
+            const grid = document.getElementById('familyGrid');
+            grid.innerHTML = '';
+
+            familySettings.forEach((member) => {
+                const item = document.createElement('div');
+                item.className = 'character-item' + (member.enabled ? ' selected' : ' disabled');
+                item.innerHTML = `
+                    <span class="emoji">${member.customImage ? '<img src="' + member.customImage + '" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">' : member.emoji}</span>
+                    <span class="name">${member.name}</span>
+                    <span class="status">${member.enabled ? '✓ 已啟用' : '✗ 已停用'}</span>
+                    <div class="edit-controls">
+                        <button class="edit-btn rename" onclick="event.stopPropagation(); openRenameModal('${member.id}')">改名</button>
+                        <button class="edit-btn ${member.enabled ? 'delete' : ''}" onclick="event.stopPropagation(); toggleMember('${member.id}')">${member.enabled ? '停用' : '啟用'}</button>
+                    </div>
+                `;
+                item.onclick = () => toggleMember(member.id);
+                grid.appendChild(item);
+            });
+        }
+
+        // 切換成員啟用狀態
+        function toggleMember(id) {
+            const member = familySettings.find(m => m.id === id);
+            if (member) {
+                member.enabled = !member.enabled;
+                renderFamilyGrid();
+                showToast(member.enabled ? `已啟用「${member.name}」` : `已停用「${member.name}」`);
+            }
+        }
+
+        // 打開重命名 Modal
+        function openRenameModal(id) {
+            currentEditingId = id;
+            const member = familySettings.find(m => m.id === id);
+            document.getElementById('renameInput').value = member.name;
+            document.getElementById('renameModal').classList.add('show');
+        }
+
+        // 關閉 Modal
+        function closeModal() {
+            document.getElementById('renameModal').classList.remove('show');
+            currentEditingId = null;
+        }
+
+        // 確認重命名
+        function confirmRename() {
+            const newName = document.getElementById('renameInput').value.trim();
+            if (newName && currentEditingId) {
+                const member = familySettings.find(m => m.id === currentEditingId);
+                member.name = newName;
+                renderFamilyGrid();
+                showToast(`已改名為「${newName}」`);
+            }
+            closeModal();
+        }
+
+        // 設定上傳事件
+        function setupUploadEvents() {
+            const uploadArea = document.getElementById('uploadArea');
+            const imageInput = document.getElementById('imageInput');
+
+            // 拖曳事件
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            // 文件選擇
+            imageInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+        }
+
+        // 處理上傳的文件
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imageData = e.target.result;
+                    // 打開分配 Modal
+                    currentAssigningImage = imageData;
+                    openAssignModal();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 打開分配 Modal
+        function openAssignModal() {
+            const grid = document.getElementById('assignGrid');
+            grid.innerHTML = '';
+
+            familySettings.forEach((member) => {
+                const item = document.createElement('div');
+                item.className = 'character-item';
+                item.innerHTML = `
+                    <span class="emoji">${member.emoji}</span>
+                    <span class="name">${member.name}</span>
+                `;
+                item.onclick = () => assignImageToMember(member.id);
+                grid.appendChild(item);
+            });
+
+            document.getElementById('assignModal').classList.add('show');
+        }
+
+        // 關閉分配 Modal
+        function closeAssignModal() {
+            document.getElementById('assignModal').classList.remove('show');
+            currentAssigningImage = null;
+        }
+
+        // 將圖片分配給成員
+        function assignImageToMember(id) {
+            const member = familySettings.find(m => m.id === id);
+            if (member && currentAssigningImage) {
+                member.customImage = currentAssigningImage;
+
+                // 儲存到已上傳圖片列表
+                uploadedImages.push({
+                    id: Date.now(),
+                    image: currentAssigningImage,
+                    assignedTo: id,
+                    memberName: member.name
+                });
+
+                renderFamilyGrid();
+                renderUploadedImages();
+                showToast(`已設定「${member.name}」的圖片`, 'success');
+            }
+            closeAssignModal();
+        }
+
+        // 渲染已上傳圖片
+        function renderUploadedImages() {
+            const container = document.getElementById('uploadedImages');
+            container.innerHTML = '';
+
+            uploadedImages.forEach((img) => {
+                const item = document.createElement('div');
+                item.className = 'uploaded-image';
+                item.innerHTML = `
+                    <img src="${img.image}" alt="${img.memberName}">
+                    <button class="delete-btn" onclick="removeUploadedImage(${img.id})">✕</button>
+                    <div class="label">${img.memberName}</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // 移除已上傳圖片
+        function removeUploadedImage(id) {
+            const img = uploadedImages.find(i => i.id === id);
+            if (img) {
+                // 移除成員的自訂圖片
+                const member = familySettings.find(m => m.id === img.assignedTo);
+                if (member) {
+                    member.customImage = null;
+                }
+            }
+
+            uploadedImages = uploadedImages.filter(i => i.id !== id);
+            renderFamilyGrid();
+            renderUploadedImages();
+            showToast('已移除圖片');
+        }
+
+        // 儲存設定
+        function saveSettings() {
+            localStorage.setItem('familySettings', JSON.stringify(familySettings));
+            localStorage.setItem('uploadedImages', JSON.stringify(uploadedImages));
+            showToast('設定已儲存！', 'success');
+        }
+
+        // 重置學習進度
+        function resetProgress() {
+            if (confirm('確定要重置所有學習進度嗎？這個動作無法復原！')) {
+                localStorage.removeItem('masteredZhuyin');
+                localStorage.removeItem('masteredWords_level2');
+                showToast('學習進度已重置', 'success');
+            }
+        }
+
+        // 還原預設值
+        function resetAll() {
+            if (confirm('確定要還原所有設定為預設值嗎？這個動作無法復原！')) {
+                familySettings = JSON.parse(JSON.stringify(DEFAULT_FAMILY));
+                uploadedImages = [];
+                localStorage.removeItem('familySettings');
+                localStorage.removeItem('uploadedImages');
+                renderFamilyGrid();
+                renderUploadedImages();
+                showToast('已還原預設值', 'success');
+            }
+        }
+
+        // 顯示通知
+        function showToast(message, type = '') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show' + (type ? ' ' + type : '');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 啟動
+        init();
+    </script>
+</body>
+</html>
