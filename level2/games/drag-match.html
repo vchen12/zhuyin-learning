@@ -6,67 +6,83 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#11998e">
     <link rel="manifest" href="../../manifest.json">
-    <title>🎯 圖文配對</title>
+    <title>圖文配對</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            padding: 20px;
             touch-action: none;
         }
 
         .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
-            border-radius: 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
         }
         .score-display {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #11998e;
             font-weight: bold;
         }
 
-        .container { max-width: 800px; margin: 0 auto; }
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 15px;
+            gap: 10px;
+            overflow: hidden;
+            min-height: 0;
+        }
 
         .round-info {
+            flex-shrink: 0;
             text-align: center;
             color: white;
-            font-size: 1.3rem;
-            margin-bottom: 15px;
+            font-size: 1rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
-        .game-area {
+        .match-container {
+            flex: 1;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            gap: 15px;
             background: rgba(255,255,255,0.1);
-            padding: 25px;
-            border-radius: 25px;
+            padding: 12px;
+            border-radius: 20px;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .zone-title {
             text-align: center;
             color: white;
-            font-size: 1.2rem;
-            margin-bottom: 15px;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
             font-weight: bold;
         }
 
@@ -74,23 +90,30 @@
         .images-zone {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 8px;
+            min-height: 0;
+            overflow: hidden;
         }
         .drag-item {
             background: white;
-            border-radius: 20px;
-            padding: 20px;
+            border-radius: 15px;
+            padding: 10px;
             text-align: center;
             cursor: grab;
             transition: all 0.2s;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             user-select: none;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
         }
         .drag-item:active { cursor: grabbing; }
         .drag-item.dragging {
             opacity: 0.6;
             transform: scale(1.05);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
         }
         .drag-item.matched {
             background: #4caf50;
@@ -98,27 +121,30 @@
             opacity: 0.7;
         }
         .drag-item .emoji {
-            font-size: 3rem;
+            font-size: clamp(1.8rem, 8vmin, 2.5rem);
         }
 
         /* 詞彙區域 */
         .words-zone {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 8px;
+            min-height: 0;
+            overflow: hidden;
         }
         .drop-target {
             background: rgba(255,255,255,0.3);
-            border: 4px dashed rgba(255,255,255,0.6);
-            border-radius: 20px;
-            padding: 20px;
+            border: 3px dashed rgba(255,255,255,0.6);
+            border-radius: 15px;
+            padding: 8px;
             text-align: center;
-            min-height: 100px;
+            flex: 1;
             transition: all 0.2s;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            min-height: 0;
         }
         .drop-target.over {
             background: rgba(255,255,255,0.5);
@@ -131,26 +157,26 @@
             border-color: #4caf50;
         }
         .drop-target .word {
-            font-size: 1.8rem;
+            font-size: clamp(1.2rem, 5vmin, 1.6rem);
             color: white;
             font-weight: bold;
         }
         .drop-target .zhuyin {
-            font-size: 1rem;
+            font-size: clamp(0.7rem, 2.5vmin, 0.9rem);
             color: rgba(255,255,255,0.9);
-            margin-top: 5px;
+            margin-top: 3px;
         }
         .drop-target .matched-emoji {
-            font-size: 2.5rem;
-            margin-top: 10px;
+            font-size: clamp(1.5rem, 6vmin, 2rem);
+            margin-top: 5px;
         }
 
         .result-message {
+            flex-shrink: 0;
             text-align: center;
-            font-size: 1.8rem;
+            font-size: 1.2rem;
             color: white;
-            margin-top: 25px;
-            min-height: 50px;
+            min-height: 30px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
@@ -184,32 +210,53 @@
         .complete-overlay.show { display: flex; }
         .complete-content {
             background: white;
-            padding: 50px;
-            border-radius: 30px;
+            padding: 40px;
+            border-radius: 25px;
             text-align: center;
-            max-width: 400px;
+            max-width: 350px;
+            margin: 20px;
         }
-        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
-        .complete-title { font-size: 2rem; color: #11998e; margin-bottom: 15px; }
-        .complete-score { font-size: 1.5rem; color: #666; margin-bottom: 25px; }
+        .complete-icon { font-size: 4rem; margin-bottom: 15px; }
+        .complete-title { font-size: 1.8rem; color: #11998e; margin-bottom: 12px; }
+        .complete-score { font-size: 1.3rem; color: #666; margin-bottom: 20px; }
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 1.3rem;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
             color: white;
             cursor: pointer;
             margin: 5px;
         }
 
-        @media (max-width: 600px) {
+        /* 響應式調整 */
+        @media (max-width: 400px) {
+            .drag-item .emoji { font-size: 1.8rem; }
+            .drop-target .word { font-size: 1.1rem; }
+        }
+
+        /* 橫向模式 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .nav-bar { padding: 6px 12px; }
             .game-area {
-                grid-template-columns: 1fr;
-                gap: 20px;
+                padding: 6px 10px;
+                gap: 6px;
             }
-            .drag-item .emoji { font-size: 2.5rem; }
-            .drop-target .word { font-size: 1.5rem; }
+            .round-info { font-size: 0.85rem; }
+            .match-container {
+                padding: 8px;
+                gap: 10px;
+            }
+            .zone-title { font-size: 0.8rem; margin-bottom: 5px; }
+            .images-zone, .words-zone { gap: 5px; }
+            .drag-item { padding: 6px; border-radius: 10px; }
+            .drag-item .emoji { font-size: 1.5rem; }
+            .drop-target { padding: 5px; border-radius: 10px; }
+            .drop-target .word { font-size: 1rem; }
+            .drop-target .zhuyin { font-size: 0.65rem; }
+            .drop-target .matched-emoji { font-size: 1.2rem; margin-top: 3px; }
+            .result-message { font-size: 1rem; }
         }
     </style>
 </head>
@@ -219,16 +266,16 @@
         <div class="score-display">得分：<span id="score">0</span></div>
     </nav>
 
-    <div class="container">
+    <div class="game-area">
         <div class="round-info">第 <span id="currentRound">1</span> / <span id="totalRounds">3</span> 輪 - 配對完成：<span id="matchedCount">0</span>/4</div>
 
-        <div class="game-area">
+        <div class="match-container">
             <div>
-                <div class="zone-title">📷 圖片</div>
+                <div class="zone-title">圖片</div>
                 <div class="images-zone" id="imagesZone"></div>
             </div>
             <div>
-                <div class="zone-title">📝 詞彙</div>
+                <div class="zone-title">詞彙</div>
                 <div class="words-zone" id="wordsZone"></div>
             </div>
         </div>

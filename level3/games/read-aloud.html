@@ -9,68 +9,93 @@
     <title>📢 朗讀練習</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            padding: 20px;
         }
 
         .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
+            padding: 10px 15px;
+            margin: 10px;
             border-radius: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
         }
         .passage-info {
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: #f5576c;
             font-weight: bold;
         }
 
-        .container { max-width: 700px; margin: 0 auto; }
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 15px;
+            gap: 8px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: hidden;
+        }
 
         /* 文章區 */
         .passage-section {
+            flex: 1;
+            min-height: 0;
             background: white;
-            border-radius: 25px;
-            padding: 35px;
-            margin-bottom: 20px;
+            border-radius: 20px;
+            padding: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow-y: auto;
         }
         .passage-title {
-            font-size: 1.8rem;
+            font-size: 1.3rem;
             color: #f5576c;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
         }
         .passage-image {
-            font-size: 4rem;
+            font-size: 2.5rem;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
         }
         .passage-text {
-            font-size: 1.6rem;
-            line-height: 2.2;
+            font-size: 1.3rem;
+            line-height: 2;
             color: #333;
         }
         .passage-text .sentence {
             display: inline;
-            padding: 5px 0;
+            padding: 3px 0;
             transition: all 0.3s;
             border-radius: 5px;
         }
@@ -85,37 +110,37 @@
 
         /* 當前句子顯示 */
         .current-sentence {
+            flex-shrink: 0;
             background: #fff3e0;
-            border-radius: 15px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 12px;
             text-align: center;
-            margin-bottom: 20px;
         }
         .current-sentence .text {
-            font-size: 1.8rem;
+            font-size: 1.4rem;
             color: #ff9800;
             font-weight: bold;
         }
         .current-sentence .hint {
-            font-size: 1rem;
+            font-size: 0.85rem;
             color: #999;
-            margin-top: 10px;
+            margin-top: 5px;
         }
 
         /* 按鈕區 */
         .buttons-section {
+            flex-shrink: 0;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
         }
         .action-btn {
             background: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            font-size: 1.1rem;
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-size: 1rem;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             transition: transform 0.2s;
@@ -135,25 +160,54 @@
         }
 
         .result-message {
+            flex-shrink: 0;
             text-align: center;
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             color: white;
-            min-height: 45px;
+            min-height: 28px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         .recognized-text {
+            flex-shrink: 0;
             text-align: center;
             background: rgba(255,255,255,0.2);
-            padding: 15px 25px;
-            border-radius: 15px;
-            margin-top: 15px;
-            font-size: 1.2rem;
+            padding: 8px 15px;
+            border-radius: 12px;
+            font-size: 0.95rem;
             color: white;
             display: none;
         }
         .recognized-text.show { display: block; }
+
+        /* Responsive adjustments */
+        @media (max-height: 600px) {
+            .nav-bar { padding: 8px 12px; margin: 5px; }
+            .game-area { padding: 5px 10px; gap: 6px; }
+            .passage-section { padding: 10px; }
+            .passage-title { font-size: 1.1rem; margin-bottom: 5px; }
+            .passage-image { font-size: 2rem; margin-bottom: 5px; }
+            .passage-text { font-size: 1.1rem; line-height: 1.8; }
+            .current-sentence { padding: 8px; }
+            .current-sentence .text { font-size: 1.2rem; }
+            .action-btn { padding: 10px 14px; font-size: 0.9rem; }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .nav-bar { padding: 5px 10px; margin: 3px; }
+            .game-area { padding: 5px; gap: 5px; }
+            .container { flex-direction: row; flex-wrap: wrap; max-width: none; gap: 6px; }
+            .passage-section { flex: 1; min-width: 250px; padding: 10px; }
+            .passage-title { font-size: 1rem; }
+            .passage-image { font-size: 1.8rem; display: inline; margin-right: 10px; margin-bottom: 0; }
+            .passage-text { font-size: 1rem; line-height: 1.6; }
+            .current-sentence { flex: 0 0 auto; padding: 8px 15px; }
+            .current-sentence .text { font-size: 1.1rem; }
+            .buttons-section { flex: 0 0 auto; flex-direction: column; gap: 5px; }
+            .action-btn { padding: 8px 12px; font-size: 0.85rem; }
+            .result-message { width: 100%; font-size: 0.95rem; }
+        }
 
         .fireworks {
             position: fixed;
@@ -204,8 +258,8 @@
         }
 
         @media (max-width: 500px) {
-            .passage-text { font-size: 1.3rem; line-height: 2; }
-            .current-sentence .text { font-size: 1.5rem; }
+            .passage-text { font-size: 1.2rem; line-height: 1.9; }
+            .current-sentence .text { font-size: 1.3rem; }
         }
     </style>
 </head>
@@ -215,26 +269,28 @@
         <div class="passage-info">短文 <span id="passageNum">1</span>/3</div>
     </nav>
 
-    <div class="container">
-        <div class="passage-section">
-            <div class="passage-title" id="passageTitle">我的家</div>
-            <div class="passage-image" id="passageImage">🏠👨‍👩‍👧</div>
-            <div class="passage-text" id="passageText"></div>
-        </div>
+    <div class="game-area">
+        <div class="container">
+            <div class="passage-section">
+                <div class="passage-title" id="passageTitle">我的家</div>
+                <div class="passage-image" id="passageImage">🏠👨‍👩‍👧</div>
+                <div class="passage-text" id="passageText"></div>
+            </div>
 
-        <div class="current-sentence">
-            <div class="text" id="currentSentence">我有一個家。</div>
-            <div class="hint">請朗讀這句話</div>
-        </div>
+            <div class="current-sentence">
+                <div class="text" id="currentSentence">我有一個家。</div>
+                <div class="hint">請朗讀這句話</div>
+            </div>
 
-        <div class="buttons-section">
-            <button class="action-btn listen" onclick="playSentence()">🔊 聽示範</button>
-            <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來讀</button>
-            <button class="action-btn next" onclick="skipSentence()">⏭️ 跳過</button>
-        </div>
+            <div class="buttons-section">
+                <button class="action-btn listen" onclick="playSentence()">🔊 聽示範</button>
+                <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來讀</button>
+                <button class="action-btn next" onclick="skipSentence()">⏭️ 跳過</button>
+            </div>
 
-        <div class="recognized-text" id="recognizedText">你說：</div>
-        <div class="result-message" id="resultMessage"></div>
+            <div class="recognized-text" id="recognizedText">你說：</div>
+            <div class="result-message" id="resultMessage"></div>
+        </div>
     </div>
 
     <div class="fireworks" id="fireworks"></div>

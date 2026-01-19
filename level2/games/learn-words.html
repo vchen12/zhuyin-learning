@@ -6,70 +6,81 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#11998e">
     <link rel="manifest" href="../../manifest.json">
-    <title>📚 看圖學詞</title>
+    <title>看圖學詞</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            padding: 20px;
         }
 
         .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
-            border-radius: 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
         }
         .progress-info {
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: #11998e;
             font-weight: bold;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 15px;
+            gap: 8px;
+            overflow: hidden;
+            min-height: 0;
         }
 
         /* 分類選擇 */
         .category-selector {
+            flex-shrink: 0;
             background: white;
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .category-selector h3 {
             color: #11998e;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             text-align: center;
+            font-size: 0.9rem;
         }
         .category-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            gap: 6px;
         }
         .category-btn {
             background: #f5f5f5;
-            border: 3px solid transparent;
-            border-radius: 15px;
-            padding: 15px 10px;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            padding: 8px 5px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
@@ -82,72 +93,79 @@
             background: #e8f5e9;
         }
         .category-btn .icon {
-            font-size: 2rem;
+            font-size: 1.3rem;
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
         }
         .category-btn .name {
-            font-size: 0.9rem;
+            font-size: 0.7rem;
             color: #333;
         }
 
         /* 詞彙卡片 */
         .word-card {
+            flex: 1;
             background: white;
-            border-radius: 30px;
-            padding: 40px;
+            border-radius: 20px;
+            padding: 15px;
             text-align: center;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
+            overflow: hidden;
         }
         .word-emoji {
-            font-size: 8rem;
-            margin-bottom: 20px;
+            font-size: clamp(3rem, 15vmin, 6rem);
             animation: bounce 2s ease-in-out infinite;
         }
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-8px); }
         }
         .word-text {
-            font-size: 4rem;
+            font-size: clamp(2rem, 10vmin, 3.5rem);
             color: #333;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-top: 8px;
         }
         .word-zhuyin {
-            font-size: 2.2rem;
+            font-size: clamp(1.2rem, 5vmin, 1.8rem);
             color: #11998e;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
+            margin-top: 5px;
         }
 
         /* 狀態訊息 */
         .status-message {
+            flex-shrink: 0;
             text-align: center;
-            font-size: 1.5rem;
+            font-size: 1rem;
             color: white;
-            min-height: 40px;
-            margin: 15px 0;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            min-height: 24px;
         }
 
         /* 按鈕區 */
         .buttons {
+            flex-shrink: 0;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 8px;
             flex-wrap: wrap;
         }
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 18px 35px;
-            border-radius: 30px;
-            font-size: 1.2rem;
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-size: 0.9rem;
             color: white;
             cursor: pointer;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             transition: transform 0.2s;
             font-weight: bold;
         }
@@ -166,22 +184,24 @@
 
         /* 詞彙列表 */
         .word-list {
+            flex-shrink: 0;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 10px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+            gap: 6px;
             background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 15px;
+            padding: 8px;
+            border-radius: 12px;
+            max-height: 100px;
+            overflow-y: auto;
         }
         .word-item {
             background: white;
-            border-radius: 12px;
-            padding: 10px;
+            border-radius: 10px;
+            padding: 6px 4px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
         .word-item:hover {
             transform: scale(1.05);
@@ -191,16 +211,16 @@
             border: 2px solid #4caf50;
         }
         .word-item.current {
-            border: 3px solid #11998e;
-            box-shadow: 0 0 15px rgba(17, 153, 142, 0.5);
+            border: 2px solid #11998e;
+            box-shadow: 0 0 10px rgba(17, 153, 142, 0.5);
         }
         .word-item-emoji {
-            font-size: 1.8rem;
+            font-size: 1.3rem;
         }
         .word-item-text {
-            font-size: 0.8rem;
+            font-size: 0.65rem;
             color: #333;
-            margin-top: 3px;
+            margin-top: 2px;
         }
 
         /* 煙火 */
@@ -222,11 +242,51 @@
             100% { transform: scale(2); opacity: 0; }
         }
 
-        @media (max-width: 600px) {
-            .word-emoji { font-size: 5rem; }
-            .word-text { font-size: 3rem; }
-            .word-zhuyin { font-size: 1.8rem; }
-            .word-card { padding: 25px; }
+        /* 響應式調整 */
+        @media (max-width: 500px) {
+            .word-emoji { font-size: clamp(2.5rem, 12vmin, 4rem); }
+            .word-text { font-size: clamp(1.5rem, 8vmin, 2.5rem); }
+            .word-zhuyin { font-size: clamp(1rem, 4vmin, 1.4rem); }
+            .action-btn { padding: 8px 14px; font-size: 0.8rem; }
+            .word-list { max-height: 80px; }
+        }
+
+        /* 橫向模式 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .nav-bar { padding: 6px 12px; }
+            .game-area {
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 8px;
+                gap: 8px;
+            }
+            .category-selector {
+                width: 100%;
+                padding: 6px;
+            }
+            .category-selector h3 { display: none; }
+            .category-grid { gap: 4px; }
+            .category-btn { padding: 4px 3px; }
+            .category-btn .icon { font-size: 1rem; }
+            .word-card {
+                flex: 1;
+                min-width: 200px;
+                padding: 10px;
+            }
+            .word-emoji { font-size: 3rem; }
+            .word-text { font-size: 1.8rem; }
+            .word-zhuyin { font-size: 1rem; }
+            .status-message { width: 100%; font-size: 0.85rem; }
+            .buttons { width: 100%; gap: 6px; }
+            .action-btn { padding: 6px 12px; font-size: 0.75rem; }
+            .word-list {
+                width: 100%;
+                max-height: 60px;
+                grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+            }
+            .word-item { padding: 4px 2px; }
+            .word-item-emoji { font-size: 1rem; }
+            .word-item-text { font-size: 0.55rem; }
         }
     </style>
 </head>
@@ -236,7 +296,7 @@
         <div class="progress-info">已學會：<span id="masteredCount">0</span> 個詞</div>
     </nav>
 
-    <div class="container">
+    <div class="game-area">
         <!-- 分類選擇 -->
         <div class="category-selector">
             <h3>選擇學習分類</h3>

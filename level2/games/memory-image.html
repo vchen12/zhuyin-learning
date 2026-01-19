@@ -6,77 +6,92 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#11998e">
     <link rel="manifest" href="../../manifest.json">
-    <title>🃏 記憶翻牌</title>
+    <title>記憶翻牌</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            padding: 20px;
         }
 
         .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
-            border-radius: 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
         }
         .stats {
             display: flex;
-            gap: 20px;
+            gap: 15px;
         }
         .stat {
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: #11998e;
             font-weight: bold;
         }
 
-        .container { max-width: 600px; margin: 0 auto; }
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 15px;
+            gap: 10px;
+            overflow: hidden;
+            min-height: 0;
+        }
 
         .game-info {
+            flex-shrink: 0;
             text-align: center;
             color: white;
-            margin-bottom: 20px;
         }
         .game-info h2 {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .game-info .hint {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             opacity: 0.9;
         }
 
         /* 卡片網格 */
         .cards-grid {
+            flex: 1;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
+            gap: 8px;
             perspective: 1000px;
+            min-height: 0;
         }
 
         .card {
-            aspect-ratio: 1;
             cursor: pointer;
             position: relative;
             transform-style: preserve-3d;
             transition: transform 0.5s;
+            min-height: 0;
         }
         .card.flipped {
             transform: rotateY(180deg);
@@ -90,12 +105,12 @@
             width: 100%;
             height: 100%;
             backface-visibility: hidden;
-            border-radius: 15px;
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .card-back {
@@ -103,7 +118,7 @@
         }
         .card-back::before {
             content: '?';
-            font-size: 3rem;
+            font-size: clamp(1.5rem, 6vmin, 2.5rem);
             color: white;
             font-weight: bold;
         }
@@ -115,32 +130,32 @@
 
         /* 圖片卡片 */
         .card-front.image-card .emoji {
-            font-size: 2.8rem;
+            font-size: clamp(1.5rem, 6vmin, 2.2rem);
         }
 
         /* 文字卡片 */
         .card-front.text-card .word {
-            font-size: 1.5rem;
+            font-size: clamp(0.9rem, 3.5vmin, 1.3rem);
             color: #333;
             font-weight: bold;
         }
         .card-front.text-card .zhuyin {
-            font-size: 0.9rem;
+            font-size: clamp(0.6rem, 2.5vmin, 0.8rem);
             color: #11998e;
-            margin-top: 5px;
+            margin-top: 3px;
         }
 
         .card.matched .card-front {
             background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            border: 3px solid #4caf50;
+            border: 2px solid #4caf50;
         }
 
         .result-message {
+            flex-shrink: 0;
             text-align: center;
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             color: white;
-            margin-top: 20px;
-            min-height: 40px;
+            min-height: 28px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
@@ -174,30 +189,54 @@
         .complete-overlay.show { display: flex; }
         .complete-content {
             background: white;
-            padding: 50px;
-            border-radius: 30px;
+            padding: 40px;
+            border-radius: 25px;
             text-align: center;
-            max-width: 400px;
+            max-width: 350px;
+            margin: 20px;
         }
-        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
-        .complete-title { font-size: 2rem; color: #11998e; margin-bottom: 15px; }
-        .complete-stats { font-size: 1.2rem; color: #666; margin-bottom: 25px; line-height: 1.8; }
+        .complete-icon { font-size: 4rem; margin-bottom: 15px; }
+        .complete-title { font-size: 1.8rem; color: #11998e; margin-bottom: 12px; }
+        .complete-stats { font-size: 1.1rem; color: #666; margin-bottom: 20px; line-height: 1.6; }
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 1.3rem;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
             color: white;
             cursor: pointer;
             margin: 5px;
         }
 
-        @media (max-width: 500px) {
-            .cards-grid { gap: 8px; }
-            .card-front.image-card .emoji { font-size: 2rem; }
-            .card-front.text-card .word { font-size: 1.2rem; }
-            .card-front.text-card .zhuyin { font-size: 0.8rem; }
+        /* 響應式調整 */
+        @media (max-width: 400px) {
+            .cards-grid { gap: 6px; }
+            .card-front.image-card .emoji { font-size: 1.5rem; }
+            .card-front.text-card .word { font-size: 0.9rem; }
+            .card-front.text-card .zhuyin { font-size: 0.6rem; }
+        }
+
+        /* 橫向模式 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .nav-bar { padding: 6px 12px; }
+            .game-area {
+                padding: 6px 10px;
+                gap: 6px;
+            }
+            .game-info h2 { font-size: 1rem; margin-bottom: 3px; }
+            .game-info .hint { font-size: 0.8rem; }
+            .cards-grid {
+                grid-template-columns: repeat(6, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                gap: 6px;
+            }
+            .card-face { border-radius: 8px; }
+            .card-back::before { font-size: 1.3rem; }
+            .card-front.image-card .emoji { font-size: 1.5rem; }
+            .card-front.text-card .word { font-size: 0.85rem; }
+            .card-front.text-card .zhuyin { font-size: 0.55rem; }
+            .result-message { font-size: 0.95rem; }
         }
     </style>
 </head>
@@ -210,9 +249,9 @@
         </div>
     </nav>
 
-    <div class="container">
+    <div class="game-area">
         <div class="game-info">
-            <h2>🃏 圖片與詞彙配對</h2>
+            <h2>圖片與詞彙配對</h2>
             <div class="hint">翻開卡片，找出相同意思的圖片和文字！</div>
         </div>
 
