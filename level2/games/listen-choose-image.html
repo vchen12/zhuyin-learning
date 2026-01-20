@@ -6,54 +6,71 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#11998e">
     <link rel="manifest" href="../../manifest.json">
-    <title>👂 聽音選圖</title>
+    <title>聽音選圖</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            padding: 20px;
         }
 
         .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
-            border-radius: 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
         }
         .score-display {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #11998e;
             font-weight: bold;
         }
 
-        .container { max-width: 600px; margin: 0 auto; }
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 15px;
+            gap: 10px;
+            overflow: hidden;
+            min-height: 0;
+        }
 
         .progress-section {
+            flex-shrink: 0;
+            width: 100%;
+            max-width: 500px;
             background: rgba(255,255,255,0.2);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            padding: 10px 15px;
         }
         .progress-bar {
             background: rgba(255,255,255,0.3);
-            height: 12px;
-            border-radius: 6px;
+            height: 10px;
+            border-radius: 5px;
             overflow: hidden;
         }
         .progress-fill {
@@ -64,26 +81,27 @@
         .progress-text {
             color: white;
             text-align: center;
-            margin-top: 8px;
+            margin-top: 6px;
+            font-size: 0.9rem;
         }
 
         .play-section {
+            flex-shrink: 0;
             background: white;
-            border-radius: 25px;
-            padding: 30px;
+            border-radius: 20px;
+            padding: 15px 25px;
             text-align: center;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
         }
         .play-btn {
-            width: 120px;
-            height: 120px;
+            width: clamp(70px, 15vmin, 100px);
+            height: clamp(70px, 15vmin, 100px);
             border-radius: 50%;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            font-size: 3.5rem;
+            font-size: clamp(2rem, 6vmin, 3rem);
             cursor: pointer;
-            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+            box-shadow: 0 6px 15px rgba(79, 172, 254, 0.4);
             transition: transform 0.2s;
         }
         .play-btn:active { transform: scale(0.95); }
@@ -93,69 +111,85 @@
             50% { transform: scale(1.1); }
         }
         .hint-text {
-            font-size: 1.3rem;
+            font-size: 1rem;
             color: #11998e;
-            margin-top: 15px;
+            margin-top: 10px;
         }
 
         .choices-grid {
+            flex: 1;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+            min-height: 0;
         }
         .choice-btn {
             background: white;
-            border: 4px solid #e0e0e0;
-            border-radius: 20px;
-            padding: 20px;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 10px;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
+            overflow: hidden;
         }
         .choice-btn:hover {
             border-color: #11998e;
-            transform: translateY(-3px);
+            transform: translateY(-2px);
         }
         .choice-btn .emoji {
-            font-size: 4rem;
-            display: block;
-            margin-bottom: 10px;
+            font-size: clamp(2rem, 10vmin, 3.5rem);
         }
         .choice-btn .text {
-            font-size: 1.2rem;
+            font-size: clamp(0.9rem, 3vmin, 1.1rem);
             color: #333;
+            margin-top: 5px;
+        }
+        .choice-btn .zhuyin {
+            font-size: clamp(0.7rem, 2.5vmin, 0.85rem);
+            color: #11998e;
+            margin-top: 3px;
         }
         .choice-btn.correct {
             background: #4caf50;
             border-color: #4caf50;
             animation: correctPulse 0.5s;
         }
-        .choice-btn.correct .text { color: white; }
+        .choice-btn.correct .text,
+        .choice-btn.correct .zhuyin { color: white; }
         .choice-btn.wrong {
             background: #f44336;
             border-color: #f44336;
             animation: shake 0.5s;
         }
-        .choice-btn.wrong .text { color: white; }
+        .choice-btn.wrong .text,
+        .choice-btn.wrong .zhuyin { color: white; }
         .choice-btn:disabled { cursor: not-allowed; opacity: 0.7; }
 
         @keyframes correctPulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.03); }
         }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-8px); }
-            75% { transform: translateX(8px); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
         }
 
         .result-message {
+            flex-shrink: 0;
             text-align: center;
-            font-size: 1.8rem;
+            font-size: 1.2rem;
             color: white;
-            margin-top: 20px;
-            min-height: 50px;
+            min-height: 30px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
@@ -189,29 +223,65 @@
         .complete-overlay.show { display: flex; }
         .complete-content {
             background: white;
-            padding: 50px;
-            border-radius: 30px;
+            padding: 40px;
+            border-radius: 25px;
             text-align: center;
-            max-width: 400px;
+            max-width: 350px;
+            margin: 20px;
         }
-        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
-        .complete-title { font-size: 2rem; color: #11998e; margin-bottom: 15px; }
-        .complete-score { font-size: 1.5rem; color: #666; margin-bottom: 25px; }
+        .complete-icon { font-size: 4rem; margin-bottom: 15px; }
+        .complete-title { font-size: 1.8rem; color: #11998e; margin-bottom: 12px; }
+        .complete-score { font-size: 1.3rem; color: #666; margin-bottom: 20px; }
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 1.3rem;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
             color: white;
             cursor: pointer;
             margin: 5px;
         }
 
-        @media (max-width: 500px) {
-            .choice-btn .emoji { font-size: 3rem; }
-            .choice-btn .text { font-size: 1rem; }
-            .play-btn { width: 100px; height: 100px; font-size: 3rem; }
+        /* 響應式調整 */
+        @media (max-width: 400px) {
+            .choice-btn .emoji { font-size: 2rem; }
+            .choice-btn .text { font-size: 0.85rem; }
+            .play-btn { width: 70px; height: 70px; font-size: 2rem; }
+        }
+
+        /* 橫向模式 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .nav-bar { padding: 6px 12px; }
+            .game-area {
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 8px;
+                gap: 8px;
+            }
+            .progress-section {
+                width: 100%;
+                padding: 6px 12px;
+            }
+            .play-section {
+                flex-shrink: 0;
+                padding: 10px 20px;
+            }
+            .play-btn { width: 60px; height: 60px; font-size: 1.8rem; }
+            .hint-text { font-size: 0.85rem; margin-top: 6px; }
+            .choices-grid {
+                flex: 1;
+                max-width: none;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+            .choice-btn {
+                padding: 8px;
+            }
+            .choice-btn .emoji { font-size: 2rem; }
+            .choice-btn .text { font-size: 0.8rem; }
+            .choice-btn .zhuyin { font-size: 0.65rem; }
+            .result-message { width: 100%; font-size: 1rem; }
         }
     </style>
 </head>
@@ -221,7 +291,7 @@
         <div class="score-display">得分：<span id="score">0</span></div>
     </nav>
 
-    <div class="container">
+    <div class="game-area">
         <div class="progress-section">
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill" style="width: 0%"></div>
@@ -329,7 +399,7 @@
             choices.forEach((word, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn';
-                btn.innerHTML = `<span class="emoji">${word.emoji}</span><span class="text">${word.text}</span>`;
+                btn.innerHTML = `<span class="emoji">${word.emoji}</span><span class="text">${word.text}</span><span class="zhuyin">${word.zhuyin}</span>`;
                 btn.onclick = () => checkAnswer(index);
                 grid.appendChild(btn);
             });

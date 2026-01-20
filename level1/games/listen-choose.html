@@ -9,89 +9,106 @@
     <title>👂 聽音選字</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh; /* 動態視口高度，避免手機瀏覽器地址欄問題 */
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
 
+        /* 頂部導航列 - 固定高度 */
         .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
-            border-radius: 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
         }
+        .nav-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
         .score-display {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #667eea;
             font-weight: bold;
         }
-
-        .game-container {
-            max-width: 600px;
-            margin: 0 auto;
+        .progress-mini {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-
-        /* 進度條 */
-        .progress-section {
-            background: rgba(255,255,255,0.2);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        .progress-bar {
-            background: rgba(255,255,255,0.3);
-            height: 12px;
-            border-radius: 6px;
+        .progress-mini-bar {
+            width: 60px;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
             overflow: hidden;
         }
-        .progress-fill {
+        .progress-mini-fill {
             height: 100%;
             background: linear-gradient(90deg, #4caf50, #8bc34a);
             transition: width 0.3s;
         }
-        .progress-text {
-            color: white;
-            text-align: center;
-            margin-top: 8px;
-            font-size: 1rem;
+        .progress-mini-text {
+            font-size: 0.85rem;
+            color: #667eea;
+            font-weight: bold;
         }
 
-        /* 播放區 */
+        /* 主遊戲區 - 填滿剩餘空間 */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        /* 播放按鈕區 */
         .play-section {
             background: white;
             border-radius: 25px;
-            padding: 40px;
+            padding: 25px 40px;
             text-align: center;
-            margin-bottom: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
         }
         .play-btn {
-            width: 150px;
-            height: 150px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            font-size: 4rem;
+            font-size: 3rem;
             cursor: pointer;
-            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
             transition: transform 0.2s, box-shadow 0.2s;
-            margin-bottom: 20px;
         }
         .play-btn:hover {
             transform: scale(1.05);
@@ -107,29 +124,36 @@
             50% { transform: scale(1.1); }
         }
         .hint-text {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             color: #667eea;
+            font-weight: 500;
         }
 
-        /* 選項區 */
+        /* 選項區 - 2x2 網格 */
         .choices-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            gap: 12px;
+            width: 100%;
+            max-width: 400px;
         }
         .choice-btn {
             background: white;
             border: 4px solid #e0e0e0;
             border-radius: 20px;
-            padding: 30px;
-            font-size: 4rem;
+            padding: 20px;
+            font-size: 3.5rem;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .choice-btn:hover {
             border-color: #667eea;
-            transform: translateY(-3px);
+            transform: translateY(-2px);
         }
         .choice-btn:active {
             transform: scale(0.98);
@@ -153,23 +177,22 @@
 
         @keyframes correctPulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.05); }
         }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
         }
 
         /* 結果訊息 */
         .result-message {
             text-align: center;
-            font-size: 2rem;
+            font-size: 1.5rem;
             color: white;
-            margin-top: 20px;
-            min-height: 50px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            min-height: 40px;
         }
 
         /* 煙火 */
@@ -209,56 +232,85 @@
         }
         .complete-content {
             background: white;
-            padding: 50px;
+            padding: 40px;
             border-radius: 30px;
             text-align: center;
-            max-width: 400px;
+            max-width: 350px;
+            margin: 20px;
         }
         .complete-icon {
-            font-size: 5rem;
-            margin-bottom: 20px;
-        }
-        .complete-title {
-            font-size: 2rem;
-            color: #667eea;
+            font-size: 4rem;
             margin-bottom: 15px;
         }
+        .complete-title {
+            font-size: 1.8rem;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
         .complete-score {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             color: #666;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 1.3rem;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
             color: white;
             cursor: pointer;
             margin: 5px;
         }
 
-        @media (max-width: 500px) {
-            .choice-btn { font-size: 3rem; padding: 25px; }
-            .play-btn { width: 120px; height: 120px; font-size: 3rem; }
+        /* 響應式調整 */
+        @media (max-height: 600px) {
+            .play-section { padding: 15px 30px; }
+            .play-btn { width: 80px; height: 80px; font-size: 2.5rem; }
+            .hint-text { font-size: 1rem; }
+            .choice-btn { font-size: 2.5rem; padding: 15px; }
+            .result-message { font-size: 1.2rem; }
+        }
+
+        @media (max-width: 400px) {
+            .choices-grid { max-width: 300px; gap: 10px; }
+            .choice-btn { font-size: 2.8rem; }
+        }
+
+        /* 橫向模式優化 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .game-area {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 20px;
+            }
+            .play-section {
+                padding: 15px 25px;
+            }
+            .play-btn { width: 70px; height: 70px; font-size: 2rem; }
+            .choices-grid {
+                max-width: 280px;
+            }
+            .choice-btn { font-size: 2rem; padding: 10px; }
         }
     </style>
 </head>
 <body>
     <nav class="nav-bar">
         <a href="../index.html" class="back-btn">← 返回</a>
-        <div class="score-display">得分：<span id="score">0</span></div>
+        <div class="nav-info">
+            <div class="progress-mini">
+                <div class="progress-mini-bar">
+                    <div class="progress-mini-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <span class="progress-mini-text"><span id="currentRound">1</span>/<span id="totalRounds">10</span></span>
+            </div>
+            <div class="score-display">⭐ <span id="score">0</span></div>
+        </div>
     </nav>
 
-    <div class="game-container">
-        <div class="progress-section">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-            </div>
-            <div class="progress-text">第 <span id="currentRound">1</span> / <span id="totalRounds">10</span> 題</div>
-        </div>
-
+    <div class="game-area">
         <div class="play-section">
             <button class="play-btn" id="playBtn" onclick="playCurrentSound()">🔊</button>
             <div class="hint-text" id="hintText">點擊播放，聽聽看是哪個注音？</div>
@@ -452,14 +504,17 @@
         }
 
         // 語音合成
-        function speak(text) {
+        function speak(text, callback) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
                 utterance.rate = 0.9;
                 utterance.pitch = 1.1;
+                if (callback) utterance.onend = callback;
                 window.speechSynthesis.speak(utterance);
+            } else if (callback) {
+                callback();
             }
         }
 
@@ -482,8 +537,22 @@
             setTimeout(() => { container.innerHTML = ''; }, 2000);
         }
 
+        // 語音引導
+        let hasPlayedGuide = false;
+        function playGuide() {
+            if (hasPlayedGuide) return;
+            hasPlayedGuide = true;
+            speak('聽音選字！點擊播放按鈕聽發音，然後選出正確的注音符號。', () => {
+                setTimeout(playCurrentSound, 800);
+            });
+        }
+
         // 啟動遊戲
         initGame();
+
+        // 首次點擊時播放引導
+        document.addEventListener('touchstart', playGuide, { once: true });
+        document.addEventListener('click', playGuide, { once: true });
     </script>
 </body>
 </html>

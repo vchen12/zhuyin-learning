@@ -223,6 +223,17 @@
             </div>
             <span class="game-badge badge-easy">入門</span>
         </a>
+
+        <!-- 遊戲 1-5：聲調練習 -->
+        <a href="games/tone-practice.html" class="game-card">
+            <div class="game-icon">🎵</div>
+            <div class="game-name">聲調練習</div>
+            <div class="game-desc">
+                認識一二三四聲和輕聲<br>
+                學習聲調的發音規則
+            </div>
+            <span class="game-badge badge-medium">進階</span>
+        </a>
     </div>
 
     <div class="progress-section">
@@ -265,12 +276,19 @@
         function welcomeGuide() {
             if (hasPlayedWelcome) return;
             hasPlayedWelcome = true;
+
+            // 如果已經在首頁播放過歡迎語，只播放簡短提示
+            const welcomePlayed = sessionStorage.getItem('welcomePlayed');
             setTimeout(() => {
-                speak('歡迎來到第一關，注音符號基礎！這裡有四個遊戲幫助你認識注音。請選擇一個遊戲開始吧！', () => {
-                    setTimeout(() => {
-                        speak('建議從「聽音選字」開始，訓練你的耳朵！');
-                    }, 800);
-                });
+                if (welcomePlayed) {
+                    speak('第一關，注音符號基礎！請選擇一個遊戲。');
+                } else {
+                    speak('歡迎來到第一關，注音符號基礎！這裡有四個遊戲幫助你認識注音。請選擇一個遊戲開始吧！', () => {
+                        setTimeout(() => {
+                            speak('建議從「聽音選字」開始，訓練你的耳朵！');
+                        }, 800);
+                    });
+                }
             }, 500);
         }
 

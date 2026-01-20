@@ -281,12 +281,19 @@
         function welcomeGuide() {
             if (hasPlayedWelcome) return;
             hasPlayedWelcome = true;
+
+            // 如果已經在首頁播放過歡迎語，只播放簡短提示
+            const welcomePlayed = sessionStorage.getItem('welcomePlayed');
             setTimeout(() => {
-                speak('歡迎來到第三關，句子與閱讀！這是最高級的關卡，有十一個遊戲等著你挑戰。', () => {
-                    setTimeout(() => {
-                        speak('建議從「看圖說話」開始，練習說句子！如果想要刺激一點，可以試試下方的賽車衝刺或寶物獵人！');
-                    }, 800);
-                });
+                if (welcomePlayed) {
+                    speak('第三關，句子與閱讀！請選擇一個遊戲。');
+                } else {
+                    speak('歡迎來到第三關，句子與閱讀！這是最高級的關卡，有十一個遊戲等著你挑戰。', () => {
+                        setTimeout(() => {
+                            speak('建議從「看圖說話」開始，練習說句子！如果想要刺激一點，可以試試下方的賽車衝刺或寶物獵人！');
+                        }, 800);
+                    });
+                }
             }, 500);
         }
 

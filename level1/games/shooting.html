@@ -9,68 +9,82 @@
     <title>🎤 射擊挑戰</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-            height: 100%;
         }
 
-        .status-bar {
+        /* 導航列 */
+        .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             cursor: pointer;
             text-decoration: none;
         }
+        .nav-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
         .score-display {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             color: #667eea;
             font-weight: bold;
         }
         .progress-text {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #764ba2;
+            font-weight: 500;
         }
 
-        .game-container {
+        /* 遊戲區域 */
+        .game-area {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            height: calc(100vh - 80px);
-            padding: 20px;
+            align-items: center;
+            padding: 15px;
+            gap: 12px;
+            overflow: hidden;
         }
 
         /* 符號顯示 */
         .symbol-display {
             background: white;
-            border-radius: 30px;
-            padding: 50px 70px;
-            margin: 20px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            border-radius: 25px;
+            padding: 30px 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
         }
         .symbol {
-            font-size: 12rem;
+            font-size: 8rem;
             color: #667eea;
             font-weight: bold;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
             animation: pulse 2s ease-in-out infinite;
+            line-height: 1;
         }
         .symbol.correct {
             animation: explode 0.6s ease-out forwards;
@@ -95,15 +109,42 @@
             75% { transform: translateX(15px); }
         }
 
+        /* 麥克風指示 */
+        .mic-indicator {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+            font-size: 2.5rem;
+            animation: mic-pulse 2s ease-in-out infinite;
+        }
+        .mic-indicator.listening {
+            animation: mic-active 0.8s ease-in-out infinite;
+            box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7);
+        }
+        @keyframes mic-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+        @keyframes mic-active {
+            0% { box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7); }
+            70% { box-shadow: 0 0 0 25px rgba(240, 147, 251, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(240, 147, 251, 0); }
+        }
+
         /* 提示訊息 */
         .hint-message {
-            font-size: 2rem;
+            font-size: 1.5rem;
             color: white;
             font-weight: bold;
-            margin: 20px 0;
             text-align: center;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            min-height: 50px;
+            min-height: 40px;
         }
         .hint-message.listening {
             color: #ffd700;
@@ -117,12 +158,11 @@
         /* 嘗試次數 */
         .attempts {
             display: flex;
-            gap: 10px;
-            margin: 15px 0;
+            gap: 8px;
         }
         .attempt-dot {
-            width: 18px;
-            height: 18px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
             background: #4caf50;
             transition: all 0.3s;
@@ -131,23 +171,38 @@
             background: #ccc;
         }
 
+        /* 嘴型提示 */
+        .mouth-hint {
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 1rem;
+            color: #667eea;
+            display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 90%;
+        }
+        .mouth-hint.show {
+            display: block;
+        }
+
         /* 按鈕 */
         .buttons {
             display: flex;
-            gap: 15px;
-            margin-top: 20px;
+            gap: 12px;
             flex-wrap: wrap;
             justify-content: center;
         }
         .game-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 15px 30px;
-            border-radius: 30px;
-            font-size: 1.2rem;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
             color: white;
             cursor: pointer;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             transition: transform 0.2s;
             font-weight: bold;
         }
@@ -160,21 +215,6 @@
         .game-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-        }
-
-        /* 嘴型提示 */
-        .mouth-hint {
-            background: rgba(255,255,255,0.9);
-            padding: 15px 30px;
-            border-radius: 15px;
-            font-size: 1.2rem;
-            color: #667eea;
-            margin-top: 15px;
-            display: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        .mouth-hint.show {
-            display: block;
         }
 
         /* 煙火 */
@@ -209,47 +249,127 @@
             align-items: center;
             justify-content: center;
             z-index: 999;
+            padding: 20px;
         }
         .overlay.hidden {
             display: none;
         }
         .overlay-content {
             background: white;
-            padding: 50px;
-            border-radius: 30px;
+            padding: 40px;
+            border-radius: 25px;
             text-align: center;
-            max-width: 500px;
+            max-width: 450px;
+            width: 100%;
         }
         .overlay h1 {
             color: #667eea;
-            font-size: 2.5rem;
-            margin-bottom: 20px;
+            font-size: 2rem;
+            margin-bottom: 15px;
         }
         .overlay p {
             color: #666;
-            font-size: 1.3rem;
-            margin: 15px 0;
+            font-size: 1.1rem;
+            margin: 12px 0;
         }
         .overlay .warning {
             color: #f44336;
-            font-size: 1rem;
+            font-size: 0.95rem;
         }
         .start-btn {
             background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
             border: none;
-            padding: 20px 50px;
-            border-radius: 30px;
-            font-size: 1.5rem;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
-            margin-top: 25px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            margin-top: 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+        .end-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .end-buttons .start-btn {
+            margin-top: 0;
+            padding: 12px 25px;
+            font-size: 1.1rem;
         }
 
-        @media (max-width: 600px) {
-            .symbol { font-size: 8rem; }
-            .symbol-display { padding: 30px 50px; }
-            .hint-message { font-size: 1.5rem; }
+        /* 響應式 - 小螢幕 */
+        @media (max-width: 480px) {
+            .nav-bar { padding: 8px 12px; }
+            .back-btn { padding: 6px 12px; font-size: 0.9rem; }
+            .nav-info { gap: 10px; }
+            .score-display { font-size: 1rem; }
+            .progress-text { font-size: 0.9rem; }
+
+            .game-area { padding: 10px; gap: 10px; }
+            .symbol-display { padding: 20px 35px; border-radius: 20px; }
+            .symbol { font-size: 6rem; }
+
+            .mic-indicator { width: 60px; height: 60px; font-size: 2rem; }
+            .hint-message { font-size: 1.2rem; min-height: 35px; }
+            .attempts { gap: 6px; }
+            .attempt-dot { width: 12px; height: 12px; }
+
+            .buttons { gap: 8px; }
+            .game-btn { padding: 10px 18px; font-size: 1rem; }
+            .mouth-hint { padding: 8px 15px; font-size: 0.9rem; }
+
+            .overlay-content { padding: 30px 20px; }
+            .overlay h1 { font-size: 1.7rem; }
+            .overlay p { font-size: 1rem; }
+            .start-btn { padding: 12px 30px; font-size: 1.1rem; }
+        }
+
+        /* 響應式 - 橫向模式 */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .nav-bar { padding: 6px 12px; }
+            .back-btn { padding: 5px 10px; font-size: 0.85rem; }
+
+            .game-area {
+                flex-direction: row;
+                gap: 20px;
+                padding: 10px 20px;
+            }
+
+            .game-main {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .game-controls {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .symbol-display { padding: 15px 30px; }
+            .symbol { font-size: 5rem; }
+
+            .mic-indicator { width: 50px; height: 50px; font-size: 1.8rem; }
+            .hint-message { font-size: 1.1rem; min-height: 30px; }
+
+            .buttons { flex-direction: column; gap: 6px; }
+            .game-btn { padding: 8px 16px; font-size: 0.95rem; }
+            .mouth-hint { font-size: 0.85rem; padding: 6px 12px; }
+        }
+
+        /* 大螢幕優化 */
+        @media (min-width: 768px) and (min-height: 600px) {
+            .symbol-display { padding: 40px 60px; }
+            .symbol { font-size: 10rem; }
+            .mic-indicator { width: 100px; height: 100px; font-size: 3rem; }
+            .hint-message { font-size: 1.8rem; }
+            .game-btn { padding: 14px 28px; font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -270,23 +390,29 @@
             <h1>🎉 恭喜完成！</h1>
             <p id="finalScore">得分：0 分</p>
             <p id="finalProgress">完成：0 / 10</p>
-            <button class="start-btn" onclick="restartGame()">🔄 再玩一次</button>
-            <button class="start-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2); margin-left: 10px;">🏠 返回選單</button>
+            <div class="end-buttons">
+                <button class="start-btn" onclick="restartGame()">🔄 再玩一次</button>
+                <button class="start-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2);">🏠 返回選單</button>
+            </div>
         </div>
     </div>
 
     <!-- 遊戲畫面 -->
-    <div id="gameScreen" style="display: none;">
-        <div class="status-bar">
+    <div id="gameScreen" style="display: none; flex-direction: column; height: 100%;">
+        <div class="nav-bar">
             <a href="../index.html" class="back-btn">← 返回</a>
-            <div class="score-display">得分：<span id="score">0</span></div>
-            <div class="progress-text">第 <span id="current">1</span>/10</div>
+            <div class="nav-info">
+                <div class="score-display">得分：<span id="score">0</span></div>
+                <div class="progress-text"><span id="current">1</span>/10</div>
+            </div>
         </div>
 
-        <div class="game-container">
+        <div class="game-area">
             <div class="symbol-display">
                 <div class="symbol" id="targetSymbol">ㄅ</div>
             </div>
+
+            <div class="mic-indicator" id="micIndicator">🎤</div>
 
             <div class="hint-message" id="hintMessage">準備中...</div>
 
@@ -300,6 +426,7 @@
 
             <div class="buttons">
                 <button class="game-btn" onclick="replaySound()">🔊 再聽一次</button>
+                <button class="game-btn" id="manualBtn" onclick="manualConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
                 <button class="game-btn skip" id="skipBtn" onclick="skipSymbol()" style="display: none;">⏭️ 跳過</button>
             </div>
         </div>
@@ -369,11 +496,15 @@
             }
 
             document.getElementById('startOverlay').classList.add('hidden');
-            document.getElementById('gameScreen').style.display = 'block';
+            document.getElementById('gameScreen').style.display = 'flex';
 
             initGame();
             initRecognition();
-            nextSymbol();
+
+            // 播放語音引導
+            speak('射擊挑戰開始！聽發音後，請大聲唸出注音符號。', () => {
+                setTimeout(nextSymbol, 500);
+            });
         }
 
         // 初始化遊戲
@@ -383,6 +514,9 @@
             completed = 0;
             updateUI();
         }
+
+        // 語音辨識失敗標記
+        let recognitionFailed = false;
 
         // 初始化語音辨識
         function initRecognition() {
@@ -398,6 +532,7 @@
 
             recognition.onresult = (event) => {
                 isRecognizing = false;
+                document.getElementById('micIndicator').classList.remove('listening');
                 if (isProcessing) return; // 正在處理中，忽略
                 const transcript = event.results[0][0].transcript;
                 console.log('辨識結果:', transcript);
@@ -406,10 +541,22 @@
 
             recognition.onerror = (event) => {
                 isRecognizing = false;
+                document.getElementById('micIndicator').classList.remove('listening');
                 console.error('語音辨識錯誤:', event.error);
 
-                if (event.error === 'not-allowed') {
-                    alert('請允許麥克風權限！');
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    recognitionFailed = true;
+                    showHint('麥克風無法使用，請點「我會唸」按鈕 👆', false);
+                    document.getElementById('skipBtn').style.display = 'none';
+                    document.getElementById('manualBtn').style.display = 'inline-block';
+                    return;
+                }
+
+                if (event.error === 'audio-capture') {
+                    recognitionFailed = true;
+                    showHint('找不到麥克風，請點「我會唸」按鈕 👆', false);
+                    document.getElementById('skipBtn').style.display = 'none';
+                    document.getElementById('manualBtn').style.display = 'inline-block';
                     return;
                 }
 
@@ -420,7 +567,7 @@
 
                 // 延長重試間隔，給使用者更多準備時間
                 setTimeout(() => {
-                    if (!isRecognizing && !isProcessing && document.getElementById('gameScreen').style.display !== 'none') {
+                    if (!isRecognizing && !isProcessing && !recognitionFailed && document.getElementById('gameScreen').style.display !== 'none') {
                         showHint('慢慢來，準備好再唸 🎤', true);
                         startListening();
                     }
@@ -429,18 +576,33 @@
 
             recognition.onend = () => {
                 isRecognizing = false;
-                // 如果正在處理答題或遊戲已結束，不要重新開始監聽
-                if (isProcessing || document.getElementById('gameScreen').style.display === 'none') {
+                document.getElementById('micIndicator').classList.remove('listening');
+                // 如果正在處理答題或遊戲已結束，不要重新開始監聯
+                if (isProcessing || recognitionFailed || document.getElementById('gameScreen').style.display === 'none') {
                     return;
                 }
                 // 延長等待時間，讓失語症患者有更多時間準備
                 setTimeout(() => {
-                    if (!isRecognizing && !isProcessing && document.getElementById('gameScreen').style.display !== 'none') {
+                    if (!isRecognizing && !isProcessing && !recognitionFailed && document.getElementById('gameScreen').style.display !== 'none') {
                         showHint('準備好了嗎？請唸出來 🎤', true);
                         startListening();
                     }
                 }, 2500);
             };
+        }
+
+        // 手動確認（麥克風不可用時使用）
+        function manualConfirm() {
+            speak('你會唸' + currentSymbol + '嗎？', () => {
+                if (confirm('你會唸「' + currentSymbol + '」嗎？\n\n點「確定」表示會唸，點「取消」再練習一下')) {
+                    handleCorrect();
+                } else {
+                    showHint('沒關係，再聽一次！', false);
+                    setTimeout(() => {
+                        playSound(currentSymbol);
+                    }, 500);
+                }
+            });
         }
 
         // 下一個符號
@@ -502,10 +664,12 @@
             try {
                 isRecognizing = true;
                 document.getElementById('hintMessage').classList.add('listening');
+                document.getElementById('micIndicator').classList.add('listening');
                 recognition.start();
             } catch (error) {
                 console.error('啟動辨識失敗:', error);
                 isRecognizing = false;
+                document.getElementById('micIndicator').classList.remove('listening');
             }
         }
 
@@ -687,14 +851,19 @@
         }
 
         // 語音合成
-        function speak(text) {
+        function speak(text, callback) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
                 utterance.rate = 0.9;
                 utterance.pitch = 1.1;
+                if (callback) {
+                    utterance.onend = callback;
+                }
                 window.speechSynthesis.speak(utterance);
+            } else if (callback) {
+                callback();
             }
         }
 

@@ -9,66 +9,89 @@
     <title>📖 故事接龍</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            padding: 20px;
         }
 
         .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
+            padding: 10px 15px;
+            margin: 10px;
             border-radius: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
         }
         .story-progress {
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: #f5576c;
             font-weight: bold;
         }
 
-        .container { max-width: 700px; margin: 0 auto; }
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 15px;
+            gap: 8px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: hidden;
+        }
 
         /* 故事標題 */
         .story-title {
+            flex-shrink: 0;
             text-align: center;
             color: white;
-            font-size: 1.8rem;
-            margin-bottom: 20px;
+            font-size: 1.3rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         /* 故事場景列 */
         .story-scenes {
+            flex-shrink: 0;
             display: flex;
-            gap: 10px;
+            gap: 8px;
             overflow-x: auto;
-            padding: 15px;
+            padding: 10px;
             background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            margin-bottom: 20px;
+            border-radius: 15px;
         }
         .scene-card {
             flex-shrink: 0;
-            width: 100px;
+            width: 70px;
             background: white;
-            border-radius: 15px;
-            padding: 15px;
+            border-radius: 12px;
+            padding: 8px;
             text-align: center;
             opacity: 0.5;
             transition: all 0.3s;
@@ -76,56 +99,60 @@
         .scene-card.active {
             opacity: 1;
             transform: scale(1.1);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
         .scene-card.completed {
             opacity: 1;
             background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
         }
-        .scene-card .emoji { font-size: 2rem; }
+        .scene-card .emoji { font-size: 1.5rem; }
         .scene-card .num {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             color: #999;
-            margin-top: 5px;
+            margin-top: 3px;
         }
 
         /* 當前場景 */
         .current-scene {
+            flex: 1;
+            min-height: 0;
             background: white;
-            border-radius: 25px;
-            padding: 35px;
+            border-radius: 20px;
+            padding: 15px;
             text-align: center;
-            margin-bottom: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .scene-image {
-            font-size: 6rem;
-            margin-bottom: 15px;
+            font-size: 4rem;
+            margin-bottom: 8px;
         }
         .scene-sentence {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .scene-hint {
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             color: #666;
         }
 
         /* 按鈕區 */
         .buttons-section {
+            flex-shrink: 0;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 10px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
         }
         .action-btn {
             background: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            font-size: 1.1rem;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             transition: transform 0.2s;
@@ -145,25 +172,55 @@
         }
 
         .result-message {
+            flex-shrink: 0;
             text-align: center;
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             color: white;
-            min-height: 45px;
+            min-height: 28px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         .recognized-text {
+            flex-shrink: 0;
             text-align: center;
             background: rgba(255,255,255,0.2);
-            padding: 15px 25px;
-            border-radius: 15px;
-            margin-top: 15px;
-            font-size: 1.2rem;
+            padding: 8px 15px;
+            border-radius: 12px;
+            font-size: 1rem;
             color: white;
             display: none;
         }
         .recognized-text.show { display: block; }
+
+        /* Responsive adjustments */
+        @media (max-height: 600px) {
+            .nav-bar { padding: 8px 12px; margin: 5px; }
+            .game-area { padding: 5px 10px; gap: 6px; }
+            .story-title { font-size: 1.1rem; }
+            .scene-card { width: 55px; padding: 6px; }
+            .scene-card .emoji { font-size: 1.2rem; }
+            .current-scene { padding: 10px; }
+            .scene-image { font-size: 3rem; }
+            .scene-sentence { font-size: 1.3rem; }
+            .action-btn { padding: 10px 16px; font-size: 0.9rem; }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .nav-bar { padding: 5px 10px; margin: 3px; }
+            .game-area { padding: 5px; gap: 5px; }
+            .container { flex-direction: row; flex-wrap: wrap; max-width: none; gap: 6px; }
+            .story-title { width: 100%; font-size: 1rem; }
+            .story-scenes { flex: 0 0 auto; padding: 6px; }
+            .scene-card { width: 50px; padding: 5px; }
+            .scene-card .emoji { font-size: 1rem; }
+            .current-scene { flex: 1; min-width: 250px; padding: 10px; }
+            .scene-image { font-size: 2.5rem; margin-bottom: 5px; }
+            .scene-sentence { font-size: 1.2rem; }
+            .buttons-section { width: 100%; gap: 6px; }
+            .action-btn { padding: 8px 14px; font-size: 0.85rem; }
+            .result-message { width: 100%; font-size: 0.95rem; }
+        }
 
         .fireworks {
             position: fixed;
@@ -214,10 +271,10 @@
         }
 
         @media (max-width: 500px) {
-            .scene-image { font-size: 4rem; }
-            .scene-sentence { font-size: 1.5rem; }
-            .scene-card { width: 80px; }
-            .scene-card .emoji { font-size: 1.5rem; }
+            .scene-image { font-size: 3.5rem; }
+            .scene-sentence { font-size: 1.3rem; }
+            .scene-card { width: 60px; }
+            .scene-card .emoji { font-size: 1.3rem; }
         }
     </style>
 </head>
@@ -227,25 +284,27 @@
         <div class="story-progress">故事 <span id="storyNum">1</span>/3</div>
     </nav>
 
-    <div class="container">
-        <div class="story-title" id="storyTitle">小明的一天</div>
+    <div class="game-area">
+        <div class="container">
+            <div class="story-title" id="storyTitle">小明的一天</div>
 
-        <div class="story-scenes" id="storyScenes"></div>
+            <div class="story-scenes" id="storyScenes"></div>
 
-        <div class="current-scene">
-            <div class="scene-image" id="sceneImage">🌅</div>
-            <div class="scene-sentence" id="sceneSentence">早上起床了</div>
-            <div class="scene-hint" id="sceneHint">看圖片，說出這個句子</div>
+            <div class="current-scene">
+                <div class="scene-image" id="sceneImage">🌅</div>
+                <div class="scene-sentence" id="sceneSentence">早上起床了</div>
+                <div class="scene-hint" id="sceneHint">看圖片，說出這個句子</div>
+            </div>
+
+            <div class="buttons-section">
+                <button class="action-btn listen" onclick="playHint()">🔊 聽示範</button>
+                <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來說</button>
+                <button class="action-btn next" onclick="skipScene()">⏭️ 跳過</button>
+            </div>
+
+            <div class="recognized-text" id="recognizedText">你說：</div>
+            <div class="result-message" id="resultMessage"></div>
         </div>
-
-        <div class="buttons-section">
-            <button class="action-btn listen" onclick="playHint()">🔊 聽示範</button>
-            <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來說</button>
-            <button class="action-btn next" onclick="skipScene()">⏭️ 跳過</button>
-        </div>
-
-        <div class="recognized-text" id="recognizedText">你說：</div>
-        <div class="result-message" id="resultMessage"></div>
     </div>
 
     <div class="fireworks" id="fireworks"></div>

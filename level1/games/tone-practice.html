@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="../../manifest.json">
+    <title>聲調練習</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+        }
+
+        .nav-bar {
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.95);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .mode-display {
+            font-size: 0.9rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            gap: 12px;
+            overflow: hidden;
+        }
+
+        /* 模式選擇 */
+        .mode-selector {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 400px;
+        }
+        .mode-selector h2 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        .mode-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .mode-btn {
+            background: #f5f5f5;
+            border: 3px solid transparent;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn:hover {
+            background: #e8e3ff;
+            border-color: #667eea;
+        }
+        .mode-btn .icon { font-size: 2rem; margin-bottom: 8px; }
+        .mode-btn .name { font-size: 1rem; color: #333; font-weight: bold; }
+        .mode-btn .desc { font-size: 0.75rem; color: #666; margin-top: 4px; }
+
+        /* 聲調學習區 */
+        .tone-learn-section {
+            display: none;
+            width: 100%;
+            max-width: 500px;
+        }
+        .tone-learn-section.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tone-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            width: 100%;
+        }
+        .tone-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .tone-symbol {
+            font-size: 3.5rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .tone-mark {
+            font-size: 3rem;
+            color: #f5576c;
+        }
+        .tone-name {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        .tone-desc {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.4;
+        }
+        .tone-example {
+            margin-top: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        .tone-example-title {
+            font-size: 0.8rem;
+            color: #667eea;
+            margin-bottom: 6px;
+        }
+        .tone-example-word {
+            font-size: 1.5rem;
+            color: #333;
+        }
+        .tone-example-zhuyin {
+            font-size: 1rem;
+            color: #667eea;
+            margin-top: 4px;
+        }
+
+        /* 按鈕區 */
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn.speak { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .action-btn.next { background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%); }
+
+        /* 聲調列表 */
+        .tone-list {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            width: 100%;
+        }
+        .tone-item {
+            background: white;
+            border-radius: 12px;
+            padding: 10px 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+        .tone-item:hover { transform: scale(1.05); }
+        .tone-item.current {
+            border: 3px solid #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+        .tone-item .mark { font-size: 1.5rem; }
+        .tone-item .label { font-size: 0.7rem; color: #666; margin-top: 3px; }
+
+        /* 聲調測驗區 */
+        .tone-quiz-section {
+            display: none;
+            width: 100%;
+            max-width: 500px;
+        }
+        .tone-quiz-section.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-section {
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 10px;
+            width: 100%;
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.3);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s;
+        }
+        .progress-text {
+            color: white;
+            text-align: center;
+            margin-top: 6px;
+            font-size: 0.85rem;
+        }
+
+        .quiz-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            width: 100%;
+        }
+        .quiz-word {
+            font-size: 3.5rem;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .quiz-zhuyin {
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+        .quiz-hint {
+            font-size: 1rem;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .quiz-choices {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            width: 100%;
+        }
+        .quiz-choice {
+            background: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 12px 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+        .quiz-choice:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        .quiz-choice .mark { font-size: 1.8rem; display: block; }
+        .quiz-choice .name { font-size: 0.75rem; color: #333; margin-top: 3px; }
+        .quiz-choice.correct {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+        .quiz-choice.correct .mark, .quiz-choice.correct .name { color: white; }
+        .quiz-choice.wrong {
+            background: #f44336;
+            border-color: #f44336;
+        }
+        .quiz-choice.wrong .mark, .quiz-choice.wrong .name { color: white; }
+        .quiz-choice:disabled { cursor: not-allowed; }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.3rem;
+            color: white;
+            min-height: 30px;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .fireworks {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .firework {
+            position: absolute;
+            animation: firework-explode 1s ease-out forwards;
+        }
+        @keyframes firework-explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .complete-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .complete-overlay.show { display: flex; }
+        .complete-content {
+            background: white;
+            padding: 30px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 350px;
+            margin: 15px;
+        }
+        .complete-icon { font-size: 4rem; margin-bottom: 15px; }
+        .complete-title { font-size: 1.5rem; color: #667eea; margin-bottom: 10px; }
+        .complete-score { font-size: 1.2rem; color: #666; margin-bottom: 20px; }
+        .complete-btn {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media (max-width: 480px) {
+            .game-area { padding: 10px; gap: 8px; }
+            .mode-selector { padding: 15px; }
+            .mode-selector h2 { font-size: 1.1rem; margin-bottom: 10px; }
+            .mode-btn { padding: 12px; }
+            .mode-btn .icon { font-size: 1.6rem; margin-bottom: 5px; }
+            .mode-btn .name { font-size: 0.9rem; }
+            .tone-card, .quiz-card { padding: 15px; }
+            .tone-symbol { font-size: 2.8rem; }
+            .tone-mark { font-size: 2.3rem; }
+            .tone-name { font-size: 1rem; }
+            .tone-desc { font-size: 0.8rem; }
+            .tone-example { padding: 8px; margin-top: 8px; }
+            .tone-example-word { font-size: 1.3rem; }
+            .tone-example-zhuyin { font-size: 0.9rem; }
+            .action-btn { padding: 10px 18px; font-size: 0.9rem; }
+            .tone-item { padding: 8px 3px; }
+            .tone-item .mark { font-size: 1.2rem; }
+            .tone-item .label { font-size: 0.6rem; }
+            .quiz-word { font-size: 2.8rem; }
+            .quiz-zhuyin { font-size: 1.2rem; }
+            .quiz-hint { font-size: 0.9rem; margin-top: 8px; }
+            .quiz-choice { padding: 10px 3px; }
+            .quiz-choice .mark { font-size: 1.4rem; }
+            .quiz-choice .name { font-size: 0.65rem; }
+            .result-message { font-size: 1.1rem; }
+        }
+
+        @media (max-height: 600px) {
+            .nav-bar { padding: 8px 12px; }
+            .game-area { padding: 8px; gap: 6px; }
+            .tone-card, .quiz-card { padding: 12px; border-radius: 15px; }
+            .tone-display { gap: 10px; margin-bottom: 6px; }
+            .tone-symbol { font-size: 2.5rem; }
+            .tone-mark { font-size: 2rem; }
+            .tone-name { font-size: 0.95rem; margin-bottom: 4px; }
+            .tone-desc { font-size: 0.75rem; }
+            .tone-example { padding: 6px; margin-top: 6px; }
+            .buttons { gap: 8px; }
+            .action-btn { padding: 8px 16px; font-size: 0.85rem; }
+            .quiz-word { font-size: 2.5rem; }
+            .quiz-zhuyin { font-size: 1.1rem; }
+            .progress-section { padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="mode-display" id="modeDisplay">選擇模式</div>
+    </nav>
+
+    <div class="game-area">
+        <!-- 模式選擇 -->
+        <div class="mode-selector" id="modeSelector">
+            <h2>聲調練習</h2>
+            <div class="mode-buttons">
+                <div class="mode-btn" onclick="startLearnMode()">
+                    <div class="icon">📖</div>
+                    <div class="name">學習模式</div>
+                    <div class="desc">認識五種聲調</div>
+                </div>
+                <div class="mode-btn" onclick="startQuizMode()">
+                    <div class="icon">🎯</div>
+                    <div class="name">測驗模式</div>
+                    <div class="desc">聽音辨識聲調</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 學習模式 -->
+        <div class="tone-learn-section" id="learnSection">
+            <div class="tone-card">
+                <div class="tone-display">
+                    <span class="tone-symbol" id="toneSymbol">ㄇㄚ</span>
+                    <span class="tone-mark" id="toneMark">ˉ</span>
+                </div>
+                <div class="tone-name" id="toneName">第一聲（陰平）</div>
+                <div class="tone-desc" id="toneDesc">聲音保持高而平穩，像唱歌時的高音。</div>
+                <div class="tone-example">
+                    <div class="tone-example-title">例詞</div>
+                    <div class="tone-example-word" id="toneExampleWord">媽媽</div>
+                    <div class="tone-example-zhuyin" id="toneExampleZhuyin">ㄇㄚ ㄇㄚ</div>
+                </div>
+            </div>
+
+            <div class="buttons">
+                <button class="action-btn" onclick="playToneSound()">🔊 聽發音</button>
+                <button class="action-btn next" onclick="nextTone()">下一個 →</button>
+            </div>
+
+            <div class="tone-list" id="toneList"></div>
+        </div>
+
+        <!-- 測驗模式 -->
+        <div class="tone-quiz-section" id="quizSection">
+            <div class="progress-section">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">第 <span id="currentRound">1</span> / <span id="totalRounds">10</span> 題</div>
+            </div>
+
+            <div class="quiz-card">
+                <div class="quiz-word" id="quizWord">媽</div>
+                <div class="quiz-zhuyin" id="quizZhuyin">ㄇㄚ</div>
+                <div class="quiz-hint">這個字是第幾聲？</div>
+            </div>
+
+            <button class="action-btn" onclick="playQuizSound()">🔊 再聽一次</button>
+
+            <div class="quiz-choices" id="quizChoices"></div>
+
+            <div class="result-message" id="resultMessage"></div>
+        </div>
+    </div>
+
+    <div class="fireworks" id="fireworks"></div>
+
+    <div class="complete-overlay" id="completeOverlay">
+        <div class="complete-content">
+            <div class="complete-icon">🎉</div>
+            <div class="complete-title">太棒了！</div>
+            <div class="complete-score" id="completeScore">得分：100 分</div>
+            <button class="complete-btn" onclick="restartQuiz()">🔄 再玩一次</button>
+            <button class="complete-btn" onclick="backToMenu()" style="background: linear-gradient(135deg, #667eea, #764ba2);">🏠 返回選單</button>
+        </div>
+    </div>
+
+    <script>
+        // 聲調資料
+        const TONES = [
+            {
+                id: 1,
+                name: '第一聲（陰平）',
+                mark: 'ˉ',
+                markAlt: '−',
+                desc: '聲音保持高而平穩，像唱歌時的高音。音調從頭到尾都是高的。',
+                example: { word: '媽媽', zhuyin: 'ㄇㄚ ㄇㄚ' },
+                sample: 'ㄇㄚ',
+                words: [
+                    { word: '媽', zhuyin: 'ㄇㄚ' },
+                    { word: '他', zhuyin: 'ㄊㄚ' },
+                    { word: '書', zhuyin: 'ㄕㄨ' },
+                    { word: '飛', zhuyin: 'ㄈㄟ' },
+                    { word: '天', zhuyin: 'ㄊㄧㄢ' }
+                ]
+            },
+            {
+                id: 2,
+                name: '第二聲（陽平）',
+                mark: 'ˊ',
+                desc: '聲音從中間往上揚，像在問問題時的語調。音調由低升到高。',
+                example: { word: '麻煩', zhuyin: 'ㄇㄚˊ ㄈㄢˊ' },
+                sample: 'ㄇㄚˊ',
+                words: [
+                    { word: '麻', zhuyin: 'ㄇㄚˊ' },
+                    { word: '人', zhuyin: 'ㄖㄣˊ' },
+                    { word: '來', zhuyin: 'ㄌㄞˊ' },
+                    { word: '紅', zhuyin: 'ㄏㄨㄥˊ' },
+                    { word: '年', zhuyin: 'ㄋㄧㄢˊ' }
+                ]
+            },
+            {
+                id: 3,
+                name: '第三聲（上聲）',
+                mark: 'ˇ',
+                desc: '聲音先下降再上揚，像在猶豫或思考時的「嗯...」。音調先低後高。',
+                example: { word: '馬上', zhuyin: 'ㄇㄚˇ ㄕㄤˋ' },
+                sample: 'ㄇㄚˇ',
+                words: [
+                    { word: '馬', zhuyin: 'ㄇㄚˇ' },
+                    { word: '你', zhuyin: 'ㄋㄧˇ' },
+                    { word: '好', zhuyin: 'ㄏㄠˇ' },
+                    { word: '小', zhuyin: 'ㄒㄧㄠˇ' },
+                    { word: '水', zhuyin: 'ㄕㄨㄟˇ' }
+                ]
+            },
+            {
+                id: 4,
+                name: '第四聲（去聲）',
+                mark: 'ˋ',
+                desc: '聲音從高處快速往下降，像在命令或強調時的語氣。音調由高降到低。',
+                example: { word: '罵人', zhuyin: 'ㄇㄚˋ ㄖㄣˊ' },
+                sample: 'ㄇㄚˋ',
+                words: [
+                    { word: '罵', zhuyin: 'ㄇㄚˋ' },
+                    { word: '大', zhuyin: 'ㄉㄚˋ' },
+                    { word: '是', zhuyin: 'ㄕˋ' },
+                    { word: '去', zhuyin: 'ㄑㄩˋ' },
+                    { word: '快', zhuyin: 'ㄎㄨㄞˋ' }
+                ]
+            },
+            {
+                id: 0,
+                name: '輕聲',
+                mark: '˙',
+                desc: '聲音輕輕的、短短的，沒有明顯的音調變化。通常出現在詞尾或助詞。',
+                example: { word: '媽媽', zhuyin: 'ㄇㄚ ˙ㄇㄚ' },
+                sample: '˙ㄇㄚ',
+                words: [
+                    { word: '嗎', zhuyin: '˙ㄇㄚ' },
+                    { word: '的', zhuyin: '˙ㄉㄜ' },
+                    { word: '了', zhuyin: '˙ㄌㄜ' },
+                    { word: '呢', zhuyin: '˙ㄋㄜ' },
+                    { word: '吧', zhuyin: '˙ㄅㄚ' }
+                ]
+            }
+        ];
+
+        let currentMode = 'menu'; // menu, learn, quiz
+        let currentToneIndex = 0;
+        let quizRound = 0;
+        let totalRounds = 10;
+        let score = 0;
+        let quizQuestions = [];
+        let currentQuestion = null;
+        let answered = false;
+
+        // 初始化
+        function init() {
+            renderToneList();
+        }
+
+        function renderToneList() {
+            const list = document.getElementById('toneList');
+            list.innerHTML = '';
+
+            TONES.forEach((tone, index) => {
+                const item = document.createElement('div');
+                item.className = 'tone-item' + (index === currentToneIndex ? ' current' : '');
+                item.innerHTML = `
+                    <div class="mark">${tone.mark}</div>
+                    <div class="label">${tone.id === 0 ? '輕聲' : '第' + tone.id + '聲'}</div>
+                `;
+                item.onclick = () => selectTone(index);
+                list.appendChild(item);
+            });
+        }
+
+        function selectTone(index) {
+            currentToneIndex = index;
+            displayCurrentTone();
+            renderToneList();
+            playToneSound();
+        }
+
+        function displayCurrentTone() {
+            const tone = TONES[currentToneIndex];
+            document.getElementById('toneSymbol').textContent = tone.sample.replace(/[ˉˊˇˋ˙]/g, '');
+            document.getElementById('toneMark').textContent = tone.mark;
+            document.getElementById('toneName').textContent = tone.name;
+            document.getElementById('toneDesc').textContent = tone.desc;
+            document.getElementById('toneExampleWord').textContent = tone.example.word;
+            document.getElementById('toneExampleZhuyin').textContent = tone.example.zhuyin;
+        }
+
+        function playToneSound() {
+            const tone = TONES[currentToneIndex];
+            speak(tone.sample);
+        }
+
+        function nextTone() {
+            currentToneIndex = (currentToneIndex + 1) % TONES.length;
+            displayCurrentTone();
+            renderToneList();
+            playToneSound();
+        }
+
+        // 學習模式
+        function startLearnMode() {
+            currentMode = 'learn';
+            document.getElementById('modeSelector').style.display = 'none';
+            document.getElementById('learnSection').classList.add('active');
+            document.getElementById('modeDisplay').textContent = '學習模式';
+
+            currentToneIndex = 0;
+            displayCurrentTone();
+            renderToneList();
+
+            speak('開始學習聲調！國語有五種聲調，分別是一聲、二聲、三聲、四聲和輕聲。', () => {
+                setTimeout(playToneSound, 500);
+            });
+        }
+
+        // 測驗模式
+        function startQuizMode() {
+            currentMode = 'quiz';
+            document.getElementById('modeSelector').style.display = 'none';
+            document.getElementById('quizSection').classList.add('active');
+            document.getElementById('modeDisplay').textContent = '測驗模式';
+
+            initQuiz();
+        }
+
+        function initQuiz() {
+            quizRound = 0;
+            score = 0;
+            quizQuestions = generateQuizQuestions();
+            renderQuizChoices();
+            nextQuizRound();
+        }
+
+        function generateQuizQuestions() {
+            let questions = [];
+            // 從每個聲調中抽取單字
+            TONES.forEach(tone => {
+                tone.words.forEach(word => {
+                    questions.push({
+                        word: word.word,
+                        zhuyin: word.zhuyin,
+                        toneId: tone.id,
+                        toneMark: tone.mark,
+                        toneName: tone.name
+                    });
+                });
+            });
+            // 打亂順序並取前 totalRounds 題
+            return shuffle(questions).slice(0, totalRounds);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function renderQuizChoices() {
+            const container = document.getElementById('quizChoices');
+            container.innerHTML = '';
+
+            TONES.forEach((tone, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-choice';
+                btn.dataset.toneId = tone.id;
+                btn.innerHTML = `
+                    <span class="mark">${tone.mark}</span>
+                    <span class="name">${tone.id === 0 ? '輕聲' : tone.id + '聲'}</span>
+                `;
+                btn.onclick = () => checkQuizAnswer(tone.id);
+                container.appendChild(btn);
+            });
+        }
+
+        function nextQuizRound() {
+            if (quizRound >= totalRounds) {
+                endQuiz();
+                return;
+            }
+
+            answered = false;
+            currentQuestion = quizQuestions[quizRound];
+            quizRound++;
+
+            document.getElementById('currentRound').textContent = quizRound;
+            document.getElementById('progressFill').style.width = ((quizRound - 1) / totalRounds * 100) + '%';
+            document.getElementById('quizWord').textContent = currentQuestion.word;
+            document.getElementById('quizZhuyin').textContent = currentQuestion.zhuyin;
+            document.getElementById('resultMessage').textContent = '';
+
+            // 重置按鈕狀態
+            const buttons = document.querySelectorAll('.quiz-choice');
+            buttons.forEach(btn => {
+                btn.classList.remove('correct', 'wrong');
+                btn.disabled = false;
+            });
+
+            // 播放發音
+            setTimeout(() => playQuizSound(), 500);
+        }
+
+        function playQuizSound() {
+            speak(currentQuestion.word);
+        }
+
+        function checkQuizAnswer(selectedToneId) {
+            if (answered) return;
+            answered = true;
+
+            const buttons = document.querySelectorAll('.quiz-choice');
+            buttons.forEach(btn => btn.disabled = true);
+
+            const selectedBtn = document.querySelector(`.quiz-choice[data-tone-id="${selectedToneId}"]`);
+            const correctBtn = document.querySelector(`.quiz-choice[data-tone-id="${currentQuestion.toneId}"]`);
+
+            if (selectedToneId === currentQuestion.toneId) {
+                selectedBtn.classList.add('correct');
+                score += 10;
+                const encouragement = ['太棒了！', '答對了！', '好厲害！', '真聰明！'][Math.floor(Math.random() * 4)];
+                document.getElementById('resultMessage').textContent = encouragement;
+                speak(encouragement);
+                createFireworks(20);
+            } else {
+                selectedBtn.classList.add('wrong');
+                correctBtn.classList.add('correct');
+                document.getElementById('resultMessage').textContent = `是${currentQuestion.toneName}喔！`;
+                speak('是' + currentQuestion.toneName);
+            }
+
+            setTimeout(nextQuizRound, 2000);
+        }
+
+        function endQuiz() {
+            document.getElementById('completeScore').textContent = `得分：${score} 分`;
+            document.getElementById('completeOverlay').classList.add('show');
+            createFireworks(50);
+            speak(`太棒了！你得了${score}分！`);
+        }
+
+        function restartQuiz() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            initQuiz();
+        }
+
+        function backToMenu() {
+            document.getElementById('completeOverlay').classList.remove('show');
+            document.getElementById('learnSection').classList.remove('active');
+            document.getElementById('quizSection').classList.remove('active');
+            document.getElementById('modeSelector').style.display = 'block';
+            document.getElementById('modeDisplay').textContent = '選擇模式';
+            currentMode = 'menu';
+        }
+
+        // 語音合成
+        function speak(text, callback) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.8;
+                utterance.pitch = 1.1;
+                if (callback) {
+                    utterance.onend = callback;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 煙火效果
+        function createFireworks(count) {
+            const container = document.getElementById('fireworks');
+            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+
+            for (let i = 0; i < count; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                firework.style.left = Math.random() * 100 + '%';
+                firework.style.top = Math.random() * 100 + '%';
+                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                firework.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(firework);
+            }
+            setTimeout(() => { container.innerHTML = ''; }, 2000);
+        }
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>

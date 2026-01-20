@@ -6,62 +6,97 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#11998e">
     <link rel="manifest" href="../../manifest.json">
-    <title>🔢 數字練習 (0-30)</title>
+    <title>數字練習 (0-30)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-            padding: 20px;
         }
 
         .nav-bar {
+            flex-shrink: 0;
             background: rgba(255,255,255,0.95);
-            padding: 15px 20px;
-            border-radius: 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-decoration: none;
         }
         .score-display {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #11998e;
             font-weight: bold;
         }
 
-        .container { max-width: 700px; margin: 0 auto; }
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 15px;
+            gap: 8px;
+            overflow: hidden;
+            min-height: 0;
+        }
 
         .title {
+            flex-shrink: 0;
             text-align: center;
             color: white;
-            font-size: 1.8rem;
-            margin-bottom: 20px;
+            font-size: 1.2rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
-        .progress-section {
+        .mode-section {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
             background: rgba(255,255,255,0.2);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
+            border: 2px solid rgba(255,255,255,0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: white;
+            color: #11998e;
+        }
+
+        .progress-section {
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 8px 12px;
         }
         .progress-bar {
             background: rgba(255,255,255,0.3);
-            height: 12px;
-            border-radius: 6px;
+            height: 10px;
+            border-radius: 5px;
             overflow: hidden;
         }
         .progress-fill {
@@ -72,97 +107,110 @@
         .progress-text {
             color: white;
             text-align: center;
-            margin-top: 8px;
+            margin-top: 5px;
+            font-size: 0.85rem;
         }
 
         .number-display {
+            flex-shrink: 0;
             background: white;
-            border-radius: 30px;
-            padding: 40px;
+            border-radius: 20px;
+            padding: 20px;
             text-align: center;
-            margin-bottom: 25px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         .number {
-            font-size: 8rem;
+            font-size: clamp(3.5rem, 15vmin, 6rem);
             color: #11998e;
             font-weight: bold;
         }
         .number-zhuyin {
-            font-size: 1.8rem;
+            font-size: clamp(1.2rem, 5vmin, 1.6rem);
             color: #38ef7d;
-            margin-top: 10px;
-        }
-
-        .mode-section {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .mode-btn {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.5);
-            padding: 12px 25px;
-            border-radius: 25px;
-            font-size: 1rem;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .mode-btn.active {
-            background: white;
-            color: #11998e;
+            margin-top: 5px;
         }
 
         .options-grid {
+            flex-shrink: 0;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 10px;
         }
         .option-btn {
             background: white;
             border: none;
-            padding: 25px;
-            border-radius: 20px;
-            font-size: 2rem;
+            padding: 18px;
+            border-radius: 15px;
+            font-size: 1.5rem;
             cursor: pointer;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             transition: all 0.2s;
         }
-        .option-btn:hover { transform: scale(1.05); }
+        .option-btn:hover { transform: scale(1.03); }
         .option-btn.correct { background: #4caf50; color: white; }
         .option-btn.wrong { background: #f44336; color: white; }
 
         .action-buttons {
+            flex-shrink: 0;
             display: flex;
             justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
+            gap: 10px;
             flex-wrap: wrap;
         }
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 15px 30px;
-            border-radius: 30px;
-            font-size: 1.2rem;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1rem;
             color: white;
             cursor: pointer;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
         .action-btn:active { transform: scale(0.95); }
 
         .result-message {
+            flex-shrink: 0;
             text-align: center;
-            font-size: 1.8rem;
+            font-size: 1.1rem;
             color: white;
-            margin-top: 20px;
-            min-height: 50px;
+            min-height: 28px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .number-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            min-height: 0;
+            overflow-y: auto;
+        }
+        .number-card {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 4px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .number-card:hover {
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.05);
+        }
+        .number-card.mastered {
+            background: rgba(76, 175, 80, 0.5);
+            border: 2px solid #4caf50;
+        }
+        .number-card .num {
+            font-size: 1.2rem;
+            color: white;
+            font-weight: bold;
+        }
+        .number-card .zhuyin {
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.8);
         }
 
         .fireworks {
@@ -194,62 +242,72 @@
         .complete-overlay.show { display: flex; }
         .complete-content {
             background: white;
-            padding: 50px;
-            border-radius: 30px;
+            padding: 40px;
+            border-radius: 25px;
             text-align: center;
-            max-width: 400px;
+            max-width: 350px;
+            margin: 20px;
         }
-        .complete-icon { font-size: 5rem; margin-bottom: 20px; }
-        .complete-title { font-size: 2rem; color: #11998e; margin-bottom: 15px; }
-        .complete-score { font-size: 1.5rem; color: #666; margin-bottom: 25px; }
+        .complete-icon { font-size: 4rem; margin-bottom: 15px; }
+        .complete-title { font-size: 1.8rem; color: #11998e; margin-bottom: 12px; }
+        .complete-score { font-size: 1.3rem; color: #666; margin-bottom: 20px; }
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 1.3rem;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
             color: white;
             cursor: pointer;
             margin: 5px;
         }
 
-        .number-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .number-card {
-            background: rgba(255,255,255,0.2);
-            padding: 12px 8px;
-            border-radius: 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .number-card:hover {
-            background: rgba(255,255,255,0.4);
-            transform: scale(1.05);
-        }
-        .number-card.mastered {
-            background: rgba(76, 175, 80, 0.5);
-            border: 2px solid #4caf50;
-        }
-        .number-card .num {
-            font-size: 1.5rem;
-            color: white;
-            font-weight: bold;
-        }
-        .number-card .zhuyin {
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.8);
+        /* 響應式調整 */
+        @media (max-width: 400px) {
+            .number { font-size: 3.5rem; }
+            .option-btn { font-size: 1.3rem; padding: 15px; }
+            .number-grid { grid-template-columns: repeat(5, 1fr); }
+            .number-card .num { font-size: 1rem; }
         }
 
-        @media (max-width: 500px) {
-            .number { font-size: 5rem; }
-            .option-btn { font-size: 1.5rem; padding: 20px; }
-            .number-grid { grid-template-columns: repeat(5, 1fr); }
-            .number-card .num { font-size: 1.2rem; }
+        /* 橫向模式 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .nav-bar { padding: 6px 12px; }
+            .game-area {
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 6px 10px;
+                gap: 6px;
+            }
+            .title { width: 100%; font-size: 1rem; }
+            .mode-section { width: 100%; gap: 6px; }
+            .mode-btn { padding: 5px 12px; font-size: 0.75rem; }
+            .progress-section { width: 100%; padding: 5px 10px; }
+            .number-display {
+                flex: 1;
+                padding: 12px;
+                min-width: 150px;
+            }
+            .number { font-size: 3rem; }
+            .number-zhuyin { font-size: 1rem; }
+            .options-grid {
+                flex: 1;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+            .option-btn { padding: 12px; font-size: 1.2rem; }
+            .action-buttons { width: 100%; gap: 8px; }
+            .action-btn { padding: 8px 15px; font-size: 0.85rem; }
+            .result-message { width: 100%; font-size: 0.95rem; }
+            .number-grid {
+                width: 100%;
+                grid-template-columns: repeat(8, 1fr);
+                gap: 4px;
+                max-height: 80px;
+            }
+            .number-card { padding: 5px 2px; }
+            .number-card .num { font-size: 0.9rem; }
+            .number-card .zhuyin { font-size: 0.5rem; }
         }
     </style>
 </head>
@@ -259,13 +317,13 @@
         <div class="score-display">得分：<span id="score">0</span></div>
     </nav>
 
-    <div class="container">
-        <h1 class="title">🔢 數字練習 (0-30)</h1>
+    <div class="game-area">
+        <h1 class="title">數字練習 (0-30)</h1>
 
         <div class="mode-section">
-            <button class="mode-btn active" onclick="setMode('learn')">📖 學習模式</button>
-            <button class="mode-btn" onclick="setMode('listen')">👂 聽音選數</button>
-            <button class="mode-btn" onclick="setMode('speak')">🎤 看數唸出</button>
+            <button class="mode-btn active" onclick="setMode('learn')">學習模式</button>
+            <button class="mode-btn" onclick="setMode('listen')">聽音選數</button>
+            <button class="mode-btn" onclick="setMode('speak')">看數唸出</button>
         </div>
 
         <div class="progress-section" id="progressSection" style="display: none;">
@@ -284,8 +342,9 @@
 
         <div class="action-buttons" id="actionButtons">
             <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
-            <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
+            <button class="action-btn" onclick="nextNumber()">換一個</button>
             <button class="action-btn" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
+            <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">我會唸</button>
         </div>
 
         <div class="result-message" id="resultMessage"></div>
@@ -541,6 +600,8 @@
             document.getElementById('resultMessage').textContent = '看到這個數字了嗎？點擊麥克風唸出來！';
         }
 
+        let recognitionFailed = false;
+
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -563,6 +624,16 @@
                 recognition.onerror = (event) => {
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
+                    console.error('語音辨識錯誤:', event.error);
+
+                    if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
+                        recognitionFailed = true;
+                        document.getElementById('resultMessage').textContent = '麥克風無法使用，請點「我會唸」按鈕';
+                        document.getElementById('speakBtn').style.display = 'none';
+                        document.getElementById('manualSpeakBtn').style.display = 'inline-block';
+                        return;
+                    }
+
                     if (event.error === 'no-speech') {
                         document.getElementById('resultMessage').textContent = '沒有聽到，慢慢來，準備好再按！';
                         setTimeout(() => speak('沒關係，準備好再按麥克風！'), 500);
@@ -574,6 +645,17 @@
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
                 };
             }
+        }
+
+        function manualSpeakConfirm() {
+            speak(currentNumber.text, () => {
+                if (confirm('你會唸「' + currentNumber.text + '」嗎？\n\n點「確定」表示會唸')) {
+                    handleSpeakCorrect();
+                } else {
+                    document.getElementById('resultMessage').textContent = '沒關係，再聽一次！';
+                    speak('沒關係，再聽一次！');
+                }
+            });
         }
 
         function startSpeaking() {
