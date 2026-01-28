@@ -9,6 +9,7 @@
     <link rel="manifest" href="../manifest.json">
     <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
     <title>🎯 第一關：注音符號基礎</title>
+    <script src="../js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -33,11 +34,24 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .back-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        .back-btn:active {
+            transform: scale(0.95);
         }
         .nav-title {
             font-size: 1.3rem;

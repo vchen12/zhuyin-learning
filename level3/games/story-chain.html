@@ -7,6 +7,8 @@
     <meta name="theme-color" content="#f5576c">
     <link rel="manifest" href="../../manifest.json">
     <title>📖 故事接龍</title>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
@@ -31,15 +33,21 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
         }
+        .back-btn:hover { transform: scale(1.05); }
+        .back-btn:active { transform: scale(0.95); }
         .story-progress {
             font-size: 0.9rem;
             color: #f5576c;
@@ -150,13 +158,18 @@
         .action-btn {
             background: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 20px;
-            font-size: 1rem;
+            padding: 16px 26px;
+            border-radius: 30px;
+            font-size: 1.15rem;
+            font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
             transition: transform 0.2s;
+            min-height: 55px;
+            min-width: 100px;
+            touch-action: manipulation;
         }
+        .action-btn:hover { transform: scale(1.05); }
         .action-btn:active { transform: scale(0.95); }
         .action-btn.speak {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -409,32 +422,74 @@
             });
         }
 
+        let isProcessing = false;
+        let hasDetectedSound = false;
+
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
                 recognition.continuous = false;
-                recognition.interimResults = false;
+                recognition.interimResults = true; // 啟用即時反饋
+                recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
                     isListening = true;
-                    document.getElementById('speakBtn').textContent = '🎤 聽你說...';
+                    hasDetectedSound = false;
+                    document.getElementById('speakBtn').textContent = '🎙️ 正在聽...';
                     document.getElementById('speakBtn').disabled = true;
+                    if (navigator.vibrate) navigator.vibrate(100);
+                };
+
+                recognition.onaudiostart = () => {
+                    document.getElementById('resultMessage').textContent = '🎙️ 聽到聲音了！請繼續...';
+                };
+
+                recognition.onspeechstart = () => {
+                    hasDetectedSound = true;
+                    document.getElementById('resultMessage').textContent = '🎙️ 聽到你在說話！';
+                    if (navigator.vibrate) navigator.vibrate(50);
+                };
+
+                recognition.onspeechend = () => {
+                    document.getElementById('resultMessage').textContent = '🎙️ 正在辨識...';
                 };
 
                 recognition.onresult = (event) => {
                     const transcript = event.results[0][0].transcript;
+                    const isFinal = event.results[0].isFinal;
+
                     document.getElementById('recognizedText').textContent = '你說：' + transcript;
                     document.getElementById('recognizedText').classList.add('show');
-                    checkResult(transcript);
+
+                    if (isFinal) {
+                        checkResult(transcript);
+                    }
                 };
 
                 recognition.onerror = (event) => {
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來說';
                     document.getElementById('speakBtn').disabled = false;
-                    document.getElementById('resultMessage').textContent = '沒有聽到，請再試一次！';
+
+                    if (event.error === 'no-speech') {
+                        // 如果有檢測到聲音但辨識失敗，仍然算通過
+                        if (hasDetectedSound) {
+                            handleCorrect();
+                            return;
+                        }
+                        document.getElementById('resultMessage').textContent = '沒有聽到聲音，再試一次！';
+                        // 快速重播提示
+                        setTimeout(() => {
+                            playHint();
+                            setTimeout(() => {
+                                document.getElementById('resultMessage').textContent = '跟著說 🎤';
+                            }, 800);
+                        }, 400);
+                    } else {
+                        document.getElementById('resultMessage').textContent = '請再試一次！';
+                    }
                 };
 
                 recognition.onend = () => {
@@ -469,31 +524,52 @@
         }
 
         function checkResult(transcript) {
-            const scene = currentStory.scenes[currentSceneIndex];
-            const isCorrect = transcript.includes(scene.sentence) ||
-                              scene.sentence.includes(transcript) ||
-                              calculateSimilarity(transcript, scene.sentence) > 0.5;
+            if (isProcessing) return;
+            isProcessing = true;
 
-            if (isCorrect) {
-                handleCorrect();
+            const target = currentStory.scenes[currentSceneIndex].sentence;
+            const hasSound = transcript && transcript.trim().length > 0;
+
+            // 計算相似度（使用 config.js 的函數）
+            const similarity = hasSound ? calculateSimilarity(transcript, target) : 0;
+
+            // 記錄發音（用於追蹤進度）
+            if (hasSound) {
+                recordPronunciation('sentence', target, transcript, similarity);
+            }
+
+            // 檢查是否通過門檻
+            const passes = (hasSound || hasDetectedSound) && passesSimilarityThreshold(similarity);
+
+            // 顯示相似度資訊（如果門檻不是0）
+            if (getSimilarityThreshold() > 0 && hasSound) {
+                const level = getSimilarityLevel(similarity);
+                document.getElementById('resultMessage').textContent = `${level.emoji} ${similarity}% - ${level.label}`;
+            }
+
+            if (passes) {
+                handleCorrect(similarity);
             } else {
+                isProcessing = false;
                 document.getElementById('resultMessage').textContent = '再試一次！';
-                speak('再試一次！');
+                // 快速重播並等待重試
+                setTimeout(() => {
+                    playHint();
+                    setTimeout(() => {
+                        document.getElementById('resultMessage').textContent = '跟著說 🎤';
+                        startListening();
+                    }, 700);
+                }, 400);
             }
         }
 
-        function calculateSimilarity(a, b) {
-            const aChars = a.replace(/\s/g, '').split('');
-            const bChars = b.replace(/\s/g, '').split('');
-            let matches = 0;
-            for (const char of aChars) {
-                if (bChars.includes(char)) matches++;
-            }
-            return matches / Math.max(aChars.length, bChars.length);
-        }
+        function handleCorrect(similarity = 100) {
+            isProcessing = true;
+            document.getElementById('resultMessage').textContent = '🎉 太棒了！';
 
-        function handleCorrect() {
-            document.getElementById('resultMessage').textContent = '太棒了！';
+            // 立即震動反饋
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
             speak('太棒了！');
             createFireworks(15);
 
@@ -501,14 +577,16 @@
             const cards = document.querySelectorAll('.scene-card');
             cards[currentSceneIndex].classList.add('completed');
 
+            // 給予足夠時間感受成就感後繼續
             setTimeout(() => {
+                isProcessing = false;
                 currentSceneIndex++;
                 if (currentSceneIndex >= currentStory.scenes.length) {
                     finishStory();
                 } else {
                     showCurrentScene();
                 }
-            }, 1500);
+            }, 1800);
         }
 
         function skipScene() {

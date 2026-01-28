@@ -9,6 +9,7 @@
     <link rel="manifest" href="../manifest.json">
     <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
     <title>注音符號學習樂園 - 基礎認識</title>
+    <script src="../js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -87,16 +88,28 @@
         }
         .back-btn {
             flex-shrink: 0;
-            background: rgba(255,255,255,0.9);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            padding: 8px 16px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            color: #667eea;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: white;
             cursor: pointer;
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             margin-bottom: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .back-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        .back-btn:active {
+            transform: scale(0.95);
         }
         .notice {
             flex-shrink: 0;
@@ -218,25 +231,32 @@
             text-align: center;
         }
 
-        /* 操作按鈕區 */
+        /* 操作按鈕區 - 加大尺寸方便兒童操作 */
         .action-buttons {
             flex-shrink: 0;
             display: flex;
-            gap: 8px;
+            gap: 12px;
             justify-content: center;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
+            padding: 5px;
         }
         .action-btn {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             border: none;
-            padding: 10px 18px;
-            border-radius: 25px;
-            font-size: 0.95rem;
+            padding: 16px 28px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
             color: white;
             cursor: pointer;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-            transition: transform 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 120px;
+            min-height: 55px;
+            /* 增加觸控區域 */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         .action-btn:hover {
             transform: scale(1.05);
@@ -445,28 +465,32 @@
                 <span style="color: #28a745;">完成37個注音後可進入第一關！</span>
             </div>
             <div class="stage-menu">
+                <!-- 遊戲放在最前面，提高興趣 -->
+                <div class="stage-card" id="stage3Card" onclick="selectStage(3)" style="border: 3px solid #f5576c;">
+                    <div class="stage-icon">🎮</div>
+                    <div class="stage-title">趣味遊戲</div>
+                    <div class="stage-desc">點擊掉落的注音！</div>
+                    <div class="stage-desc" style="margin-top: 6px; color: #f5576c; font-weight: bold;">
+                        先玩再學 ✨
+                    </div>
+                </div>
+
                 <div class="stage-card" id="stage1Card" onclick="selectStage(1)">
                     <div class="stage-icon">📖</div>
-                    <div class="stage-title">第一階段</div>
-                    <div class="stage-desc">聲母 (21個)</div>
+                    <div class="stage-title">學聲母</div>
+                    <div class="stage-desc">21個聲母</div>
                     <div class="stage-desc" style="margin-top: 6px; color: #4caf50; font-weight: bold;">
                         <span id="stage1Progress">0/21</span>
                     </div>
                 </div>
 
-                <div class="stage-card locked" id="stage2Card" onclick="selectStage(2)">
+                <div class="stage-card" id="stage2Card" onclick="selectStage(2)">
                     <div class="stage-icon">📚</div>
-                    <div class="stage-title">第二階段</div>
-                    <div class="stage-desc">韻母 (16個)</div>
+                    <div class="stage-title">學韻母</div>
+                    <div class="stage-desc">16個韻母</div>
                     <div class="stage-desc" style="margin-top: 6px; color: #4caf50; font-weight: bold;">
                         <span id="stage2Progress">0/16</span>
                     </div>
-                </div>
-
-                <div class="stage-card locked" id="stage3Card" onclick="selectStage(3)">
-                    <div class="stage-icon">🎮</div>
-                    <div class="stage-title">挑戰關卡</div>
-                    <div class="stage-desc">綜合遊戲測試</div>
                 </div>
             </div>
         </div>
@@ -567,28 +591,25 @@
         }
 
         function updateStageCards() {
+            // 所有階段都解鎖，不強制循序漸進
             document.getElementById('stage1Card').classList.remove('locked');
+            document.getElementById('stage2Card').classList.remove('locked');
+            document.getElementById('stage3Card').classList.remove('locked');
 
+            // 只顯示已完成標記
             const stage1Mastered = STAGES[1].symbols.filter(s => masteredSymbols.has(s)).length;
             if (stage1Mastered === STAGES[1].symbols.length) {
                 document.getElementById('stage1Card').classList.add('completed');
-                document.getElementById('stage2Card').classList.remove('locked');
             }
 
             const stage2Mastered = STAGES[2].symbols.filter(s => masteredSymbols.has(s)).length;
             if (stage2Mastered === STAGES[2].symbols.length) {
                 document.getElementById('stage2Card').classList.add('completed');
-                document.getElementById('stage3Card').classList.remove('locked');
             }
         }
 
         function selectStage(stage) {
-            const card = document.getElementById(`stage${stage}Card`);
-            if (card.classList.contains('locked')) {
-                speak('請先完成前一個階段喔！');
-                return;
-            }
-
+            // 所有階段都可自由進入，不需檢查 locked 狀態
             if (stage === 3) {
                 startGame();
                 return;
