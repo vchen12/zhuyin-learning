@@ -192,7 +192,7 @@
         <div class="header">
             <h1>🌟 注音符號學習樂園 🌟</h1>
             <div class="subtitle">專為失語症患者與學齡前兒童設計</div>
-            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v3.0</div>
+            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v3.1</div>
         </div>
 
         <!-- 進度總覽 -->
@@ -369,11 +369,24 @@
             });
         }
 
-        // 防止頁面縮放
+        // ==========================================
+        // 防止頁面縮放和選取（適合兒童操作）
+        // ==========================================
+
+        // 防止雙指縮放
         document.addEventListener('gesturestart', function(e) {
             e.preventDefault();
-        });
+        }, { passive: false });
 
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        // 防止雙擊縮放
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function(event) {
             const now = Date.now();
@@ -381,7 +394,41 @@
                 event.preventDefault();
             }
             lastTouchEnd = now;
-        }, false);
+        }, { passive: false });
+
+        // 防止觸控移動時縮放（在非滾動區域）
+        document.addEventListener('touchmove', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 防止滑鼠滾輪縮放（Ctrl+滾輪）
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 防止鍵盤縮放（Ctrl + +/-/0）
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 防止文字選取（避免兒童誤觸進入選取模式）
+        document.addEventListener('selectstart', function(e) {
+            // 只在非輸入元素上防止選取
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+            }
+        });
+
+        // 防止長按彈出選單
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
     </script>
 </body>
 </html>

@@ -7,6 +7,8 @@
     <meta name="theme-color" content="#667eea">
     <link rel="manifest" href="../../manifest.json">
     <title>數字練習 (0-9)</title>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
@@ -32,11 +34,24 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 15px;
-            font-size: 0.9rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .back-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        .back-btn:active {
+            transform: scale(0.95);
         }
         .score-display {
             font-size: 1rem;
@@ -151,22 +166,34 @@
             color: white;
         }
 
-        /* 動作按鈕 */
+        /* 動作按鈕 - 加大尺寸方便兒童操作 */
         .action-buttons {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 15px;
             flex-wrap: wrap;
+            padding: 10px;
         }
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1rem;
+            padding: 18px 32px;
+            border-radius: 30px;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            font-weight: bold;
+            min-width: 140px;
+            min-height: 60px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            /* 增加觸控區域 */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .action-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
         }
         .action-btn:active {
             transform: scale(0.95);
@@ -367,17 +394,56 @@
         let masteredNumbers = new Set(JSON.parse(localStorage.getItem('masteredNumbers_0_9') || '[]'));
 
         // 語音合成
+        let voicesLoaded = false;
+        function loadVoices() {
+            if ('speechSynthesis' in window) {
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    voicesLoaded = true;
+                }
+            }
+        }
+
+        // 初始化語音引擎
+        if ('speechSynthesis' in window) {
+            loadVoices();
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
         function speak(text, callback) {
             if ('speechSynthesis' in window) {
+                // 確保語音引擎沒有卡住
                 window.speechSynthesis.cancel();
+
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
                 utterance.rate = 0.85;
                 utterance.pitch = 1.1;
+
+                // 嘗試選擇中文語音
+                const voices = window.speechSynthesis.getVoices();
+                const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('TW'));
+                if (zhVoice) {
+                    utterance.voice = zhVoice;
+                }
+
                 if (callback) {
                     utterance.onend = callback;
+                    // 備用：如果 onend 沒有觸發，5秒後強制執行 callback
+                    setTimeout(() => {
+                        if (callback) callback();
+                    }, 5000);
                 }
+
+                // 防止某些瀏覽器的語音合成卡住
+                utterance.onerror = (e) => {
+                    console.error('語音合成錯誤:', e);
+                    if (callback) callback();
+                };
+
                 window.speechSynthesis.speak(utterance);
+            } else if (callback) {
+                callback();
             }
         }
 
@@ -517,9 +583,16 @@
                 saveMastered(currentNumber.num);
 
                 const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
-                document.getElementById('resultMessage').textContent = encouragement;
+                document.getElementById('resultMessage').textContent = '✨ ' + encouragement + ' ✨';
                 document.getElementById('numberDisplay').textContent = currentNumber.num;
                 document.getElementById('zhuyinDisplay').textContent = currentNumber.zhuyin;
+
+                // 加強正確回饋：震動（如果支援）+ 視覺效果 + 語音
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+                btn.style.transform = 'scale(1.2)';
+                setTimeout(() => { btn.style.transform = 'scale(1)'; }, 300);
 
                 setTimeout(() => speak(encouragement), 500);
                 createFireworks(20);
@@ -580,41 +653,78 @@
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
                 recognition.continuous = false;
-                recognition.interimResults = false;
+                recognition.interimResults = true; // 開啟即時結果回饋
                 recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
                     isListening = true;
-                    document.getElementById('speakBtn').textContent = '🎤 聽你說...';
+                    document.getElementById('speakBtn').textContent = '🎙️ 正在聽...';
+                    document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                    document.getElementById('resultMessage').textContent = '🎙️ 正在聽你說...';
+                    // 震動回饋
+                    if (navigator.vibrate) {
+                        navigator.vibrate(100);
+                    }
+                };
+
+                recognition.onaudiostart = () => {
+                    document.getElementById('resultMessage').textContent = '🎙️ 聽到聲音了！請繼續...';
+                };
+
+                recognition.onspeechstart = () => {
+                    document.getElementById('resultMessage').textContent = '🎙️ 聽到你在說話！';
+                };
+
+                recognition.onspeechend = () => {
+                    document.getElementById('resultMessage').textContent = '🎙️ 正在辨識...';
                 };
 
                 recognition.onresult = (event) => {
                     const transcript = event.results[0][0].transcript;
-                    checkSpeakResult(transcript);
+                    const isFinal = event.results[0].isFinal;
+
+                    // 顯示即時辨識結果
+                    document.getElementById('resultMessage').textContent = '聽到：' + transcript + (isFinal ? '' : '...');
+
+                    if (isFinal) {
+                        isListening = false;
+                        document.getElementById('speakBtn').textContent = '🎤 我來唸';
+                        document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+                        checkSpeakResult(transcript);
+                    }
                 };
 
                 recognition.onerror = (event) => {
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
+                    document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
                     console.error('語音辨識錯誤:', event.error);
 
                     if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
                         recognitionFailed = true;
-                        document.getElementById('resultMessage').textContent = '麥克風無法使用，請點「✅我會唸」按鈕';
+                        document.getElementById('resultMessage').textContent = '❌ 麥克風無法使用，請點「✅我會唸」按鈕';
                         document.getElementById('speakBtn').style.display = 'none';
                         document.getElementById('manualSpeakBtn').style.display = 'inline-block';
                         return;
                     }
 
                     if (event.error === 'no-speech') {
-                        document.getElementById('resultMessage').textContent = '沒有聽到，慢慢來，準備好再按！';
+                        document.getElementById('resultMessage').textContent = '😊 沒聽到聲音，準備好再按麥克風！';
+                        if (navigator.vibrate) {
+                            navigator.vibrate([50, 50, 50]);
+                        }
                         setTimeout(() => speak('沒關係，準備好再按麥克風！'), 500);
+                    }
+
+                    if (event.error === 'aborted') {
+                        document.getElementById('resultMessage').textContent = '⏸️ 已暫停，準備好再試';
                     }
                 };
 
                 recognition.onend = () => {
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
+                    document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
                 };
             }
         }
@@ -648,29 +758,57 @@
         }
 
         function checkSpeakResult(transcript) {
-            const isCorrect = transcript.includes(currentNumber.text) ||
-                              transcript.includes(String(currentNumber.num));
+            const hasSound = transcript && transcript.trim().length > 0;
 
-            if (isCorrect) {
-                handleSpeakCorrect();
+            // 計算相似度（使用 config.js 的函數）
+            const similarity = hasSound ? calculateSimilarity(transcript, currentNumber.text) : 0;
+
+            // 記錄發音（用於追蹤進度）
+            if (hasSound) {
+                recordPronunciation('number', currentNumber.text, transcript, similarity);
+            }
+
+            // 檢查是否通過門檻
+            const passes = hasSound && passesSimilarityThreshold(similarity);
+
+            // 顯示相似度資訊（如果門檻不是0）
+            if (getSimilarityThreshold() > 0 && hasSound) {
+                const level = getSimilarityLevel(similarity);
+                document.getElementById('resultMessage').textContent = `${level.emoji} ${similarity}% - ${level.label}`;
+            }
+
+            if (passes) {
+                handleSpeakCorrect(similarity);
+            } else if (hasSound) {
+                // 有聲音但未達門檻，給予鼓勵並重試
+                document.getElementById('resultMessage').textContent = `加油！再試一次 🔊`;
+                setTimeout(() => speak(currentNumber.text), 500);
             } else {
-                document.getElementById('resultMessage').textContent = '再試一次！你說：' + transcript;
-                speak('再試一次！');
+                // 快速重試：播放發音讓使用者跟著唸
+                document.getElementById('resultMessage').textContent = '再聽一次 🔊';
+                speak(currentNumber.text);
             }
         }
 
-        function handleSpeakCorrect() {
+        function handleSpeakCorrect(similarity = 100) {
             score += 10;
             updateScore();
             saveMastered(currentNumber.num);
 
-            const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
-            document.getElementById('resultMessage').textContent = encouragement;
+            // 震動回饋
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
 
-            setTimeout(() => speak(encouragement), 800);
+            const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+            document.getElementById('resultMessage').textContent = '🎉 ' + encouragement + ' 🎉';
+
+            // 立即播放鼓勵語，不要延遲
+            speak(encouragement);
             createFireworks(20);
 
-            setTimeout(nextSpeakQuestion, 3000);
+            // 縮短等待時間
+            setTimeout(nextSpeakQuestion, 2000);
         }
 
         // 工具函數

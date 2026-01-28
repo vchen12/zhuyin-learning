@@ -7,6 +7,8 @@
     <meta name="theme-color" content="#11998e">
     <link rel="manifest" href="../../manifest.json">
     <title>看圖學詞</title>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -32,15 +34,21 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
         }
+        .back-btn:hover { transform: scale(1.05); }
+        .back-btn:active { transform: scale(0.95); }
         .progress-info {
             font-size: 0.9rem;
             color: #11998e;
@@ -160,14 +168,20 @@
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 10px 18px;
-            border-radius: 25px;
-            font-size: 0.9rem;
+            padding: 16px 28px;
+            border-radius: 30px;
+            font-size: 1.15rem;
             color: white;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
             transition: transform 0.2s;
             font-weight: bold;
+            min-height: 55px;
+            min-width: 110px;
+            touch-action: manipulation;
+        }
+        .action-btn:hover {
+            transform: scale(1.05);
         }
         .action-btn:active {
             transform: scale(0.95);
@@ -434,30 +448,69 @@
         }
 
         // 初始化語音辨識
+        let isProcessing = false;
+        let hasDetectedSound = false;
+
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
                 recognition.continuous = false;
-                recognition.interimResults = false;
+                recognition.interimResults = true; // 啟用即時反饋
+                recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
                     isRecognizing = true;
-                    document.getElementById('statusMessage').textContent = '🎤 正在聽你說...';
+                    hasDetectedSound = false;
+                    document.getElementById('statusMessage').textContent = '🎙️ 正在聽你說...';
                     document.getElementById('speakBtn').disabled = true;
+                    if (navigator.vibrate) navigator.vibrate(100);
+                };
+
+                recognition.onaudiostart = () => {
+                    document.getElementById('statusMessage').textContent = '🎙️ 聽到聲音了！請繼續...';
+                };
+
+                recognition.onspeechstart = () => {
+                    hasDetectedSound = true;
+                    document.getElementById('statusMessage').textContent = '🎙️ 聽到你在說話！';
+                    if (navigator.vibrate) navigator.vibrate(50);
+                };
+
+                recognition.onspeechend = () => {
+                    document.getElementById('statusMessage').textContent = '🎙️ 正在辨識...';
                 };
 
                 recognition.onresult = (event) => {
                     const transcript = event.results[0][0].transcript;
-                    handleRecognitionResult(transcript);
+                    const isFinal = event.results[0].isFinal;
+
+                    if (isFinal) {
+                        handleRecognitionResult(transcript);
+                    } else {
+                        document.getElementById('statusMessage').textContent = '聽到：' + transcript + '...';
+                    }
                 };
 
                 recognition.onerror = (event) => {
                     isRecognizing = false;
                     document.getElementById('speakBtn').disabled = false;
+
                     if (event.error === 'no-speech') {
-                        document.getElementById('statusMessage').textContent = '沒有聽到聲音，請再試一次！';
+                        // 如果有檢測到聲音但辨識失敗，仍然算通過
+                        if (hasDetectedSound) {
+                            handleCorrect();
+                            return;
+                        }
+                        document.getElementById('statusMessage').textContent = '沒有聽到聲音，再試一次！';
+                        // 快速重播提示
+                        setTimeout(() => {
+                            playSound();
+                            setTimeout(() => {
+                                document.getElementById('statusMessage').textContent = '跟著唸 🎤';
+                            }, 800);
+                        }, 400);
                     }
                 };
 
@@ -490,16 +543,43 @@
 
         // 處理辨識結果
         function handleRecognitionResult(transcript) {
-            const word = VOCABULARY[currentCategory].words[currentWordIndex];
-            const isCorrect = transcript.includes(word.text) ||
-                              word.text.includes(transcript) ||
-                              isSimilar(transcript, word.text);
+            if (isProcessing) return;
+            isProcessing = true;
 
-            if (isCorrect) {
-                handleCorrect();
+            const word = VOCABULARY[currentCategory].words[currentWordIndex];
+            const target = word.text;
+            const hasSound = transcript && transcript.trim().length > 0;
+
+            // 計算相似度（使用 config.js 的函數）
+            const similarity = hasSound ? calculateSimilarity(transcript, target) : 0;
+
+            // 記錄發音（用於追蹤進度）
+            if (hasSound) {
+                recordPronunciation('word', target, transcript, similarity);
+            }
+
+            // 檢查是否通過門檻
+            const passes = (hasSound || hasDetectedSound) && passesSimilarityThreshold(similarity);
+
+            // 顯示相似度資訊（如果門檻不是0）
+            if (getSimilarityThreshold() > 0 && hasSound) {
+                const level = getSimilarityLevel(similarity);
+                document.getElementById('statusMessage').textContent = `${level.emoji} ${similarity}% - ${level.label}`;
+            }
+
+            if (passes) {
+                handleCorrect(similarity);
             } else {
-                document.getElementById('statusMessage').textContent = `聽到「${transcript}」，再試一次！`;
-                setTimeout(playSound, 1500);
+                isProcessing = false;
+                document.getElementById('statusMessage').textContent = '再試一次！';
+                // 快速重播並等待重試
+                setTimeout(() => {
+                    playSound();
+                    setTimeout(() => {
+                        document.getElementById('statusMessage').textContent = '跟著說 🎤';
+                        startListening();
+                    }, 700);
+                }, 400);
             }
         }
 
@@ -515,7 +595,8 @@
         }
 
         // 答對處理
-        function handleCorrect() {
+        function handleCorrect(similarity = 100) {
+            isProcessing = true;
             const word = VOCABULARY[currentCategory].words[currentWordIndex];
 
             // 儲存進度
@@ -526,16 +607,21 @@
             localStorage.setItem('masteredWords_level2', JSON.stringify(masteredWords));
 
             document.getElementById('statusMessage').textContent = '🎉 太棒了！「' + word.text + '」答對了！';
+
+            // 立即震動反饋
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
             createFireworks(25);
             speak(getEncouragement());
 
             renderWordList();
             updateMasteredCount();
 
-            // 自動下一個
+            // 給予足夠時間感受成就感後繼續
             setTimeout(() => {
+                isProcessing = false;
                 nextWord();
-            }, 2500);
+            }, 2000);
         }
 
         // 下一個詞彙

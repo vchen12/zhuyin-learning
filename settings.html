@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#667eea">
     <link rel="manifest" href="manifest.json">
     <title>⚙️ 設定 - 注音學習樂園</title>
+    <script src="js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -30,11 +31,24 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .back-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        .back-btn:active {
+            transform: scale(0.95);
         }
         .nav-title {
             font-size: 1.3rem;
@@ -342,12 +356,125 @@
         .toast.success { background: #4caf50; }
         .toast.error { background: #f44336; }
 
+        /* 語音門檻預設按鈕 */
+        .threshold-preset {
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .threshold-preset:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        .threshold-preset.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* 統計卡片 */
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .stat-card.green { background: linear-gradient(135deg, #4caf50, #8bc34a); }
+        .stat-card.orange { background: linear-gradient(135deg, #ff9800, #ffc107); }
+        .stat-card.blue { background: linear-gradient(135deg, #2196f3, #03a9f4); }
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-card .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* 類型標籤 */
+        .type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+        }
+        .type-badge.zhuyin { background: #9c27b0; }
+        .type-badge.word { background: #4caf50; }
+        .type-badge.number { background: #2196f3; }
+        .type-badge.sentence { background: #ff9800; }
+
+        /* 紀錄項目 */
+        .record-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            gap: 15px;
+        }
+        .record-item:last-child { border-bottom: none; }
+        .record-item:hover { background: #f9f9f9; }
+        .record-target {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            min-width: 80px;
+        }
+        .record-score {
+            font-weight: bold;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+        .record-score.excellent { background: #e8f5e9; color: #2e7d32; }
+        .record-score.good { background: #fff3e0; color: #ef6c00; }
+        .record-score.fair { background: #fff8e1; color: #f9a825; }
+        .record-score.needs-work { background: #ffebee; color: #c62828; }
+        .record-attempts {
+            color: #999;
+            font-size: 0.85rem;
+        }
+
+        /* 需要加強項目 */
+        .improvement-item {
+            background: #ffebee;
+            border: 2px solid #f44336;
+            padding: 8px 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .improvement-item .target { font-weight: bold; color: #c62828; }
+        .improvement-item .score { font-size: 0.85rem; color: #999; }
+
+        /* 進步項目 */
+        .progress-item {
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            padding: 8px 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .progress-item .target { font-weight: bold; color: #2e7d32; }
+        .progress-item .improvement { font-size: 0.85rem; color: #4caf50; }
+
         @media (max-width: 600px) {
             .character-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
             .character-item .emoji { font-size: 2rem; }
             .character-item .name { font-size: 0.85rem; }
+            .threshold-preset { font-size: 0.8rem; padding: 8px 12px; }
         }
     </style>
 </head>
@@ -361,6 +488,24 @@
     <div class="container">
         <div class="page-title">
             <h1>⚙️ 個人化設定</h1>
+        </div>
+
+        <!-- 使用者名稱設定 -->
+        <div class="settings-section">
+            <div class="section-title">👤 使用者名稱</div>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                設定使用者的名稱，系統會在稱讚或提示時加上名字，<br>
+                例如「小乖，你好棒！」或「正昇，再試一次！」
+            </p>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="userName" class="modal-input" placeholder="輸入使用者名稱（例如：小乖、正昇）" style="flex: 1; min-width: 200px; margin: 0;">
+                <button class="save-btn" onclick="saveUserName()" style="margin: 0; padding: 15px 25px;">💾 儲存名稱</button>
+            </div>
+            <div id="userNamePreview" style="margin-top: 15px; padding: 15px; background: #f0f8ff; border-radius: 15px; display: none;">
+                <p style="color: #667eea; font-size: 1.1rem; font-weight: bold;">
+                    預覽效果：<span id="previewText"></span>
+                </p>
+            </div>
         </div>
 
         <!-- 角色選擇 -->
@@ -392,6 +537,173 @@
 
             <div class="upload-section">
                 <p style="color: #666; margin-bottom: 10px; font-size: 0.9rem;">圖片對應設定：上傳後選擇要替換的角色</p>
+            </div>
+        </div>
+
+        <!-- 語音辨識設定 -->
+        <div class="settings-section">
+            <div class="section-title">🎤 語音辨識設定</div>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                調整語音辨識的過關門檻。預設為 0（只要有發聲就過關），<br>
+                可提高標準讓使用者練習更精確的發音。
+            </p>
+
+            <!-- 相似度門檻滑桿 -->
+            <div style="background: #f9f9f9; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <label style="color: #667eea; font-weight: bold; font-size: 1.1rem;">過關門檻</label>
+                    <span id="thresholdValue" style="background: #667eea; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 1.1rem;">0%</span>
+                </div>
+
+                <input type="range" id="similarityThreshold" min="0" max="100" value="0"
+                    style="width: 100%; height: 20px; cursor: pointer; accent-color: #667eea;">
+
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; color: #999; font-size: 0.85rem;">
+                    <span>0% (有發聲即可)</span>
+                    <span>50%</span>
+                    <span>100% (完全正確)</span>
+                </div>
+
+                <!-- 預設等級快捷按鈕 -->
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+                    <button onclick="setThreshold(0)" class="threshold-preset" data-value="0">
+                        😊 鼓勵模式 (0%)
+                    </button>
+                    <button onclick="setThreshold(50)" class="threshold-preset" data-value="50">
+                        📖 練習模式 (50%)
+                    </button>
+                    <button onclick="setThreshold(80)" class="threshold-preset" data-value="80">
+                        🎯 挑戰模式 (80%)
+                    </button>
+                    <button onclick="setThreshold(90)" class="threshold-preset" data-value="90">
+                        ⭐ 精準模式 (90%)
+                    </button>
+                </div>
+            </div>
+
+            <div style="background: #e8f5e9; padding: 15px; border-radius: 12px; border-left: 4px solid #4caf50;">
+                <p style="color: #2e7d32; font-size: 0.9rem; margin: 0;">
+                    <strong>💡 建議：</strong>失語症復健初期建議使用「鼓勵模式」(0%)，<br>
+                    鼓勵患者多發聲；隨著進步可逐步提高門檻。
+                </p>
+            </div>
+        </div>
+
+        <!-- 發音紀錄 -->
+        <div class="settings-section">
+            <div class="section-title">📊 發音練習紀錄</div>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                查看使用者的發音練習歷史與進步情況。<br>
+                這些紀錄可作為復健進度的參考依據。
+            </p>
+
+            <!-- 統計摘要 -->
+            <div id="pronunciationSummary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <!-- 動態生成 -->
+            </div>
+
+            <!-- 分類統計 -->
+            <div id="pronunciationByType" style="margin-bottom: 20px;">
+                <!-- 動態生成 -->
+            </div>
+
+            <!-- 需要加強的項目 -->
+            <div id="needsImprovementSection" style="display: none; margin-bottom: 20px;">
+                <h4 style="color: #f44336; margin-bottom: 10px;">⚠️ 需要加強練習</h4>
+                <div id="needsImprovementList" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <!-- 動態生成 -->
+                </div>
+            </div>
+
+            <!-- 最近進步 -->
+            <div id="recentProgressSection" style="display: none; margin-bottom: 20px;">
+                <h4 style="color: #4caf50; margin-bottom: 10px;">🌟 最近進步</h4>
+                <div id="recentProgressList" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <!-- 動態生成 -->
+                </div>
+            </div>
+
+            <!-- 詳細紀錄表格 -->
+            <div style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h4 style="color: #667eea; margin: 0;">📋 詳細紀錄</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="recordTypeFilter" onchange="renderDetailedRecords()" style="padding: 8px 12px; border-radius: 10px; border: 2px solid #e0e0e0; font-size: 0.9rem;">
+                            <option value="all">全部類型</option>
+                            <option value="zhuyin">注音符號</option>
+                            <option value="word">字詞</option>
+                            <option value="number">數字</option>
+                            <option value="sentence">句子</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="detailedRecords" style="max-height: 400px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 15px;">
+                    <!-- 動態生成 -->
+                </div>
+            </div>
+
+            <!-- 操作按鈕 -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; justify-content: center;">
+                <button onclick="exportRecords()" class="save-btn" style="background: linear-gradient(135deg, #2196f3, #03a9f4);">
+                    📤 匯出紀錄
+                </button>
+                <button onclick="refreshRecords()" class="save-btn" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                    🔄 重新整理
+                </button>
+                <button onclick="clearRecords()" class="reset-btn" style="background: #ff9800;">
+                    🗑️ 清除紀錄
+                </button>
+            </div>
+        </div>
+
+        <!-- 自訂字詞功能 -->
+        <div class="settings-section">
+            <div class="section-title">📝 自訂字詞與句子</div>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                新增自訂的生活用字或句子，這些字詞會出現在遊戲中。<br>
+                例如：常用的人名、地名、日常用語等。
+            </p>
+
+            <!-- 新增字詞表單 -->
+            <div style="background: #f9f9f9; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 5px;">中文字詞</label>
+                        <input type="text" id="newWord" class="modal-input" placeholder="例如：媽媽、蘋果" style="margin: 0; width: 100%;">
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 5px;">注音（選填）</label>
+                        <input type="text" id="newWordZhuyin" class="modal-input" placeholder="例如：ㄇㄚ ㄇㄚ˙" style="margin: 0; width: 100%;">
+                    </div>
+                    <div style="flex: 0 0 auto; display: flex; align-items: flex-end;">
+                        <button class="save-btn" onclick="addCustomWord()" style="margin: 0; padding: 15px 25px;">➕ 新增</button>
+                    </div>
+                </div>
+
+                <!-- 分類選擇 -->
+                <div>
+                    <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 8px;">分類</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="radio" name="wordCategory" value="daily" checked> 日常用語
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="radio" name="wordCategory" value="family"> 人名稱呼
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="radio" name="wordCategory" value="place"> 地點
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="radio" name="wordCategory" value="sentence"> 句子
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 已新增的字詞列表 -->
+            <div id="customWordsList" style="display: none;">
+                <h4 style="color: #667eea; margin-bottom: 10px;">📋 已新增的字詞</h4>
+                <div id="customWordsContainer" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
             </div>
         </div>
 
@@ -454,9 +766,535 @@
         let currentEditingId = null;
         let currentAssigningImage = null;
 
+        // ==========================================
+        // 自訂字詞功能
+        // ==========================================
+        let customWords = [];
+
+        function loadCustomWords() {
+            customWords = JSON.parse(localStorage.getItem('customWords') || '[]');
+            renderCustomWords();
+        }
+
+        function addCustomWord() {
+            const wordInput = document.getElementById('newWord');
+            const zhuyinInput = document.getElementById('newWordZhuyin');
+            const categoryRadio = document.querySelector('input[name="wordCategory"]:checked');
+
+            const word = wordInput.value.trim();
+            const zhuyin = zhuyinInput.value.trim();
+            const category = categoryRadio ? categoryRadio.value : 'daily';
+
+            if (!word) {
+                showToast('請輸入字詞！', 'error');
+                return;
+            }
+
+            // 檢查是否重複
+            if (customWords.some(w => w.word === word)) {
+                showToast('這個字詞已經存在！', 'error');
+                return;
+            }
+
+            const newWord = {
+                id: Date.now(),
+                word: word,
+                zhuyin: zhuyin || '',
+                category: category,
+                createdAt: new Date().toISOString()
+            };
+
+            customWords.push(newWord);
+            localStorage.setItem('customWords', JSON.stringify(customWords));
+
+            // 清空輸入
+            wordInput.value = '';
+            zhuyinInput.value = '';
+
+            renderCustomWords();
+            showToast(`已新增「${word}」`, 'success');
+        }
+
+        function removeCustomWord(id) {
+            const word = customWords.find(w => w.id === id);
+            if (word && confirm(`確定要刪除「${word.word}」嗎？`)) {
+                customWords = customWords.filter(w => w.id !== id);
+                localStorage.setItem('customWords', JSON.stringify(customWords));
+                renderCustomWords();
+                showToast(`已刪除「${word.word}」`);
+            }
+        }
+
+        function renderCustomWords() {
+            const container = document.getElementById('customWordsContainer');
+            const listSection = document.getElementById('customWordsList');
+
+            if (customWords.length === 0) {
+                listSection.style.display = 'none';
+                return;
+            }
+
+            listSection.style.display = 'block';
+
+            const categoryLabels = {
+                daily: '日常',
+                family: '人名',
+                place: '地點',
+                sentence: '句子'
+            };
+
+            const categoryColors = {
+                daily: '#4caf50',
+                family: '#e91e63',
+                place: '#2196f3',
+                sentence: '#ff9800'
+            };
+
+            container.innerHTML = customWords.map(w => `
+                <div style="
+                    background: white;
+                    border: 2px solid ${categoryColors[w.category] || '#ccc'};
+                    border-radius: 12px;
+                    padding: 10px 15px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                ">
+                    <span style="
+                        background: ${categoryColors[w.category] || '#ccc'};
+                        color: white;
+                        font-size: 0.7rem;
+                        padding: 2px 8px;
+                        border-radius: 10px;
+                    ">${categoryLabels[w.category] || '其他'}</span>
+                    <span style="font-size: 1.1rem; font-weight: bold; color: #333;">${w.word}</span>
+                    ${w.zhuyin ? `<span style="font-size: 0.85rem; color: #667eea;">${w.zhuyin}</span>` : ''}
+                    <button onclick="removeCustomWord(${w.id})" style="
+                        background: #f44336;
+                        color: white;
+                        border: none;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        font-size: 0.8rem;
+                        margin-left: auto;
+                    ">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // ==========================================
+        // 使用者名稱功能
+        // ==========================================
+        let userName = '';
+
+        function loadUserName() {
+            userName = localStorage.getItem('userName') || '';
+            document.getElementById('userName').value = userName;
+            updateUserNamePreview();
+        }
+
+        function saveUserName() {
+            userName = document.getElementById('userName').value.trim();
+            localStorage.setItem('userName', userName);
+            updateUserNamePreview();
+            showToast(userName ? `已設定名稱為「${userName}」` : '已清除名稱設定', 'success');
+        }
+
+        function updateUserNamePreview() {
+            const preview = document.getElementById('userNamePreview');
+            const previewText = document.getElementById('previewText');
+
+            if (userName) {
+                preview.style.display = 'block';
+                const examples = [
+                    `${userName}，你好棒！`,
+                    `${userName}，再試一次！`,
+                    `太厲害了，${userName}！`
+                ];
+                previewText.textContent = examples[Math.floor(Math.random() * examples.length)];
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        // 名稱輸入時即時預覽
+        document.addEventListener('DOMContentLoaded', function() {
+            const userNameInput = document.getElementById('userName');
+            if (userNameInput) {
+                userNameInput.addEventListener('input', function() {
+                    userName = this.value.trim();
+                    updateUserNamePreview();
+                });
+            }
+        });
+
+        // ==========================================
+        // 語音相似度設定功能
+        // ==========================================
+
+        function loadSimilarityThreshold() {
+            const threshold = parseInt(localStorage.getItem('similarityThreshold') || '0');
+            const slider = document.getElementById('similarityThreshold');
+            const display = document.getElementById('thresholdValue');
+
+            slider.value = threshold;
+            display.textContent = threshold + '%';
+            updateThresholdPresets(threshold);
+
+            // 滑桿事件
+            slider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                display.textContent = value + '%';
+                updateThresholdPresets(value);
+            });
+
+            slider.addEventListener('change', function() {
+                const value = parseInt(this.value);
+                localStorage.setItem('similarityThreshold', value.toString());
+                showToast(`過關門檻已設定為 ${value}%`, 'success');
+            });
+        }
+
+        function setThreshold(value) {
+            const slider = document.getElementById('similarityThreshold');
+            const display = document.getElementById('thresholdValue');
+
+            slider.value = value;
+            display.textContent = value + '%';
+            localStorage.setItem('similarityThreshold', value.toString());
+            updateThresholdPresets(value);
+            showToast(`過關門檻已設定為 ${value}%`, 'success');
+        }
+
+        function updateThresholdPresets(value) {
+            document.querySelectorAll('.threshold-preset').forEach(btn => {
+                const btnValue = parseInt(btn.dataset.value);
+                btn.classList.toggle('active', btnValue === value);
+            });
+        }
+
+        // ==========================================
+        // 發音紀錄功能
+        // ==========================================
+
+        function loadPronunciationRecords() {
+            renderPronunciationSummary();
+            renderPronunciationByType();
+            renderNeedsImprovement();
+            renderRecentProgress();
+            renderDetailedRecords();
+        }
+
+        function getPronunciationRecords() {
+            return JSON.parse(localStorage.getItem('pronunciationRecords') || '{}');
+        }
+
+        function renderPronunciationSummary() {
+            const container = document.getElementById('pronunciationSummary');
+            const records = getPronunciationRecords();
+
+            let totalAttempts = 0;
+            let totalItems = 0;
+            let totalBestScore = 0;
+
+            Object.values(records).forEach(typeRecords => {
+                Object.values(typeRecords).forEach(record => {
+                    totalAttempts += record.attempts || 0;
+                    totalItems++;
+                    totalBestScore += record.bestScore || 0;
+                });
+            });
+
+            const avgScore = totalItems > 0 ? Math.round(totalBestScore / totalItems) : 0;
+
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalItems}</div>
+                    <div class="stat-label">已練習項目</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-value">${totalAttempts}</div>
+                    <div class="stat-label">總練習次數</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-value">${avgScore}%</div>
+                    <div class="stat-label">平均最高分</div>
+                </div>
+            `;
+
+            if (totalItems === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #999;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">📊</div>
+                        <p>尚無練習紀錄</p>
+                        <p style="font-size: 0.9rem;">開始練習後，紀錄會顯示在這裡</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderPronunciationByType() {
+            const container = document.getElementById('pronunciationByType');
+            const records = getPronunciationRecords();
+
+            const typeNames = {
+                zhuyin: '注音符號',
+                word: '字詞',
+                number: '數字',
+                sentence: '句子'
+            };
+
+            const typeStats = {};
+            Object.entries(records).forEach(([type, typeRecords]) => {
+                const items = Object.values(typeRecords);
+                if (items.length > 0) {
+                    const totalScore = items.reduce((sum, r) => sum + (r.bestScore || 0), 0);
+                    typeStats[type] = {
+                        count: items.length,
+                        avgScore: Math.round(totalScore / items.length),
+                        totalAttempts: items.reduce((sum, r) => sum + (r.attempts || 0), 0)
+                    };
+                }
+            });
+
+            if (Object.keys(typeStats).length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <h4 style="color: #667eea; margin-bottom: 15px;">📈 分類統計</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    ${Object.entries(typeStats).map(([type, stats]) => `
+                        <div style="background: #f9f9f9; padding: 15px; border-radius: 12px; border-left: 4px solid ${getTypeColor(type)};">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span class="type-badge ${type}">${typeNames[type] || type}</span>
+                                <span style="font-weight: bold; color: #333;">${stats.avgScore}%</span>
+                            </div>
+                            <div style="color: #666; font-size: 0.85rem;">
+                                ${stats.count} 項目 · ${stats.totalAttempts} 次練習
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function getTypeColor(type) {
+            const colors = {
+                zhuyin: '#9c27b0',
+                word: '#4caf50',
+                number: '#2196f3',
+                sentence: '#ff9800'
+            };
+            return colors[type] || '#667eea';
+        }
+
+        function renderNeedsImprovement() {
+            const section = document.getElementById('needsImprovementSection');
+            const list = document.getElementById('needsImprovementList');
+            const records = getPronunciationRecords();
+
+            const needsWork = [];
+            Object.entries(records).forEach(([type, typeRecords]) => {
+                Object.entries(typeRecords).forEach(([target, record]) => {
+                    if ((record.bestScore || 0) < 50) {
+                        needsWork.push({ type, target, bestScore: record.bestScore || 0 });
+                    }
+                });
+            });
+
+            if (needsWork.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            needsWork.sort((a, b) => a.bestScore - b.bestScore);
+
+            list.innerHTML = needsWork.slice(0, 10).map(item => `
+                <div class="improvement-item">
+                    <span class="target">${item.target}</span>
+                    <span class="score">${item.bestScore}%</span>
+                </div>
+            `).join('');
+        }
+
+        function renderRecentProgress() {
+            const section = document.getElementById('recentProgressSection');
+            const list = document.getElementById('recentProgressList');
+            const records = getPronunciationRecords();
+
+            const improved = [];
+            Object.entries(records).forEach(([type, typeRecords]) => {
+                Object.entries(typeRecords).forEach(([target, record]) => {
+                    if (record.history && record.history.length >= 2) {
+                        const recent = record.history.slice(-5);
+                        const firstScore = recent[0].similarity || 0;
+                        const lastScore = recent[recent.length - 1].similarity || 0;
+                        const improvement = lastScore - firstScore;
+                        if (improvement > 10) {
+                            improved.push({ type, target, improvement, currentScore: record.bestScore });
+                        }
+                    }
+                });
+            });
+
+            if (improved.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            improved.sort((a, b) => b.improvement - a.improvement);
+
+            list.innerHTML = improved.slice(0, 10).map(item => `
+                <div class="progress-item">
+                    <span class="target">${item.target}</span>
+                    <span class="improvement">↑${item.improvement}%</span>
+                </div>
+            `).join('');
+        }
+
+        function renderDetailedRecords() {
+            const container = document.getElementById('detailedRecords');
+            const filter = document.getElementById('recordTypeFilter').value;
+            const records = getPronunciationRecords();
+
+            const typeNames = {
+                zhuyin: '注音',
+                word: '字詞',
+                number: '數字',
+                sentence: '句子'
+            };
+
+            const allRecords = [];
+            Object.entries(records).forEach(([type, typeRecords]) => {
+                if (filter === 'all' || filter === type) {
+                    Object.entries(typeRecords).forEach(([target, record]) => {
+                        allRecords.push({
+                            type,
+                            target,
+                            bestScore: record.bestScore || 0,
+                            attempts: record.attempts || 0,
+                            lastPracticed: record.history && record.history.length > 0
+                                ? record.history[record.history.length - 1].timestamp
+                                : null
+                        });
+                    });
+                }
+            });
+
+            if (allRecords.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <p>沒有符合條件的紀錄</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 按最高分排序
+            allRecords.sort((a, b) => b.bestScore - a.bestScore);
+
+            container.innerHTML = allRecords.map(record => {
+                const scoreClass = record.bestScore >= 90 ? 'excellent'
+                    : record.bestScore >= 80 ? 'good'
+                    : record.bestScore >= 50 ? 'fair'
+                    : 'needs-work';
+
+                return `
+                    <div class="record-item">
+                        <span class="type-badge ${record.type}">${typeNames[record.type]}</span>
+                        <span class="record-target">${record.target}</span>
+                        <span class="record-score ${scoreClass}">${record.bestScore}%</span>
+                        <span class="record-attempts">${record.attempts} 次練習</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function exportRecords() {
+            const records = getPronunciationRecords();
+            const report = generatePronunciationReport();
+
+            const exportData = {
+                exportDate: new Date().toISOString(),
+                userName: localStorage.getItem('userName') || '未設定',
+                similarityThreshold: parseInt(localStorage.getItem('similarityThreshold') || '0'),
+                summary: report,
+                detailedRecords: records
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `發音練習紀錄_${new Date().toLocaleDateString('zh-TW').replace(/\//g, '-')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('紀錄已匯出', 'success');
+        }
+
+        function generatePronunciationReport() {
+            const records = getPronunciationRecords();
+
+            let totalAttempts = 0;
+            let totalItems = 0;
+            let totalBestScore = 0;
+            const byType = {};
+
+            Object.entries(records).forEach(([type, typeRecords]) => {
+                const items = Object.values(typeRecords);
+                if (items.length > 0) {
+                    totalItems += items.length;
+                    const typeTotal = items.reduce((sum, r) => sum + (r.bestScore || 0), 0);
+                    const typeAttempts = items.reduce((sum, r) => sum + (r.attempts || 0), 0);
+                    totalBestScore += typeTotal;
+                    totalAttempts += typeAttempts;
+
+                    byType[type] = {
+                        count: items.length,
+                        avgScore: Math.round(typeTotal / items.length),
+                        totalAttempts: typeAttempts
+                    };
+                }
+            });
+
+            return {
+                totalItems,
+                totalAttempts,
+                avgBestScore: totalItems > 0 ? Math.round(totalBestScore / totalItems) : 0,
+                byType
+            };
+        }
+
+        function refreshRecords() {
+            loadPronunciationRecords();
+            showToast('已重新整理', 'success');
+        }
+
+        function clearRecords() {
+            if (confirm('確定要清除所有發音練習紀錄嗎？這個動作無法復原！')) {
+                localStorage.removeItem('pronunciationRecords');
+                loadPronunciationRecords();
+                showToast('紀錄已清除', 'success');
+            }
+        }
+
+        // ==========================================
         // 初始化
+        // ==========================================
         function init() {
+            loadUserName();
+            loadCustomWords();
             loadSettings();
+            loadSimilarityThreshold();
+            loadPronunciationRecords();
             renderFamilyGrid();
             renderUploadedImages();
             setupUploadEvents();
