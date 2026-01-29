@@ -367,21 +367,30 @@
         let hasDetectedSound = false;
 
         function initSpeechRecognition() {
+            let recognitionTimeout = null;
+            let hasReceivedResult = false;
+
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
-                recognition.continuous = false;
+                recognition.continuous = true;
                 recognition.interimResults = true; // 啟用即時反饋
                 recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
                     isListening = true;
                     hasDetectedSound = false;
+                    hasReceivedResult = false;
                     document.getElementById('speakBtn').textContent = '🎙️ 正在聽...';
                     document.getElementById('speakBtn').disabled = true;
                     document.getElementById('recognizedText').classList.remove('show');
                     if (navigator.vibrate) navigator.vibrate(100);
+                    recognitionTimeout = setTimeout(() => {
+                        if (isListening && !hasReceivedResult) {
+                            try { recognition.stop(); } catch(e) {}
+                        }
+                    }, 8000);
                 };
 
                 recognition.onaudiostart = () => {
@@ -396,21 +405,31 @@
 
                 recognition.onspeechend = () => {
                     document.getElementById('resultMessage').textContent = '🎙️ 正在辨識...';
+                    setTimeout(() => {
+                        if (isListening && !hasReceivedResult) {
+                            try { recognition.stop(); } catch(e) {}
+                        }
+                    }, 1000);
                 };
 
                 recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    const isFinal = event.results[0].isFinal;
+                    const result = event.results[event.results.length - 1];
+                    const transcript = result[0].transcript;
+                    const isFinal = result.isFinal;
 
                     document.getElementById('recognizedText').textContent = '你說：' + transcript;
                     document.getElementById('recognizedText').classList.add('show');
 
-                    if (isFinal) {
+                    if (isFinal && !hasReceivedResult) {
+                        hasReceivedResult = true;
+                        clearTimeout(recognitionTimeout);
+                        try { recognition.stop(); } catch(e) {}
                         checkResult(transcript);
                     }
                 };
 
                 recognition.onerror = (event) => {
+                    clearTimeout(recognitionTimeout);
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來說';
                     document.getElementById('speakBtn').disabled = false;
@@ -435,6 +454,7 @@
                 };
 
                 recognition.onend = () => {
+                    clearTimeout(recognitionTimeout);
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來說';
                     document.getElementById('speakBtn').disabled = false;

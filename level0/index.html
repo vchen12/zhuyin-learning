@@ -793,7 +793,7 @@
 
             let position = -15;
             const fall = setInterval(() => {
-                position += 1;
+                position += 0.5; // 降低掉落速度（原本是 1）
                 item.style.top = position + '%';
 
                 if (position > 100) {
