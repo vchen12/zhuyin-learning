@@ -395,7 +395,7 @@
                 <button class="action-btn highlight-btn" onclick="playSound()">🔊 聽發音</button>
                 <button class="action-btn highlight-btn" onclick="nextNumber()">⚡ 換一個</button>
                 <button class="action-btn mic-highlight" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
-                <button class="action-btn highlight-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+                <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
             </div>
 
             <div class="result-message" id="resultMessage"></div>
@@ -555,6 +555,21 @@
         }
 
         function startListenMode() {
+            // 先說明玩法，等用戶準備好再開始
+            speak('聽音選數模式！', () => {
+                setTimeout(() => {
+                    speak('聽到數字發音後，選出正確的數字！準備好請點「確定」', () => {
+                        if (confirm('🎮 聽音選數模式\n\n玩法：聽到數字發音後，選出正確的數字\n\n準備好了嗎？')) {
+                            actuallyStartListenMode();
+                        } else {
+                            setMode('learn');
+                        }
+                    });
+                }, 300);
+            });
+        }
+
+        function actuallyStartListenMode() {
             currentRound = 0;
             score = 0;
             const numbers = getNumbersInRange();
@@ -566,7 +581,7 @@
             document.getElementById('numberGrid').style.display = 'none';
 
             updateScore();
-            speak('聽音選數模式！聽發音後，選出正確的數字！', () => {
+            speak('開始囉！', () => {
                 nextListenQuestion();
             });
         }
@@ -647,6 +662,21 @@
         }
 
         function startSpeakMode() {
+            // 先說明玩法，等用戶準備好再開始
+            speak('看數唸出模式！', () => {
+                setTimeout(() => {
+                    speak('看到數字後，大聲唸出來！準備好請點「確定」', () => {
+                        if (confirm('🎤 看數唸出模式\n\n玩法：看到數字後，點麥克風大聲唸出來\n\n準備好了嗎？')) {
+                            actuallyStartSpeakMode();
+                        } else {
+                            setMode('learn');
+                        }
+                    });
+                }, 300);
+            });
+        }
+
+        function actuallyStartSpeakMode() {
             currentRound = 0;
             score = 0;
             const numbers = getNumbersInRange();
@@ -660,7 +690,7 @@
 
             initSpeechRecognition();
             updateScore();
-            speak('看數唸出模式！看到數字後，大聲唸出來！', () => {
+            speak('開始囉！', () => {
                 nextSpeakQuestion();
             });
         }
@@ -682,6 +712,9 @@
         }
 
         let recognitionFailed = false;
+        let recognitionTimeout = null;
+        let hasReceivedResult = false;
+        let lastTranscript = '';
 
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -689,20 +722,49 @@
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
                 recognition.continuous = false;
-                recognition.interimResults = false;
+                recognition.interimResults = true;
                 recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
                     isListening = true;
+                    hasReceivedResult = false;
+                    lastTranscript = '';
                     document.getElementById('speakBtn').textContent = '🎤 聽你說...';
+                    document.getElementById('resultMessage').textContent = '';
+
+                    // 設定 10 秒超時
+                    recognitionTimeout = setTimeout(() => {
+                        if (isListening && !hasReceivedResult) {
+                            try { recognition.stop(); } catch(e) {}
+                        }
+                    }, 10000);
                 };
 
                 recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    checkSpeakResult(transcript);
+                    const lastResult = event.results[event.results.length - 1];
+                    const transcript = lastResult[0].transcript.trim();
+                    const isFinal = lastResult.isFinal;
+
+                    // 儲存收到的文字（不管是否 final）
+                    if (transcript) {
+                        lastTranscript = transcript;
+                    }
+
+                    // 顯示即時辨識結果
+                    document.getElementById('resultMessage').textContent = '聽到：' + transcript;
+
+                    // Safari 永遠不會回傳 isFinal: true
+                    // 如果是 final 就立即處理，否則等 onend 時處理
+                    if (isFinal && !hasReceivedResult) {
+                        hasReceivedResult = true;
+                        clearTimeout(recognitionTimeout);
+                        try { recognition.stop(); } catch(e) {}
+                        checkSpeakResult(transcript);
+                    }
                 };
 
                 recognition.onerror = (event) => {
+                    clearTimeout(recognitionTimeout);
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
                     console.error('語音辨識錯誤:', event.error);
@@ -722,8 +784,25 @@
                 };
 
                 recognition.onend = () => {
+                    clearTimeout(recognitionTimeout);
+                    const wasListening = isListening;
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
+
+                    // 如果已經收到結果，不做任何事
+                    if (hasReceivedResult) {
+                        return;
+                    }
+
+                    // Safari 修正：在 onend 時處理 lastTranscript
+                    if (lastTranscript && wasListening) {
+                        hasReceivedResult = true;
+                        console.log('辨識結果 (onend, Safari模式):', lastTranscript);
+                        checkSpeakResult(lastTranscript);
+                    } else if (wasListening) {
+                        // 完全沒聽到任何東西
+                        document.getElementById('resultMessage').textContent = '沒有聽到，點麥克風再試一次！';
+                    }
                 };
             }
         }

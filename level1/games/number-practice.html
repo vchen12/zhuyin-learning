@@ -365,7 +365,7 @@
             <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
             <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
             <button class="action-btn mic-highlight" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
-            <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+            <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
         </div>
 
         <div class="result-message" id="resultMessage"></div>
@@ -530,6 +530,21 @@
 
         // 聽音選數模式
         function startListenMode() {
+            // 先說明玩法，等用戶準備好再開始
+            speak('聽音選數模式！', () => {
+                setTimeout(() => {
+                    speak('聽到數字發音後，選出正確的數字！準備好請點「確定」', () => {
+                        if (confirm('🎮 聽音選數模式\n\n玩法：聽到數字發音後，選出正確的數字\n\n準備好了嗎？')) {
+                            actuallyStartListenMode();
+                        } else {
+                            setMode('learn');
+                        }
+                    });
+                }, 300);
+            });
+        }
+
+        function actuallyStartListenMode() {
             currentRound = 0;
             score = 0;
             questionQueue = shuffle([...NUMBERS, ...NUMBERS]).slice(0, totalRounds);
@@ -539,7 +554,7 @@
             document.getElementById('actionButtons').style.display = 'none';
 
             updateScore();
-            speak('聽音選數模式！聽發音後，選出正確的數字！', () => {
+            speak('開始！', () => {
                 nextListenQuestion();
             });
         }
@@ -633,6 +648,21 @@
 
         // 看數唸出模式
         function startSpeakMode() {
+            // 先說明玩法，等用戶準備好再開始
+            speak('看數唸出模式！', () => {
+                setTimeout(() => {
+                    speak('看到數字後，點麥克風大聲唸出來！準備好請點「確定」', () => {
+                        if (confirm('🎤 看數唸出模式\n\n玩法：看到數字後，點麥克風大聲唸出來\n或點「✅我會唸」按鈕確認\n\n準備好了嗎？')) {
+                            actuallyStartSpeakMode();
+                        } else {
+                            setMode('learn');
+                        }
+                    });
+                }, 300);
+            });
+        }
+
+        function actuallyStartSpeakMode() {
             currentRound = 0;
             score = 0;
             questionQueue = shuffle([...NUMBERS, ...NUMBERS]).slice(0, totalRounds);
@@ -645,7 +675,7 @@
 
             initSpeechRecognition();
             updateScore();
-            speak('看數唸出模式！看到數字後，大聲唸出來！', () => {
+            speak('開始！', () => {
                 nextSpeakQuestion();
             });
         }

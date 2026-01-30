@@ -473,8 +473,8 @@
             <div class="mouth-hint" id="mouthHint"></div>
 
             <div class="buttons">
-                <button class="game-btn highlight-btn" onclick="replaySound()">🔊 再聽一次</button>
-                <button class="game-btn" id="manualBtn" onclick="manualConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+                <button class="game-btn" onclick="replaySound()">🔊 再聽一次</button>
+                <button class="game-btn" id="manualBtn" onclick="manualConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
                 <button class="game-btn skip" id="skipBtn" onclick="skipSymbol()" style="display: none;">⏭️ 跳過</button>
             </div>
         </div>
@@ -616,7 +616,7 @@
                 const transcript = lastResult[0].transcript.trim();
                 const isFinal = lastResult.isFinal;
 
-                // 儲存收到的文字
+                // 儲存收到的文字（不管是否 final）
                 if (transcript) {
                     lastTranscript = transcript;
                 }
@@ -624,6 +624,8 @@
                 // 顯示即時辨識結果
                 showHint('聽到：' + transcript + (isFinal ? '' : '...'), true);
 
+                // Safari 永遠不會回傳 isFinal: true，所以我們不能只依賴 isFinal
+                // 改成：如果是 final 就立即處理，否則等 onend 時處理
                 if (isFinal && !hasReceivedResult) {
                     hasReceivedResult = true;
                     clearTimeout(recognitionTimeout);
@@ -631,9 +633,10 @@
                     try { recognition.stop(); } catch(e) {}
                     document.getElementById('micIndicator').classList.remove('listening');
                     if (isProcessing) return;
-                    console.log('辨識結果:', transcript);
+                    console.log('辨識結果 (final):', transcript);
                     handleRecognitionResult(transcript);
                 }
+                // 非 final 的結果會儲存在 lastTranscript，等 onend 處理
             };
 
             recognition.onerror = (event) => {
@@ -658,20 +661,28 @@
                 const wasRecognizing = isRecognizing;
                 isRecognizing = false;
                 document.getElementById('micIndicator').classList.remove('listening');
+                document.getElementById('hintMessage').classList.remove('listening');
 
                 // 如果已經收到結果或正在處理，不做任何事
                 if (hasReceivedResult || isProcessing || recognitionFailed || document.getElementById('gameScreen').style.display === 'none') {
                     return;
                 }
 
-                // 如果有收到任何文字但還沒處理，現在處理它
+                // Safari 修正：Safari 永遠不會回傳 isFinal: true
+                // 所以在 onend 時，如果有收到任何文字，就處理它
                 if (lastTranscript && wasRecognizing) {
                     hasReceivedResult = true;
+                    console.log('辨識結果 (onend, Safari模式):', lastTranscript);
                     showHint('聽到：' + lastTranscript, false);
                     handleRecognitionResult(lastTranscript);
                 } else if (wasRecognizing) {
                     // 完全沒聽到任何東西
-                    showHint('沒聽清楚，點麥克風再試 🎤 或點「我會唸」', false);
+                    showHint('沒聽清楚，請點🎤麥克風重試或點「✅我會唸」', false);
+                    // 讓麥克風按鈕閃爍提示可以再試
+                    document.getElementById('micIndicator').classList.add('listening');
+                    setTimeout(() => {
+                        document.getElementById('micIndicator').classList.remove('listening');
+                    }, 2000);
                 }
             };
         }
