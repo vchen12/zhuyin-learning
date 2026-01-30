@@ -589,13 +589,13 @@
                 if (navigator.vibrate) {
                     navigator.vibrate(50);
                 }
-                // 設定 8 秒超時
+                // 設定 4 秒超時（縮短，讓系統更快重試）
                 recognitionTimeout = setTimeout(() => {
                     if (isRecognizing && !hasReceivedResult) {
                         console.log('辨識超時，停止');
                         try { recognition.stop(); } catch(e) {}
                     }
-                }, 8000);
+                }, 4000);
             };
 
             // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
@@ -610,20 +610,10 @@
             };
 
             recognition.onspeechend = () => {
-                console.log('onspeechend - lastTranscript:', lastTranscript);
-                // 當偵測到語音結束時，如果已經有結果，加速處理
-                if (lastTranscript && !hasReceivedResult && !isProcessing) {
-                    // 給 200ms 讓最後的結果進來，然後處理
-                    setTimeout(() => {
-                        if (lastTranscript && !hasReceivedResult && !isProcessing) {
-                            processResult(lastTranscript, 'speechend');
-                        }
-                    }, 200);
-                }
+                console.log('onspeechend');
+                // 不需要特別處理，onresult 會立即處理結果
             };
 
-            // 用來追蹤辨識結果
-            let resultProcessTimeout = null;
 
             recognition.onresult = (event) => {
                 // 取得最新的辨識結果
@@ -650,26 +640,9 @@
                     // 顯示即時辨識結果
                     showHint('🎤 聽到：' + transcript, true);
 
-                    // 清除之前的計時器
-                    if (resultProcessTimeout) {
-                        clearTimeout(resultProcessTimeout);
-                    }
-
-                    // 立即處理策略：
-                    // 1. 如果是 isFinal（Chrome），立即處理
-                    // 2. 如果不是 isFinal（Safari），等 300ms 後處理
-                    //    但如果結果有變化，重新計時
-                    if (isFinal) {
-                        // Chrome：立即處理
-                        processResult(transcript, 'final');
-                    } else {
-                        // Safari：短暫等待確認沒有更多輸入
-                        resultProcessTimeout = setTimeout(() => {
-                            if (!hasReceivedResult && !isProcessing) {
-                                processResult(lastTranscript, 'Safari');
-                            }
-                        }, 200); // 縮短到 200ms
-                    }
+                    // 【立即處理】一收到結果就馬上處理，不等待
+                    // 這樣單音節也能快速得到回饋
+                    processResult(transcript, isFinal ? 'final' : 'immediate');
                 }
             };
 
@@ -679,7 +652,6 @@
 
                 hasReceivedResult = true;
                 clearTimeout(recognitionTimeout);
-                clearTimeout(resultProcessTimeout);
                 try { recognition.stop(); } catch(e) {}
                 isRecognizing = false;
                 document.getElementById('micIndicator').classList.remove('listening');
@@ -728,14 +700,15 @@
                 if (lastTranscript && wasRecognizing) {
                     processResult(lastTranscript, 'onend');
                 } else if (wasRecognizing) {
-                    // 完全沒聽到任何東西，重新播放發音並聆聽
-                    console.log('沒聽到任何東西，重新播放發音');
-                    showHint('再聽一次...', false);
+                    // 完全沒聽到任何東西，快速重新播放發音並聆聽
+                    console.log('沒聽到任何東西，快速重試');
+                    showHint('再聽一次 🔊', false);
+                    // 縮短等待時間，快速重試
                     setTimeout(() => {
                         if (!isProcessing && !hasReceivedResult) {
                             playAndListen();
                         }
-                    }, 500);
+                    }, 200);
                 }
             };
         }
