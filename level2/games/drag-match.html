@@ -98,7 +98,7 @@
         .drag-item {
             background: white;
             border-radius: 15px;
-            padding: 10px;
+            padding: 15px;
             text-align: center;
             cursor: grab;
             transition: all 0.2s;
@@ -108,7 +108,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 0;
+            min-height: 70px;
+            font-size: 1.4rem;
         }
         .drag-item:active { cursor: grabbing; }
         .drag-item.dragging {
@@ -223,12 +224,29 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 12px 30px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
+        }
+        .complete-btn:hover { transform: scale(1.05); }
+        .complete-btn:active { transform: scale(0.95); }
+
+        /* \u9583\u720d\u63d0\u793a\u52d5\u756b */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
         }
 
         /* 響應式調整 */
@@ -291,7 +309,7 @@
             <div class="complete-icon">🎉</div>
             <div class="complete-title">太棒了！</div>
             <div class="complete-score" id="completeScore">得分：100 分</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
             <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
         </div>
     </div>
@@ -368,7 +386,7 @@
             // 渲染圖片
             shuffledImages.forEach((word, index) => {
                 const item = document.createElement('div');
-                item.className = 'drag-item';
+                item.className = 'drag-item highlight-btn';
                 item.dataset.text = word.text;
                 item.innerHTML = `<span class="emoji">${word.emoji}</span>`;
 

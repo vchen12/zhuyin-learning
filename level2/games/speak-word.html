@@ -122,16 +122,20 @@
             gap: 10px;
         }
         .mic-btn {
-            width: 150px;
-            height: 150px;
+            width: 160px;
+            height: 160px;
             border-radius: 50%;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             border: none;
-            font-size: 4.5rem;
+            font-size: 5rem;
             cursor: pointer;
             box-shadow: 0 12px 40px rgba(240, 147, 251, 0.5);
             transition: transform 0.2s, box-shadow 0.2s;
             flex-shrink: 0;
+            touch-action: manipulation;
+        }
+        .mic-btn:hover {
+            transform: scale(1.05);
         }
         .mic-btn:active {
             transform: scale(0.95);
@@ -165,15 +169,15 @@
         .helper-btn {
             background: rgba(255,255,255,0.25);
             border: 3px solid rgba(255,255,255,0.5);
-            padding: 16px 24px;
+            padding: 18px 32px;
             border-radius: 30px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             font-weight: bold;
             color: white;
             cursor: pointer;
             transition: all 0.2s;
-            min-height: 55px;
-            min-width: 100px;
+            min-height: 65px;
+            min-width: 140px;
             touch-action: manipulation;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
@@ -250,12 +254,38 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 12px 30px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
+        }
+        .complete-btn:hover { transform: scale(1.05); }
+        .complete-btn:active { transform: scale(0.95); }
+
+        /* \u9583\u720d\u63d0\u793a\u52d5\u756b */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* \u9ea5\u514b\u98a8\u6309\u9215\u7279\u5225\u9583\u720d */
+        .mic-highlight {
+            animation: mic-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes mic-glow {
+            0%, 100% { box-shadow: 0 12px 40px rgba(240, 147, 251, 0.5); }
+            50% { box-shadow: 0 0 40px 15px rgba(240, 147, 251, 0.9), 0 0 80px 25px rgba(245, 87, 108, 0.6); }
         }
 
         /* 響應式調整 - 小螢幕 */
@@ -339,15 +369,15 @@
         </div>
 
         <div class="mic-section">
-            <button class="mic-btn" id="micBtn" onclick="startListening()">🎤</button>
+            <button class="mic-btn mic-highlight" id="micBtn" onclick="startListening()">🎤</button>
             <button class="mic-btn" id="manualMicBtn" onclick="manualConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅</button>
             <div class="mic-hint" id="micHint">點擊麥克風，說出這是什麼！</div>
         </div>
 
         <div class="helper-buttons">
-            <button class="helper-btn" onclick="playHint()">🔊 聽提示</button>
+            <button class="helper-btn highlight-btn" onclick="playHint()">🔊 聽提示</button>
             <button class="helper-btn" onclick="showAnswer()">👁️ 看答案</button>
-            <button class="helper-btn" onclick="skipWord()">⏭️ 跳過</button>
+            <button class="helper-btn highlight-btn" onclick="skipWord()">⏭️ 跳過</button>
         </div>
 
         <div class="result-section">
@@ -363,7 +393,7 @@
             <div class="complete-icon">🎉</div>
             <div class="complete-title">太棒了！</div>
             <div class="complete-score" id="completeScore">得分：100 分</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
             <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
         </div>
     </div>
@@ -413,13 +443,14 @@
         let hasDetectedSound = false;
         let recognitionTimeout = null;
         let hasReceivedResult = false;
+        let lastTranscript = '';
 
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
-                recognition.continuous = true; // 持續聆聽，不要聽到一點就停
+                recognition.continuous = false; // 改回 false，讓瀏覽器自動管理
                 recognition.interimResults = true; // 啟用即時反饋
                 recognition.maxAlternatives = 5;
 
@@ -427,17 +458,18 @@
                     isListening = true;
                     hasDetectedSound = false;
                     hasReceivedResult = false;
+                    lastTranscript = '';
                     document.getElementById('micBtn').classList.add('listening');
                     document.getElementById('micHint').textContent = '🎙️ 請大聲說出來！';
                     document.getElementById('recognizedText').classList.remove('show');
                     if (navigator.vibrate) navigator.vibrate(100);
 
-                    // 設定較長的聆聽時間（8秒）
+                    // 設定較長的聆聽時間（10秒）
                     recognitionTimeout = setTimeout(() => {
                         if (isListening && !hasReceivedResult) {
                             try { recognition.stop(); } catch(e) {}
                         }
-                    }, 8000);
+                    }, 10000);
                 };
 
                 recognition.onaudiostart = () => {
@@ -452,18 +484,18 @@
 
                 recognition.onspeechend = () => {
                     document.getElementById('micHint').textContent = '🎙️ 正在辨識...';
-                    // 語音結束後等 1 秒再停止
-                    setTimeout(() => {
-                        if (isListening && !hasReceivedResult) {
-                            try { recognition.stop(); } catch(e) {}
-                        }
-                    }, 1000);
+                    // 不要在這裡 stop，讓瀏覽器自己決定何時結束
                 };
 
                 recognition.onresult = (event) => {
                     const lastResult = event.results[event.results.length - 1];
                     const transcript = lastResult[0].transcript;
                     const isFinal = lastResult.isFinal;
+
+                    // 儲存收到的文字
+                    if (transcript) {
+                        lastTranscript = transcript;
+                    }
 
                     document.getElementById('recognizedText').textContent = '你說：' + transcript;
                     document.getElementById('recognizedText').classList.add('show');
@@ -505,10 +537,18 @@
 
                 recognition.onend = () => {
                     clearTimeout(recognitionTimeout);
+                    const wasListening = isListening;
                     isListening = false;
                     document.getElementById('micBtn').classList.remove('listening');
                     document.getElementById('micBtn').disabled = false;
-                    if (!isProcessing && !hasReceivedResult) {
+
+                    // 如果有收到任何文字但還沒處理，現在處理它
+                    if (!hasReceivedResult && lastTranscript && wasListening) {
+                        hasReceivedResult = true;
+                        document.getElementById('recognizedText').textContent = '你說：' + lastTranscript;
+                        document.getElementById('recognizedText').classList.add('show');
+                        checkResult(lastTranscript);
+                    } else if (!isProcessing && !hasReceivedResult) {
                         document.getElementById('micHint').textContent = '點擊麥克風，再說一次！';
                     }
                 };
@@ -606,15 +646,8 @@
             } else {
                 isProcessing = false;
                 document.getElementById('resultMessage').textContent = '再試一次！';
-                document.getElementById('micHint').textContent = '再說一次看看！';
-                // 快速重播並等待重試
-                setTimeout(() => {
-                    playHint();
-                    setTimeout(() => {
-                        document.getElementById('micHint').textContent = '跟著說 🎤';
-                        startListening();
-                    }, 700);
-                }, 400);
+                // 沒有達到門檻時，顯示提示讓用戶手動重試，不自動循環
+                document.getElementById('micHint').textContent = '點麥克風再試 🎤 或點「跳過」';
             }
         }
 

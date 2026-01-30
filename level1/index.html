@@ -67,33 +67,33 @@
         .page-title {
             text-align: center;
             color: white;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
         .page-title h1 {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .page-title p {
-            font-size: 1.2rem;
+            font-size: 1rem;
             opacity: 0.9;
         }
 
         /* 遊戲選單 */
         .games-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            max-width: 900px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 800px;
             margin: 0 auto;
         }
 
         .game-card {
             background: white;
-            border-radius: 25px;
-            padding: 35px;
+            border-radius: 20px;
+            padding: 20px 15px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
             cursor: pointer;
             transition: transform 0.3s, box-shadow 0.3s;
             text-decoration: none;
@@ -101,34 +101,34 @@
             display: block;
         }
         .game-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
         }
         .game-card:active {
             transform: scale(0.98);
         }
 
         .game-icon {
-            font-size: 4rem;
-            margin-bottom: 15px;
+            font-size: 2.5rem;
+            margin-bottom: 8px;
         }
         .game-name {
-            font-size: 1.6rem;
+            font-size: 1.1rem;
             color: #667eea;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .game-desc {
             color: #666;
-            font-size: 1rem;
-            line-height: 1.5;
-            margin-bottom: 15px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            margin-bottom: 8px;
         }
         .game-badge {
             display: inline-block;
-            padding: 6px 16px;
-            border-radius: 15px;
-            font-size: 0.85rem;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
             font-weight: bold;
         }
         .badge-easy {
@@ -175,9 +175,20 @@
         }
 
         @media (max-width: 768px) {
-            .page-title h1 { font-size: 2rem; }
-            .game-icon { font-size: 3rem; }
-            .game-name { font-size: 1.3rem; }
+            .games-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            .game-card { padding: 15px 10px; }
+            .game-icon { font-size: 2rem; }
+            .game-name { font-size: 1rem; }
+            .game-desc { font-size: 0.75rem; }
+        }
+
+        @media (max-width: 480px) {
+            .games-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>

@@ -124,32 +124,52 @@
             75% { transform: translateX(15px); }
         }
 
-        /* 麥克風指示 */
+        /* 麥克風指示 - 明顯閃爍提示 */
         .mic-indicator {
-            width: 80px;
-            height: 80px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border: none;
+            border: 4px solid white;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
-            font-size: 2.5rem;
-            animation: mic-pulse 2s ease-in-out infinite;
+            font-size: 3rem;
+            cursor: pointer;
+            animation: mic-glow 1.2s ease-in-out infinite;
         }
         .mic-indicator.listening {
-            animation: mic-active 0.8s ease-in-out infinite;
-            box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7);
+            animation: mic-active 0.6s ease-in-out infinite;
+            border-color: #ffd700;
         }
-        @keyframes mic-pulse {
-            0%, 100% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; }
+        @keyframes mic-glow {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 20px 5px rgba(240, 147, 251, 0.5);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 40px 15px rgba(245, 87, 108, 0.8), 0 0 60px 25px rgba(240, 147, 251, 0.4);
+            }
         }
         @keyframes mic-active {
-            0% { box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7); }
-            70% { box-shadow: 0 0 0 25px rgba(240, 147, 251, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(240, 147, 251, 0); }
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
+                border-color: #ffd700;
+            }
+            50% {
+                box-shadow: 0 0 0 20px rgba(255, 215, 0, 0);
+                border-color: #ff6b6b;
+            }
+        }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn, .game-btn.highlight {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
         }
 
         /* 提示訊息 */
@@ -222,7 +242,7 @@
             transition: transform 0.2s, box-shadow 0.2s;
             font-weight: bold;
             min-width: 140px;
-            min-height: 60px;
+            min-height: 65px;
             /* 增加觸控區域 */
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
@@ -304,13 +324,16 @@
         .start-btn {
             background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
             border: none;
-            padding: 15px 40px;
+            padding: 18px 40px;
             border-radius: 25px;
             font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin-top: 20px;
             box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            min-height: 65px;
+            min-width: 160px;
+            font-weight: bold;
         }
         .end-buttons {
             display: flex;
@@ -405,7 +428,7 @@
             <h1>🎤 射擊挑戰</h1>
             <p>聽到注音符號的發音後<br>請大聲唸出來！</p>
             <p class="warning">⚠️ 請確認已允許麥克風權限<br>建議使用 Chrome 瀏覽器</p>
-            <button class="start-btn" onclick="startGame()">🚀 開始遊戲</button>
+            <button class="start-btn highlight-btn" onclick="startGame()">🚀 開始遊戲</button>
         </div>
     </div>
 
@@ -450,7 +473,7 @@
             <div class="mouth-hint" id="mouthHint"></div>
 
             <div class="buttons">
-                <button class="game-btn" onclick="replaySound()">🔊 再聽一次</button>
+                <button class="game-btn highlight-btn" onclick="replaySound()">🔊 再聽一次</button>
                 <button class="game-btn" id="manualBtn" onclick="manualConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
                 <button class="game-btn skip" id="skipBtn" onclick="skipSymbol()" style="display: none;">⏭️ 跳過</button>
             </div>
@@ -542,6 +565,9 @@
 
         // 語音辨識失敗標記
         let recognitionFailed = false;
+        let recognitionTimeout = null;
+        let hasReceivedResult = false;
+        let lastTranscript = ''; // 儲存最後收到的文字（即使不是 final）
 
         // 初始化語音辨識
         function initRecognition() {
@@ -550,28 +576,25 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             recognition.lang = 'zh-TW';
-            recognition.continuous = true; // 持續聆聽，不要聽到一點就停
+            recognition.continuous = false; // 改回 false，讓瀏覽器自動管理
             recognition.interimResults = true; // 開啟即時結果，給用戶回饋
             recognition.maxAlternatives = 5;
-
-            let recognitionTimeout = null;
-            let hasReceivedResult = false;
 
             recognition.onstart = () => {
                 isRecognizing = true;
                 hasReceivedResult = false;
+                lastTranscript = '';
                 document.getElementById('micIndicator').classList.add('listening');
                 showHint('🎙️ 請大聲唸出來！', true);
-                // 震動回饋（如果支援）
                 if (navigator.vibrate) {
                     navigator.vibrate(100);
                 }
-                // 設定較長的聆聽時間（8秒）
+                // 設定 10 秒超時
                 recognitionTimeout = setTimeout(() => {
-                    if (isRecognizing && !hasReceivedResult) {
+                    if (isRecognizing) {
                         try { recognition.stop(); } catch(e) {}
                     }
-                }, 8000);
+                }, 10000);
             };
 
             recognition.onaudiostart = () => {
@@ -579,24 +602,24 @@
             };
 
             recognition.onspeechstart = () => {
-                showHint('🎙️ 聽到你在說話！繼續...', true);
+                showHint('🎙️ 聽到你在說話！', true);
             };
 
             recognition.onspeechend = () => {
                 showHint('🎙️ 正在辨識...', true);
-                // 語音結束後等 1 秒再停止
-                setTimeout(() => {
-                    if (isRecognizing && !hasReceivedResult) {
-                        try { recognition.stop(); } catch(e) {}
-                    }
-                }, 1000);
+                // 不要在這裡 stop，讓瀏覽器自己決定何時結束
             };
 
             recognition.onresult = (event) => {
                 // 取得最新的辨識結果
                 const lastResult = event.results[event.results.length - 1];
-                const transcript = lastResult[0].transcript;
+                const transcript = lastResult[0].transcript.trim();
                 const isFinal = lastResult.isFinal;
+
+                // 儲存收到的文字
+                if (transcript) {
+                    lastTranscript = transcript;
+                }
 
                 // 顯示即時辨識結果
                 showHint('聽到：' + transcript + (isFinal ? '' : '...'), true);
@@ -615,74 +638,41 @@
 
             recognition.onerror = (event) => {
                 clearTimeout(recognitionTimeout);
-                isRecognizing = false;
-                document.getElementById('micIndicator').classList.remove('listening');
                 console.error('語音辨識錯誤:', event.error);
 
-                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
                     recognitionFailed = true;
+                    isRecognizing = false;
+                    document.getElementById('micIndicator').classList.remove('listening');
                     showHint('❌ 麥克風無法使用，請點「我會唸」按鈕 👆', false);
                     document.getElementById('skipBtn').style.display = 'none';
                     document.getElementById('manualBtn').style.display = 'inline-block';
                     return;
                 }
 
-                if (event.error === 'audio-capture') {
-                    recognitionFailed = true;
-                    showHint('❌ 找不到麥克風，請點「我會唸」按鈕 👆', false);
-                    document.getElementById('skipBtn').style.display = 'none';
-                    document.getElementById('manualBtn').style.display = 'inline-block';
-                    return;
-                }
-
-                if (event.error === 'no-speech') {
-                    showHint('😊 沒聽到聲音，請大聲一點再試！', false);
-                    // 震動提示
-                    if (navigator.vibrate) {
-                        navigator.vibrate([50, 50, 50]);
-                    }
-                }
-
-                if (event.error === 'aborted') {
-                    showHint('⏸️ 已暫停，準備好再開始', false);
-                    return;
-                }
-
-                // 如果正在處理答題或遊戲已結束，不要重新開始監聽
-                if (isProcessing || document.getElementById('gameScreen').style.display === 'none') {
-                    return;
-                }
-
-                // 給予提示，等待用戶再試
-                setTimeout(() => {
-                    if (!isProcessing && !recognitionFailed && document.getElementById('gameScreen').style.display !== 'none') {
-                        showHint('再聽一次，跟著唸！🔊', false);
-                        playSound(currentSymbol);
-                    }
-                }, 1000);
+                // no-speech 或 aborted 錯誤會繼續到 onend 處理
             };
 
             recognition.onend = () => {
                 clearTimeout(recognitionTimeout);
+                const wasRecognizing = isRecognizing;
                 isRecognizing = false;
                 document.getElementById('micIndicator').classList.remove('listening');
 
-                // 如果已經收到結果或正在處理，不要重新聆聽
+                // 如果已經收到結果或正在處理，不做任何事
                 if (hasReceivedResult || isProcessing || recognitionFailed || document.getElementById('gameScreen').style.display === 'none') {
                     return;
                 }
 
-                // 沒有收到結果時，重新播放發音並開始聆聽
-                setTimeout(() => {
-                    if (!isRecognizing && !isProcessing && !recognitionFailed && document.getElementById('gameScreen').style.display !== 'none') {
-                        showHint('再聽一次 🔊', false);
-                        playSound(currentSymbol);
-                        setTimeout(() => {
-                            showHint('請大聲唸 🎤', true);
-                            startListening();
-                        }, 1200);
-                    }
-                }, 1500);
+                // 如果有收到任何文字但還沒處理，現在處理它
+                if (lastTranscript && wasRecognizing) {
+                    hasReceivedResult = true;
+                    showHint('聽到：' + lastTranscript, false);
+                    handleRecognitionResult(lastTranscript);
+                } else if (wasRecognizing) {
+                    // 完全沒聽到任何東西
+                    showHint('沒聽清楚，點麥克風再試 🎤 或點「我會唸」', false);
+                }
             };
         }
 

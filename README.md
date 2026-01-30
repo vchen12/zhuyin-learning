@@ -101,6 +101,21 @@ zhuyin-learning/
 
 作者：陳宜誠律師（Vincent Chen, Attorney at Law）及 Claude Code
 
+### v3.4（2025-01-30）
+- ✅ **全面 UI 優化（23 個遊戲）**
+  - 放大所有互動按鈕（padding 18px 32px, font-size 1.3rem, min-height 65px）
+  - 放大選項按鈕/卡片（min-height 70px, font-size 1.4rem）
+  - 麥克風按鈕加上明顯閃爍發光動畫（粉紫色光暈）
+  - 互動按鈕加上閃爍提示，引導兒童點擊正確位置
+  - 第0關/第一關：卡片大小適中，網格完整顯示
+
+### v3.3（2025-01-30）
+- ✅ **修正語音辨識 isFinal 結果遺失問題**
+  - 改用 `continuous = false` 讓瀏覽器自動管理辨識週期
+  - 新增 `lastTranscript` 儲存中間結果，避免結果遺失
+  - 在 `onend` 補救處理未完成的辨識結果
+  - 修正 9 個語音辨識遊戲（Level 1-3 全部）
+
 ### v3.2（2025-01-29）
 - ✅ **修正語音辨識問題**
   - 改用 `continuous = true` 持續聆聽模式

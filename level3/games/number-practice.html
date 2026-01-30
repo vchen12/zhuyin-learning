@@ -180,6 +180,25 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             transition: all 0.2s;
+            min-height: 70px;
+        }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* 麥克風按鈕特別閃爍 */
+        .mic-highlight {
+            animation: mic-glow 1.2s ease-in-out infinite;
+        }
+        @keyframes mic-glow {
+            0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+            50% { box-shadow: 0 0 30px 10px rgba(240, 147, 251, 0.8), 0 0 60px 20px rgba(245, 87, 108, 0.5); }
         }
         .option-btn:hover { transform: scale(1.05); }
         .option-btn.correct { background: #4caf50; color: white; }
@@ -195,12 +214,14 @@
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 10px 18px;
+            padding: 18px 32px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            min-height: 65px;
+            min-width: 140px;
         }
         .action-btn:active { transform: scale(0.95); }
 
@@ -286,12 +307,14 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
+            padding: 18px 32px;
             border-radius: 30px;
             font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
         }
 
         .number-grid {
@@ -369,10 +392,10 @@
             <div class="options-grid" id="optionsGrid" style="display: none;"></div>
 
             <div class="action-buttons" id="actionButtons">
-                <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
-                <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
-                <button class="action-btn" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
-                <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+                <button class="action-btn highlight-btn" onclick="playSound()">🔊 聽發音</button>
+                <button class="action-btn highlight-btn" onclick="nextNumber()">⚡ 換一個</button>
+                <button class="action-btn mic-highlight" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
+                <button class="action-btn highlight-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
             </div>
 
             <div class="result-message" id="resultMessage"></div>
@@ -388,8 +411,8 @@
             <div class="complete-icon">🎉</div>
             <div class="complete-title">太棒了！</div>
             <div class="complete-score" id="completeScore">得分：100 分</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
-            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
         </div>
     </div>
 
@@ -584,7 +607,7 @@
 
             options.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = 'option-btn';
+                btn.className = 'option-btn highlight-btn';
                 btn.textContent = opt.num;
                 btn.onclick = () => checkAnswer(btn, opt);
                 grid.appendChild(btn);

@@ -76,12 +76,14 @@
         .mode-btn {
             background: rgba(255,255,255,0.2);
             border: 2px solid rgba(255,255,255,0.5);
-            padding: 8px 16px;
+            padding: 12px 20px;
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 1rem;
             color: white;
             cursor: pointer;
             transition: all 0.2s;
+            touch-action: manipulation;
+            font-weight: bold;
         }
         .mode-btn.active {
             background: white;
@@ -140,12 +142,15 @@
         .option-btn {
             background: white;
             border: none;
-            padding: 18px;
+            padding: 15px;
             border-radius: 15px;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             transition: all 0.2s;
+            min-height: 70px;
+            touch-action: manipulation;
+            font-weight: bold;
         }
         .option-btn:hover { transform: scale(1.03); }
         .option-btn.correct { background: #4caf50; color: white; }
@@ -161,13 +166,19 @@
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 10px 20px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
+            touch-action: manipulation;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+        .action-btn:hover { transform: scale(1.05); }
         .action-btn:active { transform: scale(0.95); }
 
         .result-message {
@@ -255,12 +266,38 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 12px 30px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
+        }
+        .complete-btn:hover { transform: scale(1.05); }
+        .complete-btn:active { transform: scale(0.95); }
+
+        /* \u9583\u720d\u63d0\u793a\u52d5\u756b */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* \u9ea5\u514b\u98a8\u6309\u9215\u7279\u5225\u9583\u720d */
+        .mic-highlight {
+            animation: mic-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes mic-glow {
+            0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 30px 12px rgba(240, 147, 251, 0.8), 0 0 60px 20px rgba(245, 87, 108, 0.5); }
         }
 
         /* 響應式調整 */
@@ -342,9 +379,9 @@
         <div class="options-grid" id="optionsGrid" style="display: none;"></div>
 
         <div class="action-buttons" id="actionButtons">
-            <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
-            <button class="action-btn" onclick="nextNumber()">換一個</button>
-            <button class="action-btn" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
+            <button class="action-btn highlight-btn" onclick="playSound()">🔊 聽發音</button>
+            <button class="action-btn highlight-btn" onclick="nextNumber()">換一個</button>
+            <button class="action-btn mic-highlight" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
             <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">我會唸</button>
         </div>
 
@@ -360,7 +397,7 @@
             <div class="complete-icon">🎉</div>
             <div class="complete-title">太棒了！</div>
             <div class="complete-score" id="completeScore">得分：100 分</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
             <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
         </div>
     </div>
@@ -530,7 +567,7 @@
 
             options.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = 'option-btn';
+                btn.className = 'option-btn highlight-btn';
                 btn.textContent = opt.num;
                 btn.onclick = () => checkAnswer(btn, opt);
                 grid.appendChild(btn);

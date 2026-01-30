@@ -171,10 +171,20 @@
             background: #f5f5f5;
             border: 3px solid #e0e0e0;
             border-radius: 12px;
-            padding: 12px;
-            font-size: 1.1rem;
+            padding: 15px;
+            font-size: 1.4rem;
             cursor: pointer;
             transition: all 0.2s;
+            min-height: 70px;
+        }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(102, 126, 234, 0.7), 0 0 50px 15px rgba(118, 75, 162, 0.4); }
         }
         .choice-btn:hover {
             border-color: #667eea;
@@ -272,12 +282,14 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
+            padding: 18px 32px;
             border-radius: 30px;
             font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
         }
 
         @media (max-width: 500px) {
@@ -329,8 +341,8 @@
             <div class="complete-icon" id="completeIcon">🏆</div>
             <div class="complete-title" id="completeTitle">遊戲結束！</div>
             <div class="complete-message" id="completeMessage">你贏了！</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
-            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2);">🏠 返回選單</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2);">🏠 返回選單</button>
         </div>
     </div>
 
@@ -448,7 +460,7 @@
 
             choices.forEach((word, index) => {
                 const btn = document.createElement('button');
-                btn.className = 'choice-btn';
+                btn.className = 'choice-btn highlight-btn';
                 btn.textContent = word.text;
                 btn.onclick = () => playerAnswer(index);
                 grid.appendChild(btn);

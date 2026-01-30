@@ -202,12 +202,38 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 12px 30px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
+        }
+        .complete-btn:hover { transform: scale(1.05); }
+        .complete-btn:active { transform: scale(0.95); }
+
+        /* \u9583\u720d\u63d0\u793a\u52d5\u756b */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* \u5361\u7247\u9583\u720d\u63d0\u793a */
+        .card-highlight .card-back {
+            animation: card-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes card-glow {
+            0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 20px 6px rgba(102, 126, 234, 0.6), 0 0 40px 12px rgba(118, 75, 162, 0.4); }
         }
 
         /* 響應式調整 */
@@ -271,7 +297,7 @@
                 總翻牌次數：0 次<br>
                 配對成功：6 組
             </div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
             <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
         </div>
     </div>
@@ -349,7 +375,7 @@
 
             cards.forEach((card, index) => {
                 const cardEl = document.createElement('div');
-                cardEl.className = 'card';
+                cardEl.className = 'card card-highlight';
                 cardEl.dataset.index = index;
 
                 let frontContent;

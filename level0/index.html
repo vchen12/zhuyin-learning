@@ -123,23 +123,24 @@
             line-height: 1.4;
         }
         .stage-menu {
-            flex: 1;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            min-height: 0;
+            gap: 15px;
+            max-width: 600px;
+            margin: 0 auto;
         }
         .stage-card {
             background: white;
-            border-radius: 15px;
-            padding: 15px;
+            border-radius: 20px;
+            padding: 25px 20px;
             text-align: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
             cursor: pointer;
             transition: transform 0.3s, box-shadow 0.3s;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            align-items: center;
         }
         .stage-card:hover {
             transform: translateY(-3px);
@@ -153,18 +154,18 @@
             border: 3px solid #4caf50;
         }
         .stage-icon {
-            font-size: 2rem;
-            margin-bottom: 6px;
+            font-size: 3rem;
+            margin-bottom: 10px;
         }
         .stage-title {
-            font-size: 1rem;
+            font-size: 1.2rem;
             color: #667eea;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
             font-weight: bold;
         }
         .stage-desc {
             color: #666;
-            font-size: 0.75rem;
+            font-size: 0.9rem;
         }
 
         /* 學習模式 */

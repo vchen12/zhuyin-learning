@@ -168,16 +168,16 @@
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 16px 28px;
+            padding: 18px 32px;
             border-radius: 30px;
-            font-size: 1.15rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
             font-weight: bold;
-            min-height: 55px;
-            min-width: 110px;
+            min-height: 65px;
+            min-width: 140px;
             touch-action: manipulation;
         }
         .action-btn:hover {
@@ -188,12 +188,34 @@
         }
         .action-btn.speak {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-width: 90px;
+            min-height: 90px;
+            border-radius: 50%;
+            font-size: 2rem;
         }
         .action-btn.next {
             background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
         }
         .action-btn.prev {
             background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+        }
+
+        /* \u9583\u720d\u63d0\u793a\u52d5\u756b */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* \u9ea5\u514b\u98a8\u6309\u9215\u7279\u5225\u9583\u720d */
+        .mic-highlight {
+            animation: mic-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes mic-glow {
+            0%, 100% { box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4); }
+            50% { box-shadow: 0 0 30px 12px rgba(240, 147, 251, 0.8), 0 0 60px 20px rgba(245, 87, 108, 0.5); }
         }
 
         /* 詞彙列表 */
@@ -211,11 +233,13 @@
         .word-item {
             background: white;
             border-radius: 10px;
-            padding: 6px 4px;
+            padding: 8px 6px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            min-height: 50px;
+            touch-action: manipulation;
         }
         .word-item:hover {
             transform: scale(1.05);
@@ -330,9 +354,9 @@
         <!-- 按鈕區 -->
         <div class="buttons">
             <button class="action-btn prev" onclick="prevWord()">⬅️ 上一個</button>
-            <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
-            <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來唸</button>
-            <button class="action-btn next" onclick="nextWord()">➡️ 下一個</button>
+            <button class="action-btn highlight-btn" onclick="playSound()">🔊 聽發音</button>
+            <button class="action-btn speak mic-highlight" onclick="startListening()" id="speakBtn">🎤</button>
+            <button class="action-btn next highlight-btn" onclick="nextWord()">➡️ 下一個</button>
         </div>
 
         <!-- 詞彙列表 -->
@@ -452,13 +476,14 @@
         let hasDetectedSound = false;
         let recognitionTimeout = null;
         let hasReceivedResult = false;
+        let lastTranscript = '';
 
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
-                recognition.continuous = true; // 持續聆聽，不要聽到一點就停
+                recognition.continuous = false; // 改回 false，讓瀏覽器自動管理
                 recognition.interimResults = true; // 啟用即時反饋
                 recognition.maxAlternatives = 5;
 
@@ -466,16 +491,17 @@
                     isRecognizing = true;
                     hasDetectedSound = false;
                     hasReceivedResult = false;
+                    lastTranscript = '';
                     document.getElementById('statusMessage').textContent = '🎙️ 請大聲說出來！';
                     document.getElementById('speakBtn').disabled = true;
                     if (navigator.vibrate) navigator.vibrate(100);
 
-                    // 設定較長的聆聽時間（8秒）
+                    // 設定較長的聆聽時間（10秒）
                     recognitionTimeout = setTimeout(() => {
                         if (isRecognizing && !hasReceivedResult) {
                             try { recognition.stop(); } catch(e) {}
                         }
-                    }, 8000);
+                    }, 10000);
                 };
 
                 recognition.onaudiostart = () => {
@@ -490,18 +516,18 @@
 
                 recognition.onspeechend = () => {
                     document.getElementById('statusMessage').textContent = '🎙️ 正在辨識...';
-                    // 語音結束後等 1 秒再停止
-                    setTimeout(() => {
-                        if (isRecognizing && !hasReceivedResult) {
-                            try { recognition.stop(); } catch(e) {}
-                        }
-                    }, 1000);
+                    // 不要在這裡 stop，讓瀏覽器自己決定何時結束
                 };
 
                 recognition.onresult = (event) => {
                     const lastResult = event.results[event.results.length - 1];
                     const transcript = lastResult[0].transcript;
                     const isFinal = lastResult.isFinal;
+
+                    // 儲存收到的文字
+                    if (transcript) {
+                        lastTranscript = transcript;
+                    }
 
                     if (isFinal && !hasReceivedResult) {
                         hasReceivedResult = true;
@@ -530,8 +556,15 @@
 
                 recognition.onend = () => {
                     clearTimeout(recognitionTimeout);
+                    const wasRecognizing = isRecognizing;
                     isRecognizing = false;
                     document.getElementById('speakBtn').disabled = false;
+
+                    // 如果有收到任何文字但還沒處理，現在處理它
+                    if (!hasReceivedResult && lastTranscript && wasRecognizing) {
+                        hasReceivedResult = true;
+                        handleRecognitionResult(lastTranscript);
+                    }
                 };
             }
         }
@@ -586,15 +619,8 @@
                 handleCorrect(similarity);
             } else {
                 isProcessing = false;
-                document.getElementById('statusMessage').textContent = '再試一次！';
-                // 快速重播並等待重試
-                setTimeout(() => {
-                    playSound();
-                    setTimeout(() => {
-                        document.getElementById('statusMessage').textContent = '跟著說 🎤';
-                        startListening();
-                    }, 700);
-                }, 400);
+                // 沒有達到門檻時，顯示提示讓用戶手動重試，不自動循環
+                document.getElementById('statusMessage').textContent = '再試一次！點「我來唸」或「下一個」';
             }
         }
 

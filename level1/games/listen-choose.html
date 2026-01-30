@@ -101,12 +101,12 @@
             gap: 10px;
         }
         .play-btn {
-            width: 100px;
-            height: 100px;
+            width: 110px;
+            height: 110px;
             border-radius: 50%;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            font-size: 3rem;
+            font-size: 3.5rem;
             cursor: pointer;
             box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
             transition: transform 0.2s, box-shadow 0.2s;
@@ -142,8 +142,8 @@
             background: white;
             border: 4px solid #e0e0e0;
             border-radius: 20px;
-            padding: 20px;
-            font-size: 3.5rem;
+            padding: 15px;
+            font-size: 3.8rem;
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -151,6 +151,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: 90px;
         }
         .choice-btn:hover {
             border-color: #667eea;
@@ -184,6 +185,15 @@
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-8px); }
             75% { transform: translateX(8px); }
+        }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn, .play-btn.highlight {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
         }
 
         /* 結果訊息 */
@@ -256,12 +266,15 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 12px 30px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
         }
 
         /* 響應式調整 */
@@ -313,7 +326,7 @@
 
     <div class="game-area">
         <div class="play-section">
-            <button class="play-btn" id="playBtn" onclick="playCurrentSound()">🔊</button>
+            <button class="play-btn highlight-btn" id="playBtn" onclick="playCurrentSound()">🔊</button>
             <div class="hint-text" id="hintText">點擊播放，聽聽看是哪個注音？</div>
         </div>
 
