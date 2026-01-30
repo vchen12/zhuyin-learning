@@ -426,8 +426,9 @@
     <div class="overlay" id="startOverlay">
         <div class="overlay-content">
             <h1>🎤 射擊挑戰</h1>
-            <p>聽到注音符號的發音後<br>請大聲唸出來！</p>
-            <p class="warning">⚠️ 請確認已允許麥克風權限<br>建議使用 Chrome 瀏覽器</p>
+            <p>聽到注音符號的發音後<br>請<b>大聲唸 2~3 次</b>！</p>
+            <p style="font-size: 0.95rem; color: #888;">例如：ㄅ ㄅ ㄅ</p>
+            <p class="warning">⚠️ 請確認已允許麥克風權限</p>
             <button class="start-btn highlight-btn" onclick="startGame()">🚀 開始遊戲</button>
         </div>
     </div>
@@ -550,7 +551,7 @@
             initRecognition();
 
             // 播放語音引導
-            speak('射擊挑戰開始！聽發音後，請大聲唸出注音符號。', () => {
+            speak('射擊挑戰開始！聽發音後，請大聲唸兩到三次。', () => {
                 setTimeout(nextSymbol, 500);
             });
         }
@@ -767,14 +768,10 @@
             // 先播放發音
             showHint('聽發音 🔊', false);
             playSoundWithCallback(currentSymbol, () => {
-                // 發音播放完成後，說「請跟著唸」，說完再啟動辨識
-                setTimeout(() => {
-                    showHint('請跟著唸！🎤', true);
-                    speakShort('請跟著唸', () => {
-                        // 語音說完後，啟動辨識
-                        startListening();
-                    });
-                }, 50);
+                // 發音播放完成後，立即啟動辨識，同時說提示
+                showHint('請唸 2~3 次！🎤', true);
+                startListening();
+                speakShort('請唸兩到三次');
             });
         }
 
