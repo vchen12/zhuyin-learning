@@ -614,9 +614,8 @@
                 // 不要在這裡 stop，讓瀏覽器自己決定何時結束
             };
 
-            // 用來追蹤穩定的辨識結果
-            let stableResultTimeout = null;
-            let lastStableTranscript = '';
+            // 用來追蹤辨識結果
+            let resultProcessTimeout = null;
 
             recognition.onresult = (event) => {
                 // 取得最新的辨識結果
@@ -626,51 +625,59 @@
 
                 console.log('onresult:', transcript, 'isFinal:', isFinal);
 
-                // 儲存收到的文字（不管是否 final）
+                // 如果已經處理過，不要再處理
+                if (hasReceivedResult || isProcessing) {
+                    return;
+                }
+
+                // 過濾掉「請跟著唸」（系統語音可能被辨識到）
+                if (transcript.includes('請跟著') || transcript.includes('跟著唸')) {
+                    console.log('過濾系統語音:', transcript);
+                    return;
+                }
+
+                // 儲存收到的文字
                 if (transcript) {
                     lastTranscript = transcript;
                     // 顯示即時辨識結果
                     showHint('🎤 聽到：' + transcript, true);
 
-                    // 如果已經處理過，不要再處理
-                    if (hasReceivedResult || isProcessing) {
-                        return;
+                    // 清除之前的計時器
+                    if (resultProcessTimeout) {
+                        clearTimeout(resultProcessTimeout);
                     }
 
-                    // 清除之前的穩定檢測計時器
-                    if (stableResultTimeout) {
-                        clearTimeout(stableResultTimeout);
-                    }
-
-                    // Safari 修正：Safari 不會回傳 isFinal: true
-                    // 策略：當辨識結果穩定 1 秒沒變化，就當作 final 處理
+                    // 立即處理策略：
+                    // 1. 如果是 isFinal（Chrome），立即處理
+                    // 2. 如果不是 isFinal（Safari），等 300ms 後處理
+                    //    但如果結果有變化，重新計時
                     if (isFinal) {
-                        // Chrome 等正常瀏覽器：直接處理 final 結果
-                        hasReceivedResult = true;
-                        clearTimeout(recognitionTimeout);
-                        try { recognition.stop(); } catch(e) {}
-                        isRecognizing = false;
-                        document.getElementById('micIndicator').classList.remove('listening');
-                        console.log('辨識結果 (final):', transcript);
-                        handleRecognitionResult(transcript);
+                        // Chrome：立即處理
+                        processResult(transcript, 'final');
                     } else {
-                        // Safari：設定計時器，如果 400ms 內沒有新結果，就處理
-                        // 注音符號是單音節，不需要等太久
-                        lastStableTranscript = transcript;
-                        stableResultTimeout = setTimeout(() => {
-                            if (!hasReceivedResult && !isProcessing && lastTranscript === lastStableTranscript) {
-                                hasReceivedResult = true;
-                                clearTimeout(recognitionTimeout);
-                                try { recognition.stop(); } catch(e) {}
-                                isRecognizing = false;
-                                document.getElementById('micIndicator').classList.remove('listening');
-                                console.log('辨識結果 (Safari穩定):', lastStableTranscript);
-                                handleRecognitionResult(lastStableTranscript);
+                        // Safari：短暫等待確認沒有更多輸入
+                        resultProcessTimeout = setTimeout(() => {
+                            if (!hasReceivedResult && !isProcessing) {
+                                processResult(lastTranscript, 'Safari');
                             }
-                        }, 400); // 縮短到 400ms，讓單音節能快速得到回饋
+                        }, 300);
                     }
                 }
             };
+
+            // 處理辨識結果
+            function processResult(transcript, source) {
+                if (hasReceivedResult || isProcessing) return;
+
+                hasReceivedResult = true;
+                clearTimeout(recognitionTimeout);
+                clearTimeout(resultProcessTimeout);
+                try { recognition.stop(); } catch(e) {}
+                isRecognizing = false;
+                document.getElementById('micIndicator').classList.remove('listening');
+                console.log(`辨識結果 (${source}):`, transcript);
+                handleRecognitionResult(transcript);
+            }
 
             recognition.onerror = (event) => {
                 clearTimeout(recognitionTimeout);
@@ -711,20 +718,16 @@
 
                 // 如果有收到任何文字，處理它
                 if (lastTranscript && wasRecognizing) {
-                    hasReceivedResult = true;
-                    console.log('辨識結果 (onend):', lastTranscript);
-                    showHint('聽到：' + lastTranscript, false);
-                    handleRecognitionResult(lastTranscript);
+                    processResult(lastTranscript, 'onend');
                 } else if (wasRecognizing) {
-                    // 完全沒聽到任何東西，自動重播發音並重新聆聽
-                    console.log('沒聽到任何東西，自動重試');
-                    showHint('沒聽清楚，請再試一次 🎤', false);
-                    // 等久一點再重試
+                    // 完全沒聽到任何東西，只重新啟動辨識（不重播發音）
+                    console.log('沒聽到任何東西，重新聆聽');
+                    showHint('請再唸一次 🎤', true);
                     setTimeout(() => {
                         if (!isProcessing && !hasReceivedResult) {
-                            playAndListen();
+                            startListening();
                         }
-                    }, 1500);
+                    }, 300);
                 }
             };
         }
@@ -783,15 +786,14 @@
             // 先播放發音
             showHint('聽發音 🔊', false);
             playSoundWithCallback(currentSymbol, () => {
-                // 發音播放完成後，等一下再啟動辨識
-                // 確保麥克風不會收到回音
+                // 發音播放完成後，短暫等待
                 setTimeout(() => {
+                    // 先啟動辨識，再說「請跟著唸」
+                    // 這樣使用者的聲音才不會被漏掉
+                    startListening();
                     showHint('請跟著唸！🎤', true);
-                    // 用語音說「請跟著唸」
-                    speakShort('請跟著唸', () => {
-                        startListening();
-                    });
-                }, 200);
+                    speakShort('請跟著唸');
+                }, 50);
             });
         }
 
