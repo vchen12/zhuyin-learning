@@ -589,24 +589,28 @@
                 if (navigator.vibrate) {
                     navigator.vibrate(100);
                 }
-                // 設定 10 秒超時
+                // 設定 8 秒超時（給使用者足夠時間）
                 recognitionTimeout = setTimeout(() => {
-                    if (isRecognizing) {
+                    if (isRecognizing && !hasReceivedResult) {
+                        console.log('辨識超時，停止');
                         try { recognition.stop(); } catch(e) {}
                     }
-                }, 10000);
+                }, 8000);
             };
 
+            // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
             recognition.onaudiostart = () => {
-                showHint('🎙️ 聽到聲音了！請繼續說...', true);
+                // 不顯示任何東西，避免誤導
+                console.log('onaudiostart');
             };
 
             recognition.onspeechstart = () => {
-                showHint('🎙️ 聽到你在說話！', true);
+                // 不顯示任何東西，避免誤導
+                console.log('onspeechstart');
             };
 
             recognition.onspeechend = () => {
-                showHint('🎙️ 正在辨識...', true);
+                console.log('onspeechend');
                 // 不要在這裡 stop，讓瀏覽器自己決定何時結束
             };
 
@@ -684,14 +688,14 @@
                     showHint('聽到：' + lastTranscript, false);
                     handleRecognitionResult(lastTranscript);
                 } else if (wasRecognizing) {
-                    // 完全沒聽到任何東西，重置狀態讓使用者可以再試
-                    isProcessing = false;
-                    showHint('沒聽清楚，請點🎤麥克風重試或點「✅我會唸」', false);
-                    // 讓麥克風按鈕閃爍提示可以再試
-                    document.getElementById('micIndicator').classList.add('listening');
+                    // 完全沒聽到任何東西，自動重播發音並重新聆聽
+                    console.log('沒聽到任何東西，自動重試');
+                    showHint('沒聽清楚，再試一次...', false);
                     setTimeout(() => {
-                        document.getElementById('micIndicator').classList.remove('listening');
-                    }, 2000);
+                        if (!isProcessing && !hasReceivedResult) {
+                            playAndListen();
+                        }
+                    }, 500);
                 }
             };
         }
@@ -728,21 +732,31 @@
             updateAttempts();
             displaySymbol();
 
-            // 播放發音，然後提示使用者點麥克風（不自動開始聆聽）
-            setTimeout(() => {
-                showHint('聽發音 🔊', false);
-                playSound(currentSymbol);
+            // 播放發音，然後自動開始聆聽
+            playAndListen();
+        }
 
-                // 播放完後提示點麥克風
-                setTimeout(() => {
-                    showHint('點🎤唸出來！', false);
-                    // 讓麥克風閃爍提示
-                    document.getElementById('micIndicator').classList.add('listening');
-                    setTimeout(() => {
-                        document.getElementById('micIndicator').classList.remove('listening');
-                    }, 2000);
-                }, 1000);
-            }, 300);
+        // 播放發音後自動開始聆聽
+        function playAndListen() {
+            // 如果正在辨識，先停止
+            if (isRecognizing) {
+                try { recognition.stop(); } catch(e) {}
+                isRecognizing = false;
+            }
+
+            // 重置狀態
+            hasReceivedResult = false;
+            lastTranscript = '';
+
+            showHint('聽發音 🔊', false);
+            playSound(currentSymbol);
+
+            // 播放完發音後，自動開始聆聽（等音檔播完約 0.8 秒）
+            setTimeout(() => {
+                if (!isProcessing && !hasReceivedResult) {
+                    startListening();
+                }
+            }, 1000);
         }
 
         // 顯示符號
@@ -769,46 +783,19 @@
             currentAudio.play().catch(err => console.error('播放失敗:', err));
         }
 
-        // 重播
+        // 重播（和麥克風按鈕功能一樣）
         function replaySound() {
-            // 如果正在辨識，先停止
-            if (isRecognizing) {
-                try { recognition.stop(); } catch(e) {}
-                isRecognizing = false;
-            }
-
-            playSound(currentSymbol);
-            showHint('仔細聽！🔊', false);
-
-            // 播放完後提示點麥克風
-            setTimeout(() => {
-                showHint('聽完了嗎？點🎤說出來！', false);
-                // 讓麥克風閃爍提示
-                document.getElementById('micIndicator').classList.add('listening');
-                setTimeout(() => {
-                    document.getElementById('micIndicator').classList.remove('listening');
-                }, 2000);
-            }, 1000);
+            playAndListen();
         }
 
-        // 麥克風點擊事件
+        // 麥克風點擊事件（和再聽一次功能一樣）
         function onMicClick() {
-            console.log('麥克風被點擊, isRecognizing:', isRecognizing, 'isProcessing:', isProcessing);
-
-            // 如果正在辨識，停止它
-            if (isRecognizing) {
-                try { recognition.stop(); } catch(e) {}
-                return;
-            }
-
-            // 重置狀態並開始聆聽
-            isProcessing = false;
-            startListening();
+            playAndListen();
         }
 
         // 開始監聽
         function startListening() {
-            // 如果已經在辨識或正在處理，不要重複啟動
+            // 如果已經在辨識，不要重複啟動
             if (isRecognizing) {
                 console.log('已經在辨識中，跳過');
                 return;
@@ -818,15 +805,8 @@
                 return;
             }
 
-            // 重置狀態
-            hasReceivedResult = false;
-            lastTranscript = '';
-
             try {
                 console.log('啟動語音辨識...');
-                isRecognizing = true;
-                document.getElementById('hintMessage').classList.add('listening');
-                document.getElementById('micIndicator').classList.add('listening');
                 recognition.start();
             } catch (error) {
                 console.error('啟動辨識失敗:', error);
@@ -836,10 +816,12 @@
 
                 // 如果是 "already started" 錯誤，等一下再試
                 if (error.message && error.message.includes('already started')) {
-                    showHint('請稍候再試...', false);
                     setTimeout(() => {
-                        if (!isRecognizing) startListening();
-                    }, 500);
+                        try { recognition.stop(); } catch(e) {}
+                        setTimeout(() => {
+                            if (!isRecognizing) startListening();
+                        }, 300);
+                    }, 200);
                 }
             }
         }
@@ -909,7 +891,7 @@
             }, 2000);
         }
 
-        // 答錯 - 提示使用者重試
+        // 答錯 - 自動重播發音並重新聆聽
         function handleWrong(similarity = 0) {
             // 停止語音辨識
             if (recognition && isRecognizing) {
@@ -925,22 +907,17 @@
                 document.getElementById('targetSymbol').classList.remove('wrong');
             }, 400);
 
-            // 顯示提示，讓使用者手動重試
-            showHint('沒聽清楚，點🎤再試或點「🔊再聽一次」', false);
-
-            // 讓麥克風按鈕閃爍提示
-            document.getElementById('micIndicator').classList.add('listening');
-            setTimeout(() => {
-                document.getElementById('micIndicator').classList.remove('listening');
-            }, 1500);
-
-            // 重置處理狀態，允許使用者操作
-            isProcessing = false;
-
             // 第3次後顯示跳過按鈕
             if (attempts >= 3) {
                 document.getElementById('skipBtn').style.display = 'inline-block';
             }
+
+            // 短暫提示後，自動重播發音並開始聆聽
+            showHint('再試一次！', false);
+            setTimeout(() => {
+                isProcessing = false;
+                playAndListen();
+            }, 800);
         }
 
         // 跳過
