@@ -654,7 +654,8 @@
                         console.log('辨識結果 (final):', transcript);
                         handleRecognitionResult(transcript);
                     } else {
-                        // Safari：設定計時器，如果 1 秒內沒有新結果，就處理
+                        // Safari：設定計時器，如果 400ms 內沒有新結果，就處理
+                        // 注音符號是單音節，不需要等太久
                         lastStableTranscript = transcript;
                         stableResultTimeout = setTimeout(() => {
                             if (!hasReceivedResult && !isProcessing && lastTranscript === lastStableTranscript) {
@@ -666,7 +667,7 @@
                                 console.log('辨識結果 (Safari穩定):', lastStableTranscript);
                                 handleRecognitionResult(lastStableTranscript);
                             }
-                        }, 1000); // 等待 1 秒確認結果穩定
+                        }, 400); // 縮短到 400ms，讓單音節能快速得到回饋
                     }
                 }
             };
@@ -782,12 +783,15 @@
             // 先播放發音
             showHint('聽發音 🔊', false);
             playSoundWithCallback(currentSymbol, () => {
-                // 發音播放完成後，等更長時間再啟動辨識
+                // 發音播放完成後，等一下再啟動辨識
                 // 確保麥克風不會收到回音
                 setTimeout(() => {
                     showHint('請跟著唸！🎤', true);
-                    startListening();
-                }, 300); // 額外 300ms 等待
+                    // 用語音說「請跟著唸」
+                    speakShort('請跟著唸', () => {
+                        startListening();
+                    });
+                }, 200);
             });
         }
 
@@ -1087,6 +1091,24 @@
                 utterance.lang = 'zh-TW';
                 utterance.rate = 0.9;
                 utterance.pitch = 1.1;
+                if (callback) {
+                    utterance.onend = callback;
+                }
+                window.speechSynthesis.speak(utterance);
+            } else if (callback) {
+                callback();
+            }
+        }
+
+        // 快速語音提示（語速較快，不會干擾辨識）
+        function speakShort(text, callback) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 1.3; // 語速加快
+                utterance.pitch = 1.1;
+                utterance.volume = 0.8; // 稍微降低音量
                 if (callback) {
                     utterance.onend = callback;
                 }
