@@ -610,8 +610,16 @@
             };
 
             recognition.onspeechend = () => {
-                console.log('onspeechend');
-                // 不要在這裡 stop，讓瀏覽器自己決定何時結束
+                console.log('onspeechend - lastTranscript:', lastTranscript);
+                // 當偵測到語音結束時，如果已經有結果，加速處理
+                if (lastTranscript && !hasReceivedResult && !isProcessing) {
+                    // 給 200ms 讓最後的結果進來，然後處理
+                    setTimeout(() => {
+                        if (lastTranscript && !hasReceivedResult && !isProcessing) {
+                            processResult(lastTranscript, 'speechend');
+                        }
+                    }, 200);
+                }
             };
 
             // 用來追蹤辨識結果
@@ -660,7 +668,7 @@
                             if (!hasReceivedResult && !isProcessing) {
                                 processResult(lastTranscript, 'Safari');
                             }
-                        }, 300);
+                        }, 200); // 縮短到 200ms
                     }
                 }
             };
@@ -720,14 +728,14 @@
                 if (lastTranscript && wasRecognizing) {
                     processResult(lastTranscript, 'onend');
                 } else if (wasRecognizing) {
-                    // 完全沒聽到任何東西，只重新啟動辨識（不重播發音）
-                    console.log('沒聽到任何東西，重新聆聽');
-                    showHint('請再唸一次 🎤', true);
+                    // 完全沒聽到任何東西，重新播放發音並聆聽
+                    console.log('沒聽到任何東西，重新播放發音');
+                    showHint('再聽一次...', false);
                     setTimeout(() => {
                         if (!isProcessing && !hasReceivedResult) {
-                            startListening();
+                            playAndListen();
                         }
-                    }, 300);
+                    }, 500);
                 }
             };
         }
@@ -786,13 +794,13 @@
             // 先播放發音
             showHint('聽發音 🔊', false);
             playSoundWithCallback(currentSymbol, () => {
-                // 發音播放完成後，短暫等待
+                // 發音播放完成後，說「請跟著唸」，說完再啟動辨識
                 setTimeout(() => {
-                    // 先啟動辨識，再說「請跟著唸」
-                    // 這樣使用者的聲音才不會被漏掉
-                    startListening();
                     showHint('請跟著唸！🎤', true);
-                    speakShort('請跟著唸');
+                    speakShort('請跟著唸', () => {
+                        // 語音說完後，啟動辨識
+                        startListening();
+                    });
                 }, 50);
             });
         }
