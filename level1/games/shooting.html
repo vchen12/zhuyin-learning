@@ -737,15 +737,16 @@
 
         // 播放發音並同時開始聆聽
         function playAndListen() {
-            // 如果正在辨識，先停止
+            // 先確保停止任何進行中的辨識
+            clearTimeout(recognitionTimeout);
             if (isRecognizing) {
                 try { recognition.stop(); } catch(e) {}
                 isRecognizing = false;
-                // 等一下讓辨識完全停止
-                setTimeout(() => playAndListenNow(), 300);
-                return;
             }
-            playAndListenNow();
+            document.getElementById('micIndicator').classList.remove('listening');
+
+            // 等待足夠時間讓辨識完全停止
+            setTimeout(() => playAndListenNow(), 500);
         }
 
         function playAndListenNow() {
@@ -755,13 +756,20 @@
             isProcessing = false;
 
             // 先啟動辨識（讓它準備好聽）
+            console.log('playAndListenNow: 啟動辨識');
             startListening();
 
-            // 短暫延遲後播放發音，讓辨識有時間啟動
+            // 等辨識啟動後再播放發音
             setTimeout(() => {
-                showHint('聽發音，然後跟著唸 🔊🎤', true);
-                playSound(currentSymbol);
-            }, 200);
+                if (isRecognizing) {
+                    showHint('聽發音，然後跟著唸 🔊🎤', true);
+                    playSound(currentSymbol);
+                } else {
+                    // 辨識沒有成功啟動，重試
+                    console.log('辨識未啟動，重試');
+                    setTimeout(() => playAndListenNow(), 300);
+                }
+            }, 300);
         }
 
         // 顯示符號
@@ -866,14 +874,17 @@
         function handleCorrect(similarity = 100) {
             isProcessing = true; // 開始處理，停止語音辨識自動重啟
 
-            // 停止語音辨識
+            // 完全停止語音辨識
+            clearTimeout(recognitionTimeout);
             if (recognition && isRecognizing) {
                 try { recognition.stop(); } catch(e) {}
-                isRecognizing = false;
             }
+            isRecognizing = false;
+            hasReceivedResult = true; // 確保不會觸發 onend 的自動重試
 
             score += 10;
             document.getElementById('targetSymbol').classList.add('correct');
+            document.getElementById('micIndicator').classList.remove('listening');
 
             // 震動回饋
             if (navigator.vibrate) {
@@ -889,20 +900,25 @@
             saveMastered(currentSymbol);
             updateUI();
 
-            // 縮短等待時間，快速進入下一題
+            // 給足夠時間讓辨識完全停止，再進入下一題
             setTimeout(() => {
-                isProcessing = false; // 恢復狀態
+                isProcessing = false;
                 nextSymbol();
-            }, 2000);
+            }, 2500);
         }
 
         // 答錯 - 自動重播發音並重新聆聽
         function handleWrong(similarity = 0) {
-            // 停止語音辨識
+            isProcessing = true;
+
+            // 完全停止語音辨識
+            clearTimeout(recognitionTimeout);
             if (recognition && isRecognizing) {
                 try { recognition.stop(); } catch(e) {}
-                isRecognizing = false;
             }
+            isRecognizing = false;
+            hasReceivedResult = true; // 確保不會觸發 onend 的自動重試
+            document.getElementById('micIndicator').classList.remove('listening');
 
             attempts++;
             updateAttempts();
@@ -917,12 +933,12 @@
                 document.getElementById('skipBtn').style.display = 'inline-block';
             }
 
-            // 短暫提示後，自動重播發音並開始聆聽
+            // 給足夠時間讓辨識完全停止，再重新開始
             showHint('再試一次！', false);
             setTimeout(() => {
                 isProcessing = false;
                 playAndListen();
-            }, 800);
+            }, 1000);
         }
 
         // 跳過
