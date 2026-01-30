@@ -576,7 +576,7 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             recognition.lang = 'zh-TW';
-            recognition.continuous = false; // 改回 false，讓瀏覽器自動管理
+            recognition.continuous = true; // 改回 continuous 模式，讓辨識持續運行
             recognition.interimResults = true; // 開啟即時結果，給用戶回饋
             recognition.maxAlternatives = 5;
 
@@ -585,17 +585,17 @@
                 hasReceivedResult = false;
                 lastTranscript = '';
                 document.getElementById('micIndicator').classList.add('listening');
-                // 不在這裡顯示提示，因為 playAndListenNow 會顯示更好的提示
+                console.log('🎤 辨識已啟動');
                 if (navigator.vibrate) {
                     navigator.vibrate(50);
                 }
-                // 設定 10 秒超時（給使用者足夠時間聽發音再唸）
+                // 設定 8 秒超時
                 recognitionTimeout = setTimeout(() => {
                     if (isRecognizing && !hasReceivedResult) {
                         console.log('辨識超時，停止');
                         try { recognition.stop(); } catch(e) {}
                     }
-                }, 10000);
+                }, 8000);
             };
 
             // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
@@ -614,32 +614,61 @@
                 // 不要在這裡 stop，讓瀏覽器自己決定何時結束
             };
 
+            // 用來追蹤穩定的辨識結果
+            let stableResultTimeout = null;
+            let lastStableTranscript = '';
+
             recognition.onresult = (event) => {
                 // 取得最新的辨識結果
                 const lastResult = event.results[event.results.length - 1];
                 const transcript = lastResult[0].transcript.trim();
                 const isFinal = lastResult.isFinal;
 
+                console.log('onresult:', transcript, 'isFinal:', isFinal);
+
                 // 儲存收到的文字（不管是否 final）
                 if (transcript) {
                     lastTranscript = transcript;
                     // 顯示即時辨識結果
                     showHint('🎤 聽到：' + transcript, true);
-                }
 
-                // Safari 永遠不會回傳 isFinal: true，所以我們不能只依賴 isFinal
-                // 改成：如果是 final 就立即處理，否則等 onend 時處理
-                if (isFinal && !hasReceivedResult) {
-                    hasReceivedResult = true;
-                    clearTimeout(recognitionTimeout);
-                    isRecognizing = false;
-                    try { recognition.stop(); } catch(e) {}
-                    document.getElementById('micIndicator').classList.remove('listening');
-                    if (isProcessing) return;
-                    console.log('辨識結果 (final):', transcript);
-                    handleRecognitionResult(transcript);
+                    // 如果已經處理過，不要再處理
+                    if (hasReceivedResult || isProcessing) {
+                        return;
+                    }
+
+                    // 清除之前的穩定檢測計時器
+                    if (stableResultTimeout) {
+                        clearTimeout(stableResultTimeout);
+                    }
+
+                    // Safari 修正：Safari 不會回傳 isFinal: true
+                    // 策略：當辨識結果穩定 1 秒沒變化，就當作 final 處理
+                    if (isFinal) {
+                        // Chrome 等正常瀏覽器：直接處理 final 結果
+                        hasReceivedResult = true;
+                        clearTimeout(recognitionTimeout);
+                        try { recognition.stop(); } catch(e) {}
+                        isRecognizing = false;
+                        document.getElementById('micIndicator').classList.remove('listening');
+                        console.log('辨識結果 (final):', transcript);
+                        handleRecognitionResult(transcript);
+                    } else {
+                        // Safari：設定計時器，如果 1 秒內沒有新結果，就處理
+                        lastStableTranscript = transcript;
+                        stableResultTimeout = setTimeout(() => {
+                            if (!hasReceivedResult && !isProcessing && lastTranscript === lastStableTranscript) {
+                                hasReceivedResult = true;
+                                clearTimeout(recognitionTimeout);
+                                try { recognition.stop(); } catch(e) {}
+                                isRecognizing = false;
+                                document.getElementById('micIndicator').classList.remove('listening');
+                                console.log('辨識結果 (Safari穩定):', lastStableTranscript);
+                                handleRecognitionResult(lastStableTranscript);
+                            }
+                        }, 1000); // 等待 1 秒確認結果穩定
+                    }
                 }
-                // 非 final 的結果會儲存在 lastTranscript，等 onend 處理
             };
 
             recognition.onerror = (event) => {
@@ -666,35 +695,35 @@
                 document.getElementById('micIndicator').classList.remove('listening');
                 document.getElementById('hintMessage').classList.remove('listening');
 
-                console.log('recognition.onend - wasRecognizing:', wasRecognizing, 'hasReceivedResult:', hasReceivedResult, 'lastTranscript:', lastTranscript);
+                console.log('recognition.onend - wasRecognizing:', wasRecognizing, 'hasReceivedResult:', hasReceivedResult, 'lastTranscript:', lastTranscript, 'isProcessing:', isProcessing);
 
-                // 如果已經收到結果，不做任何事
-                if (hasReceivedResult) {
-                    console.log('已經處理過結果，跳過');
+                // 如果已經收到結果或正在處理，不做任何事
+                if (hasReceivedResult || isProcessing) {
+                    console.log('已經處理過結果或正在處理，跳過');
                     return;
                 }
 
-                // 如果正在處理其他事情或遊戲已結束
+                // 如果語音辨識已經失敗或遊戲已結束
                 if (recognitionFailed || document.getElementById('gameScreen').style.display === 'none') {
                     return;
                 }
 
-                // Safari 修正：Safari 永遠不會回傳 isFinal: true
-                // 所以在 onend 時，如果有收到任何文字，就處理它
+                // 如果有收到任何文字，處理它
                 if (lastTranscript && wasRecognizing) {
                     hasReceivedResult = true;
-                    console.log('辨識結果 (onend, Safari模式):', lastTranscript);
+                    console.log('辨識結果 (onend):', lastTranscript);
                     showHint('聽到：' + lastTranscript, false);
                     handleRecognitionResult(lastTranscript);
                 } else if (wasRecognizing) {
                     // 完全沒聽到任何東西，自動重播發音並重新聆聽
                     console.log('沒聽到任何東西，自動重試');
-                    showHint('沒聽清楚，再試一次...', false);
+                    showHint('沒聽清楚，請再試一次 🎤', false);
+                    // 等久一點再重試
                     setTimeout(() => {
                         if (!isProcessing && !hasReceivedResult) {
                             playAndListen();
                         }
-                    }, 500);
+                    }, 1500);
                 }
             };
         }
@@ -735,7 +764,7 @@
             playAndListen();
         }
 
-        // 播放發音並同時開始聆聽
+        // 播放發音，完成後再開始聆聽
         function playAndListen() {
             // 先確保停止任何進行中的辨識
             clearTimeout(recognitionTimeout);
@@ -745,31 +774,56 @@
             }
             document.getElementById('micIndicator').classList.remove('listening');
 
-            // 等待足夠時間讓辨識完全停止
-            setTimeout(() => playAndListenNow(), 500);
-        }
-
-        function playAndListenNow() {
             // 重置狀態
             hasReceivedResult = false;
             lastTranscript = '';
             isProcessing = false;
 
-            // 先啟動辨識（讓它準備好聽）
-            console.log('playAndListenNow: 啟動辨識');
-            startListening();
+            // 先播放發音
+            showHint('聽發音 🔊', false);
+            playSoundWithCallback(currentSymbol, () => {
+                // 發音播放完成後，等更長時間再啟動辨識
+                // 確保麥克風不會收到回音
+                setTimeout(() => {
+                    showHint('請跟著唸！🎤', true);
+                    startListening();
+                }, 300); // 額外 300ms 等待
+            });
+        }
 
-            // 等辨識啟動後再播放發音
-            setTimeout(() => {
-                if (isRecognizing) {
-                    showHint('聽發音，然後跟著唸 🔊🎤', true);
-                    playSound(currentSymbol);
-                } else {
-                    // 辨識沒有成功啟動，重試
-                    console.log('辨識未啟動，重試');
-                    setTimeout(() => playAndListenNow(), 300);
-                }
-            }, 300);
+        // 播放音檔並在完成後回調
+        function playSoundWithCallback(symbol, callback) {
+            const fileNum = SOUND_MAP[symbol];
+            if (!fileNum) {
+                if (callback) callback();
+                return;
+            }
+
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+
+            currentAudio = new Audio(`../../sounds/${fileNum}.mp3`);
+
+            // 音檔播放完成後執行回調
+            currentAudio.onended = () => {
+                console.log('🔊 音檔播放完成');
+                // 等待回音消散後再回調
+                if (callback) callback();
+            };
+
+            // 如果播放失敗，也要執行回調
+            currentAudio.onerror = () => {
+                console.error('播放失敗');
+                if (callback) callback();
+            };
+
+            console.log('🔊 播放音檔:', fileNum);
+            currentAudio.play().catch(err => {
+                console.error('播放失敗:', err);
+                if (callback) callback();
+            });
         }
 
         // 顯示符號
@@ -808,9 +862,13 @@
 
         // 開始監聽
         function startListening() {
-            // 如果已經在辨識，不要重複啟動
+            // 如果已經在辨識或正在處理結果，不要重複啟動
             if (isRecognizing) {
                 console.log('已經在辨識中，跳過');
+                return;
+            }
+            if (isProcessing) {
+                console.log('正在處理結果，跳過');
                 return;
             }
             if (!recognition) {
@@ -818,8 +876,12 @@
                 return;
             }
 
+            // 重置狀態
+            lastTranscript = '';
+            hasReceivedResult = false;
+
             try {
-                console.log('啟動語音辨識...');
+                console.log('🚀 啟動語音辨識...');
                 recognition.start();
             } catch (error) {
                 console.error('啟動辨識失敗:', error);
@@ -829,12 +891,15 @@
 
                 // 如果是 "already started" 錯誤，等一下再試
                 if (error.message && error.message.includes('already started')) {
+                    console.log('辨識已啟動，嘗試重啟...');
                     setTimeout(() => {
                         try { recognition.stop(); } catch(e) {}
                         setTimeout(() => {
-                            if (!isRecognizing) startListening();
-                        }, 300);
-                    }, 200);
+                            if (!isRecognizing && !isProcessing) {
+                                startListening();
+                            }
+                        }, 500);
+                    }, 300);
                 }
             }
         }
