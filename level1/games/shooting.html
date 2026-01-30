@@ -585,17 +585,17 @@
                 hasReceivedResult = false;
                 lastTranscript = '';
                 document.getElementById('micIndicator').classList.add('listening');
-                showHint('🎙️ 請大聲唸出來！', true);
+                // 不在這裡顯示提示，因為 playAndListenNow 會顯示更好的提示
                 if (navigator.vibrate) {
-                    navigator.vibrate(100);
+                    navigator.vibrate(50);
                 }
-                // 設定 8 秒超時（給使用者足夠時間）
+                // 設定 10 秒超時（給使用者足夠時間聽發音再唸）
                 recognitionTimeout = setTimeout(() => {
                     if (isRecognizing && !hasReceivedResult) {
                         console.log('辨識超時，停止');
                         try { recognition.stop(); } catch(e) {}
                     }
-                }, 8000);
+                }, 10000);
             };
 
             // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
@@ -623,10 +623,9 @@
                 // 儲存收到的文字（不管是否 final）
                 if (transcript) {
                     lastTranscript = transcript;
+                    // 顯示即時辨識結果
+                    showHint('🎤 聽到：' + transcript, true);
                 }
-
-                // 顯示即時辨識結果
-                showHint('聽到：' + transcript + (isFinal ? '' : '...'), true);
 
                 // Safari 永遠不會回傳 isFinal: true，所以我們不能只依賴 isFinal
                 // 改成：如果是 final 就立即處理，否則等 onend 時處理
@@ -736,27 +735,33 @@
             playAndListen();
         }
 
-        // 播放發音後自動開始聆聽
+        // 播放發音並同時開始聆聽
         function playAndListen() {
             // 如果正在辨識，先停止
             if (isRecognizing) {
                 try { recognition.stop(); } catch(e) {}
                 isRecognizing = false;
+                // 等一下讓辨識完全停止
+                setTimeout(() => playAndListenNow(), 300);
+                return;
             }
+            playAndListenNow();
+        }
 
+        function playAndListenNow() {
             // 重置狀態
             hasReceivedResult = false;
             lastTranscript = '';
+            isProcessing = false;
 
-            showHint('聽發音 🔊', false);
-            playSound(currentSymbol);
+            // 先啟動辨識（讓它準備好聽）
+            startListening();
 
-            // 播放完發音後，自動開始聆聽（等音檔播完約 0.8 秒）
+            // 短暫延遲後播放發音，讓辨識有時間啟動
             setTimeout(() => {
-                if (!isProcessing && !hasReceivedResult) {
-                    startListening();
-                }
-            }, 1000);
+                showHint('聽發音，然後跟著唸 🔊🎤', true);
+                playSound(currentSymbol);
+            }, 200);
         }
 
         // 顯示符號
