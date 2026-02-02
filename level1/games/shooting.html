@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#667eea">
     <link rel="manifest" href="../../manifest.json">
-    <title>🎤 射擊挑戰</title>
+    <title>🎤 發音練習</title>
     <script src="../../js/config.js"></script>
     <script src="../../js/prevent-zoom.js" defer></script>
     <style>
@@ -425,7 +425,7 @@
     <!-- 開始畫面 -->
     <div class="overlay" id="startOverlay">
         <div class="overlay-content">
-            <h1>🎤 射擊挑戰</h1>
+            <h1>🎤 發音練習</h1>
             <p>聽到注音符號的發音後<br>請<b>大聲唸 2~3 次</b>！</p>
             <p style="font-size: 0.95rem; color: #888;">例如：ㄅ ㄅ ㄅ</p>
             <p class="warning">⚠️ 請確認已允許麥克風權限</p>
@@ -551,8 +551,10 @@
             initRecognition();
             initVAD(); // 初始化語音活動偵測
 
-            // 播放語音引導
-            speak('射擊挑戰開始！聽發音後，請大聲唸兩到三次。', () => {
+            // 播放語音引導（加入使用者名稱）
+            const userName = getUserName();
+            const greeting = userName ? `${userName}，` : '';
+            speak(`${greeting}發音練習開始！聽發音後，請大聲唸兩到三次。`, () => {
                 setTimeout(nextSymbol, 500);
             });
         }
@@ -686,12 +688,14 @@
 
             // 根據內容長度決定聆聽時間（為失語症患者延長時間）
             function getListenDuration(text) {
-                if (!text) return 6000;
+                if (!text) return 8000;
                 const len = text.length;
-                if (len === 1) return 6000;      // 單字：6秒（原3秒，加倍）
-                if (len <= 3) return 8000;       // 2-3字：8秒
-                if (len <= 6) return 10000;      // 4-6字：10秒
-                return 12000;                     // 更長：12秒
+                // 單字需要唸 2-3 次，所以給更多時間
+                if (len === 1) return 8000;      // 單字：8秒（要唸2-3次）
+                // 詞語/句子只需唸一次
+                if (len <= 3) return 6000;       // 2-3字：6秒
+                if (len <= 6) return 8000;       // 4-6字：8秒
+                return 10000;                     // 更長：10秒
             }
 
             // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
@@ -868,9 +872,19 @@
             showHint('聽發音 🔊', false);
             playSoundWithCallback(currentSymbol, () => {
                 // 發音播放完成後，立即啟動辨識，同時說提示
-                showHint('請唸 2~3 次！🎤', true);
-                startListening();
-                speakShort('請唸兩到三次');
+                // 根據內容長度給不同提示
+                const len = currentSymbol ? currentSymbol.length : 0;
+                if (len <= 1) {
+                    // 單字：請唸 2-3 次
+                    showHint('請唸 2~3 次！🎤', true);
+                    startListening();
+                    speakShort('請唸兩到三次');
+                } else {
+                    // 詞語/句子：請跟著唸
+                    showHint('請跟著唸！🎤', true);
+                    startListening();
+                    speakShort('請跟著唸');
+                }
             });
         }
 
@@ -1044,7 +1058,8 @@
                 navigator.vibrate([100, 50, 100]);
             }
 
-            const encouragement = ENCOURAGEMENTS.correct[Math.floor(Math.random() * ENCOURAGEMENTS.correct.length)];
+            // 使用 config.js 的 getEncouragement 函數（會自動加入使用者名稱）
+            const encouragement = getEncouragement('correct');
             // 立即播放鼓勵語！不要延遲
             speak(encouragement);
             showHint('🎉 ' + encouragement + ' 🎉', false);
@@ -1157,7 +1172,9 @@
             document.getElementById('finalProgress').textContent = '完成：' + totalQuestions + ' / ' + totalQuestions;
 
             createFireworks(60);
-            speak(`太棒了！你得了${score}分！`);
+            const userName = getUserName();
+            const endMsg = userName ? `${userName}，太棒了！你得了${score}分！` : `太棒了！你得了${score}分！`;
+            speak(endMsg);
         }
 
         // 重新開始
