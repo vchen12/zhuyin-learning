@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#87CEEB">
+    <link rel="manifest" href="../../manifest.json">
+    <title>🦅 射擊挑戰</title>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/prevent-zoom.js" defer></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+        }
+
+        /* 天空背景 */
+        .sky {
+            flex: 1;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 雲朵 */
+        .cloud {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.7;
+            animation: cloud-float 20s linear infinite;
+        }
+        @keyframes cloud-float {
+            from { transform: translateX(100vw); }
+            to { transform: translateX(-100px); }
+        }
+
+        /* 地面 */
+        .ground {
+            height: 120px;
+            background: linear-gradient(180deg, #7CBA5F 0%, #5A9A3F 100%);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 10px;
+        }
+
+        /* 小朋友 */
+        .child {
+            font-size: 4rem;
+            animation: child-bounce 0.5s ease-in-out infinite;
+        }
+        .child.happy {
+            animation: child-jump 0.5s ease-out;
+        }
+        @keyframes child-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        @keyframes child-jump {
+            0% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.2); }
+            100% { transform: translateY(0) scale(1); }
+        }
+
+        /* 禮物籃 */
+        .gift-basket {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5rem;
+        }
+
+        /* 老鷹和禮物袋 */
+        .eagle-container {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: eagle-fly linear forwards;
+            cursor: pointer;
+        }
+        .eagle {
+            font-size: 4rem;
+            animation: eagle-flap 0.3s ease-in-out infinite;
+        }
+        .gift-bag {
+            font-size: 2rem;
+            background: white;
+            border-radius: 15px;
+            padding: 10px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: -10px;
+        }
+        .gift-symbol {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .gift-icon {
+            font-size: 1.5rem;
+        }
+        @keyframes eagle-flap {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        @keyframes eagle-fly {
+            from { right: -150px; }
+            to { right: calc(100% + 150px); }
+        }
+
+        /* 掉落的禮物 */
+        .falling-gift {
+            position: absolute;
+            font-size: 2rem;
+            animation: gift-fall 1s ease-in forwards;
+        }
+        @keyframes gift-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(200px) rotate(360deg); opacity: 0; }
+        }
+
+        /* 導航列 */
+        .nav-bar {
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.95);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .nav-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .score-display {
+            font-size: 1.1rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        /* 麥克風指示 */
+        .mic-indicator {
+            position: fixed;
+            bottom: 140px;
+            right: 20px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: 3px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+        .mic-indicator.listening {
+            animation: mic-pulse 0.6s ease-in-out infinite;
+            border-color: #ffd700;
+        }
+        @keyframes mic-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+            50% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
+        }
+
+        /* 提示訊息 */
+        .hint-message {
+            position: fixed;
+            bottom: 220px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        /* 開始/結束畫面 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 20px;
+        }
+        .overlay.hidden {
+            display: none;
+        }
+        .overlay-content {
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 450px;
+            width: 100%;
+        }
+        .overlay h1 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        .overlay p {
+            color: #666;
+            font-size: 1.1rem;
+            margin: 12px 0;
+        }
+        .start-btn {
+            background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+            border: none;
+            padding: 18px 40px;
+            border-radius: 25px;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .end-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        /* 收集到的禮物顯示 */
+        .collected-gifts {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            z-index: 50;
+        }
+        .collected-gift {
+            font-size: 1.5rem;
+            animation: gift-pop 0.3s ease-out;
+        }
+        @keyframes gift-pop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        /* 響應式 */
+        @media (max-width: 480px) {
+            .eagle { font-size: 3rem; }
+            .gift-symbol { font-size: 2.5rem; }
+            .child { font-size: 3rem; }
+            .ground { height: 100px; }
+            .mic-indicator { width: 60px; height: 60px; font-size: 1.5rem; bottom: 110px; }
+            .hint-message { font-size: 1rem; bottom: 180px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 開始畫面 -->
+    <div class="overlay" id="startOverlay">
+        <div class="overlay-content">
+            <h1>🦅 射擊挑戰</h1>
+            <p>老鷹抓著注音禮物袋飛過天空！</p>
+            <p>大聲唸出正確的注音符號，<br>就能打下禮物給小朋友！</p>
+            <p style="font-size: 0.95rem; color: #888;">提示：唸 2~3 次效果更好</p>
+            <button class="start-btn" onclick="startGame()">🚀 開始遊戲</button>
+        </div>
+    </div>
+
+    <!-- 結束畫面 -->
+    <div class="overlay hidden" id="endOverlay">
+        <div class="overlay-content">
+            <h1>🎉 遊戲結束！</h1>
+            <p id="finalScore">得分：0 分</p>
+            <p id="finalGifts">收集了 0 個禮物</p>
+            <div class="end-buttons">
+                <button class="start-btn" onclick="restartGame()">🔄 再玩一次</button>
+                <button class="start-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2);">🏠 返回選單</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div class="nav-bar">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <div class="nav-info">
+            <div class="score-display">得分：<span id="score">0</span></div>
+            <div class="score-display">🎁 <span id="giftCount">0</span></div>
+        </div>
+    </div>
+
+    <div class="sky" id="sky">
+        <!-- 雲朵會動態生成 -->
+    </div>
+
+    <div class="ground">
+        <div class="gift-basket">🧺</div>
+        <div class="child" id="child">🧒</div>
+    </div>
+
+    <div class="collected-gifts" id="collectedGifts"></div>
+    <div class="mic-indicator" id="micIndicator">🎤</div>
+    <div class="hint-message" id="hintMessage">準備中...</div>
+
+    <script>
+        // 注音符號
+        const ALL_SYMBOLS = [
+            'ㄅ', 'ㄆ', 'ㄇ', 'ㄈ', 'ㄉ', 'ㄊ', 'ㄋ', 'ㄌ', 'ㄍ', 'ㄎ', 'ㄏ',
+            'ㄐ', 'ㄑ', 'ㄒ', 'ㄓ', 'ㄔ', 'ㄕ', 'ㄖ', 'ㄗ', 'ㄘ', 'ㄙ',
+            'ㄚ', 'ㄛ', 'ㄜ', 'ㄝ', 'ㄞ', 'ㄟ', 'ㄠ', 'ㄡ', 'ㄢ', 'ㄣ', 'ㄤ', 'ㄥ', 'ㄦ', 'ㄧ', 'ㄨ', 'ㄩ'
+        ];
+
+        const SOUND_MAP = {
+            'ㄅ': 'F1', 'ㄆ': 'F2', 'ㄇ': 'F3', 'ㄈ': 'F4', 'ㄉ': 'F5', 'ㄊ': 'F6', 'ㄋ': 'F7', 'ㄌ': 'F8',
+            'ㄍ': 'F9', 'ㄎ': 'F10', 'ㄏ': 'F11', 'ㄐ': 'F12', 'ㄑ': 'F13', 'ㄒ': 'F14', 'ㄓ': 'F15', 'ㄔ': 'F16',
+            'ㄕ': 'F17', 'ㄖ': 'F18', 'ㄗ': 'F19', 'ㄘ': 'F20', 'ㄙ': 'F21',
+            'ㄚ': 'F22', 'ㄛ': 'F23', 'ㄜ': 'F24', 'ㄝ': 'F25', 'ㄞ': 'F26', 'ㄟ': 'F27', 'ㄠ': 'F28', 'ㄡ': 'F29',
+            'ㄢ': 'F30', 'ㄣ': 'F31', 'ㄤ': 'F32', 'ㄥ': 'F33', 'ㄦ': 'F34', 'ㄧ': 'F35', 'ㄨ': 'F36', 'ㄩ': 'F37'
+        };
+
+        const GIFT_EMOJIS = ['🍬', '🍭', '🍫', '🎈', '⭐', '🌟', '💎', '🏆'];
+
+        // 遊戲狀態
+        let score = 0;
+        let giftCount = 0;
+        let currentSymbol = '';
+        let currentEagle = null;
+        let isListening = false;
+        let gameActive = false;
+        let eagleTimeout = null;
+        let recognition = null;
+        let recognitionTimeout = null;
+
+        // VAD 相關
+        let audioContext = null;
+        let analyser = null;
+        let vadInterval = null;
+        let hasDetectedVoice = false;
+        const VAD_THRESHOLD = 35;
+
+        // 初始化雲朵
+        function initClouds() {
+            const sky = document.getElementById('sky');
+            for (let i = 0; i < 5; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                cloud.textContent = '☁️';
+                cloud.style.top = (Math.random() * 60) + '%';
+                cloud.style.animationDelay = (Math.random() * 20) + 's';
+                cloud.style.fontSize = (2 + Math.random() * 2) + 'rem';
+                sky.appendChild(cloud);
+            }
+        }
+
+        // 開始遊戲
+        function startGame() {
+            document.getElementById('startOverlay').classList.add('hidden');
+            gameActive = true;
+            score = 0;
+            giftCount = 0;
+            updateUI();
+
+            initRecognition();
+            initVAD();
+
+            const userName = getUserName();
+            const greeting = userName ? `${userName}，` : '';
+            speak(`${greeting}射擊挑戰開始！大聲唸出注音符號，打下禮物吧！`, () => {
+                setTimeout(spawnEagle, 1000);
+            });
+        }
+
+        // 初始化 VAD
+        async function initVAD() {
+            if (audioContext) return;
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const microphone = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                microphone.connect(analyser);
+            } catch (e) {
+                console.error('VAD 初始化失敗:', e);
+            }
+        }
+
+        // 開始 VAD
+        function startVAD() {
+            if (!analyser) return;
+            hasDetectedVoice = false;
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            vadInterval = setInterval(() => {
+                analyser.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                if (average > VAD_THRESHOLD && !hasDetectedVoice) {
+                    hasDetectedVoice = true;
+                    showHint('🎤 聽到你的聲音了！');
+                }
+            }, 50);
+        }
+
+        function stopVAD() {
+            if (vadInterval) {
+                clearInterval(vadInterval);
+                vadInterval = null;
+            }
+        }
+
+        // 初始化語音辨識
+        function initRecognition() {
+            if (recognition) return;
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert('您的瀏覽器不支援語音辨識，建議使用 Chrome。');
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 5;
+
+            let lastTranscript = '';
+            let hasResult = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                hasResult = false;
+                lastTranscript = '';
+                document.getElementById('micIndicator').classList.add('listening');
+            };
+
+            recognition.onresult = (event) => {
+                if (hasResult) return;
+
+                const result = event.results[event.results.length - 1];
+                const transcript = result[0].transcript.trim();
+
+                // 過濾系統語音
+                if (transcript.includes('請唸') || transcript.includes('兩到三次')) return;
+
+                if (transcript) {
+                    lastTranscript = transcript;
+                    showHint('🎤 聽到：' + transcript);
+                    processResult(transcript);
+                    hasResult = true;
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                stopVAD();
+                document.getElementById('micIndicator').classList.remove('listening');
+
+                if (!hasResult && lastTranscript) {
+                    processResult(lastTranscript);
+                }
+
+                // 如果遊戲還在進行且有老鷹在飛，繼續聆聽
+                if (gameActive && currentEagle) {
+                    setTimeout(() => {
+                        if (gameActive && currentEagle) {
+                            startListening();
+                        }
+                    }, 300);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('語音辨識錯誤:', event.error);
+                isListening = false;
+                document.getElementById('micIndicator').classList.remove('listening');
+            };
+        }
+
+        // 開始聆聽
+        function startListening() {
+            if (isListening || !recognition) return;
+
+            startVAD();
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error('啟動辨識失敗:', e);
+            }
+
+            // 8 秒超時
+            clearTimeout(recognitionTimeout);
+            recognitionTimeout = setTimeout(() => {
+                if (isListening) {
+                    try { recognition.stop(); } catch (e) {}
+                }
+            }, 8000);
+        }
+
+        // 處理辨識結果
+        function processResult(transcript) {
+            if (!currentEagle || !currentSymbol) return;
+
+            // 計算相似度
+            const similarity = calculateSimilarity(transcript, currentSymbol);
+            const passes = passesSimilarityThreshold(similarity);
+
+            // 記錄發音
+            recordPronunciation('zhuyin', currentSymbol, transcript, similarity);
+
+            if (passes) {
+                hitEagle();
+            }
+        }
+
+        // 生成老鷹
+        function spawnEagle() {
+            if (!gameActive) return;
+
+            // 隨機選擇符號
+            currentSymbol = ALL_SYMBOLS[Math.floor(Math.random() * ALL_SYMBOLS.length)];
+
+            // 創建老鷹容器
+            const sky = document.getElementById('sky');
+            const eagle = document.createElement('div');
+            eagle.className = 'eagle-container';
+            eagle.id = 'currentEagle';
+
+            // 隨機高度
+            const topPosition = 10 + Math.random() * 40;
+            eagle.style.top = topPosition + '%';
+
+            // 飛行時間（較慢讓玩家有時間反應）
+            const flyDuration = 8 + Math.random() * 4;
+            eagle.style.animationDuration = flyDuration + 's';
+
+            // 隨機禮物
+            const giftEmoji = GIFT_EMOJIS[Math.floor(Math.random() * GIFT_EMOJIS.length)];
+
+            eagle.innerHTML = `
+                <div class="eagle">🦅</div>
+                <div class="gift-bag">
+                    <div class="gift-symbol">${currentSymbol}</div>
+                    <div class="gift-icon">${giftEmoji}</div>
+                </div>
+            `;
+
+            eagle.onclick = () => playSound(currentSymbol);
+
+            sky.appendChild(eagle);
+            currentEagle = eagle;
+
+            // 播放發音並開始聆聽
+            showHint(`大聲唸「${currentSymbol}」！`);
+            playSound(currentSymbol);
+
+            setTimeout(() => {
+                speakShort('請唸兩到三次');
+                startListening();
+            }, 500);
+
+            // 老鷹飛走時
+            eagle.addEventListener('animationend', () => {
+                if (currentEagle === eagle) {
+                    eagleMissed();
+                }
+            });
+        }
+
+        // 擊中老鷹
+        function hitEagle() {
+            if (!currentEagle) return;
+
+            const eagle = currentEagle;
+            const rect = eagle.getBoundingClientRect();
+
+            // 停止聆聽
+            clearTimeout(recognitionTimeout);
+            if (isListening) {
+                try { recognition.stop(); } catch (e) {}
+            }
+            stopVAD();
+
+            // 移除老鷹
+            eagle.remove();
+            currentEagle = null;
+
+            // 掉落禮物動畫
+            const sky = document.getElementById('sky');
+            const fallingGift = document.createElement('div');
+            fallingGift.className = 'falling-gift';
+            fallingGift.textContent = GIFT_EMOJIS[Math.floor(Math.random() * GIFT_EMOJIS.length)];
+            fallingGift.style.left = rect.left + rect.width / 2 + 'px';
+            fallingGift.style.top = rect.top + 'px';
+            sky.appendChild(fallingGift);
+
+            setTimeout(() => fallingGift.remove(), 1000);
+
+            // 更新分數
+            score += 10;
+            giftCount++;
+            updateUI();
+
+            // 小朋友開心
+            const child = document.getElementById('child');
+            child.classList.add('happy');
+            setTimeout(() => child.classList.remove('happy'), 500);
+
+            // 加入收集的禮物
+            addCollectedGift();
+
+            // 鼓勵語
+            const encouragement = getEncouragement('correct');
+            showHint('🎉 ' + encouragement);
+            speak(encouragement);
+
+            // 生成下一隻老鷹
+            setTimeout(spawnEagle, 2500);
+        }
+
+        // 老鷹飛走
+        function eagleMissed() {
+            if (!currentEagle) return;
+
+            currentEagle.remove();
+            currentEagle = null;
+
+            clearTimeout(recognitionTimeout);
+            if (isListening) {
+                try { recognition.stop(); } catch (e) {}
+            }
+            stopVAD();
+
+            showHint('老鷹飛走了，再試一次！');
+
+            // 生成下一隻老鷹
+            setTimeout(spawnEagle, 1500);
+
+            // 檢查是否結束（收集 10 個禮物或玩了一段時間）
+            if (giftCount >= 10) {
+                setTimeout(endGame, 1000);
+            }
+        }
+
+        // 加入收集的禮物
+        function addCollectedGift() {
+            const container = document.getElementById('collectedGifts');
+            const gift = document.createElement('span');
+            gift.className = 'collected-gift';
+            gift.textContent = GIFT_EMOJIS[Math.floor(Math.random() * GIFT_EMOJIS.length)];
+            container.appendChild(gift);
+
+            // 最多顯示 10 個
+            if (container.children.length > 10) {
+                container.removeChild(container.firstChild);
+            }
+        }
+
+        // 播放音檔
+        function playSound(symbol) {
+            const fileNum = SOUND_MAP[symbol];
+            if (!fileNum) return;
+            const audio = new Audio(`../../sounds/${fileNum}.mp3`);
+            audio.play().catch(e => console.error('播放失敗:', e));
+        }
+
+        // 語音合成
+        function speak(text, callback) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                if (callback) utterance.onend = callback;
+                window.speechSynthesis.speak(utterance);
+            } else if (callback) {
+                callback();
+            }
+        }
+
+        function speakShort(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.volume = 0.8;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 顯示提示
+        function showHint(message) {
+            document.getElementById('hintMessage').textContent = message;
+        }
+
+        // 更新 UI
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('giftCount').textContent = giftCount;
+        }
+
+        // 結束遊戲
+        function endGame() {
+            gameActive = false;
+
+            clearTimeout(recognitionTimeout);
+            if (isListening) {
+                try { recognition.stop(); } catch (e) {}
+            }
+            stopVAD();
+
+            if (currentEagle) {
+                currentEagle.remove();
+                currentEagle = null;
+            }
+
+            document.getElementById('endOverlay').classList.remove('hidden');
+            document.getElementById('finalScore').textContent = '得分：' + score + ' 分';
+            document.getElementById('finalGifts').textContent = '收集了 ' + giftCount + ' 個禮物';
+
+            const userName = getUserName();
+            const msg = userName ? `${userName}，太棒了！你收集了${giftCount}個禮物！` : `太棒了！你收集了${giftCount}個禮物！`;
+            speak(msg);
+        }
+
+        // 重新開始
+        function restartGame() {
+            document.getElementById('endOverlay').classList.add('hidden');
+            document.getElementById('collectedGifts').innerHTML = '';
+            startGame();
+        }
+
+        // 初始化
+        initClouds();
+    </script>
+</body>
+</html>

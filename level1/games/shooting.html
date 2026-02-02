@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#667eea">
     <link rel="manifest" href="../../manifest.json">
-    <title>🎤 射擊挑戰</title>
+    <title>🎤 發音練習</title>
     <script src="../../js/config.js"></script>
     <script src="../../js/prevent-zoom.js" defer></script>
     <style>
@@ -425,7 +425,7 @@
     <!-- 開始畫面 -->
     <div class="overlay" id="startOverlay">
         <div class="overlay-content">
-            <h1>🎤 射擊挑戰</h1>
+            <h1>🎤 發音練習</h1>
             <p>聽到注音符號的發音後<br>請<b>大聲唸 2~3 次</b>！</p>
             <p style="font-size: 0.95rem; color: #888;">例如：ㄅ ㄅ ㄅ</p>
             <p class="warning">⚠️ 請確認已允許麥克風權限</p>
@@ -549,9 +549,12 @@
 
             initGame();
             initRecognition();
+            initVAD(); // 初始化語音活動偵測
 
-            // 播放語音引導
-            speak('射擊挑戰開始！聽發音後，請大聲唸兩到三次。', () => {
+            // 播放語音引導（加入使用者名稱）
+            const userName = getUserName();
+            const greeting = userName ? `${userName}，` : '';
+            speak(`${greeting}發音練習開始！聽發音後，請大聲唸兩到三次。`, () => {
                 setTimeout(nextSymbol, 500);
             });
         }
@@ -569,6 +572,88 @@
         let recognitionTimeout = null;
         let hasReceivedResult = false;
         let lastTranscript = ''; // 儲存最後收到的文字（即使不是 final）
+
+        // VAD（語音活動偵測）相關變數
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let vadInterval = null;
+        let hasDetectedVoice = false;  // 是否偵測到聲音
+        let voiceStartTime = null;     // 開始偵測到聲音的時間
+        const VAD_THRESHOLD = 35;      // 音量門檻（0-255），提高以避免風扇聲誤觸發
+        const MIN_VOICE_DURATION = 200; // 最少要持續 200ms 才算有效聲音
+
+        // 初始化 VAD（語音活動偵測）
+        async function initVAD() {
+            if (audioContext) return;
+
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                microphone = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.5;
+                microphone.connect(analyser);
+                console.log('✅ VAD 初始化成功');
+            } catch (error) {
+                console.error('VAD 初始化失敗:', error);
+            }
+        }
+
+        // 開始 VAD 偵測
+        function startVAD() {
+            if (!analyser) return;
+
+            hasDetectedVoice = false;
+            voiceStartTime = null;
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            vadInterval = setInterval(() => {
+                analyser.getByteFrequencyData(dataArray);
+
+                // 計算平均音量
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / dataArray.length;
+
+                // 偵測到聲音
+                if (average > VAD_THRESHOLD) {
+                    if (!voiceStartTime) {
+                        voiceStartTime = Date.now();
+                    } else if (Date.now() - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
+                        // 聲音持續超過門檻，確認有效
+                        hasDetectedVoice = true;
+                        onVoiceDetected();
+                    }
+                } else {
+                    // 沒有聲音，重置計時
+                    voiceStartTime = null;
+                }
+            }, 50); // 每 50ms 檢查一次
+        }
+
+        // 停止 VAD 偵測
+        function stopVAD() {
+            if (vadInterval) {
+                clearInterval(vadInterval);
+                vadInterval = null;
+            }
+        }
+
+        // 當偵測到聲音時的回調
+        function onVoiceDetected() {
+            console.log('🎙️ VAD: 偵測到聲音！');
+            // 立即給使用者回饋
+            showHint('🎤 聽到你的聲音了！', true);
+            // 震動回饋
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        }
 
         // 初始化語音辨識
         function initRecognition() {
@@ -590,14 +675,28 @@
                 if (navigator.vibrate) {
                     navigator.vibrate(50);
                 }
-                // 設定 4 秒超時（縮短，讓系統更快重試）
+                // 根據練習內容設定超時時間
+                // 單字（注音符號）：3秒
+                const listenDuration = getListenDuration(currentSymbol);
                 recognitionTimeout = setTimeout(() => {
                     if (isRecognizing && !hasReceivedResult) {
                         console.log('辨識超時，停止');
                         try { recognition.stop(); } catch(e) {}
                     }
-                }, 4000);
+                }, listenDuration);
             };
+
+            // 根據內容長度決定聆聽時間（為失語症患者延長時間）
+            function getListenDuration(text) {
+                if (!text) return 8000;
+                const len = text.length;
+                // 單字需要唸 2-3 次，所以給更多時間
+                if (len === 1) return 8000;      // 單字：8秒（要唸2-3次）
+                // 詞語/句子只需唸一次
+                if (len <= 3) return 6000;       // 2-3字：6秒
+                if (len <= 6) return 8000;       // 4-6字：8秒
+                return 10000;                     // 更長：10秒
+            }
 
             // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
             recognition.onaudiostart = () => {
@@ -629,8 +728,10 @@
                     return;
                 }
 
-                // 過濾掉「請跟著唸」（系統語音可能被辨識到）
-                if (transcript.includes('請跟著') || transcript.includes('跟著唸')) {
+                // 過濾掉系統語音（可能被辨識到）
+                if (transcript.includes('請跟著') || transcript.includes('跟著唸') ||
+                    transcript.includes('請唸') || transcript.includes('兩到三次') ||
+                    transcript.includes('2到3次')) {
                     console.log('過濾系統語音:', transcript);
                     return;
                 }
@@ -653,6 +754,7 @@
 
                 hasReceivedResult = true;
                 clearTimeout(recognitionTimeout);
+                stopVAD(); // 停止 VAD
                 try { recognition.stop(); } catch(e) {}
                 isRecognizing = false;
                 document.getElementById('micIndicator').classList.remove('listening');
@@ -679,6 +781,7 @@
 
             recognition.onend = () => {
                 clearTimeout(recognitionTimeout);
+                stopVAD(); // 停止 VAD
                 const wasRecognizing = isRecognizing;
                 isRecognizing = false;
                 document.getElementById('micIndicator').classList.remove('listening');
@@ -769,9 +872,19 @@
             showHint('聽發音 🔊', false);
             playSoundWithCallback(currentSymbol, () => {
                 // 發音播放完成後，立即啟動辨識，同時說提示
-                showHint('請唸 2~3 次！🎤', true);
-                startListening();
-                speakShort('請唸兩到三次');
+                // 根據內容長度給不同提示
+                const len = currentSymbol ? currentSymbol.length : 0;
+                if (len <= 1) {
+                    // 單字：請唸 2-3 次
+                    showHint('請唸 2~3 次！🎤', true);
+                    startListening();
+                    speakShort('請唸兩到三次');
+                } else {
+                    // 詞語/句子：請跟著唸
+                    showHint('請跟著唸！🎤', true);
+                    startListening();
+                    speakShort('請跟著唸');
+                }
             });
         }
 
@@ -863,6 +976,10 @@
             // 重置狀態
             lastTranscript = '';
             hasReceivedResult = false;
+            hasDetectedVoice = false;
+
+            // 啟動 VAD
+            startVAD();
 
             try {
                 console.log('🚀 啟動語音辨識...');
@@ -870,6 +987,7 @@
             } catch (error) {
                 console.error('啟動辨識失敗:', error);
                 isRecognizing = false;
+                stopVAD();
                 document.getElementById('micIndicator').classList.remove('listening');
                 document.getElementById('hintMessage').classList.remove('listening');
 
@@ -940,7 +1058,8 @@
                 navigator.vibrate([100, 50, 100]);
             }
 
-            const encouragement = ENCOURAGEMENTS.correct[Math.floor(Math.random() * ENCOURAGEMENTS.correct.length)];
+            // 使用 config.js 的 getEncouragement 函數（會自動加入使用者名稱）
+            const encouragement = getEncouragement('correct');
             // 立即播放鼓勵語！不要延遲
             speak(encouragement);
             showHint('🎉 ' + encouragement + ' 🎉', false);
@@ -1053,7 +1172,9 @@
             document.getElementById('finalProgress').textContent = '完成：' + totalQuestions + ' / ' + totalQuestions;
 
             createFireworks(60);
-            speak(`太棒了！你得了${score}分！`);
+            const userName = getUserName();
+            const endMsg = userName ? `${userName}，太棒了！你得了${score}分！` : `太棒了！你得了${score}分！`;
+            speak(endMsg);
         }
 
         // 重新開始
@@ -1080,15 +1201,15 @@
             }
         }
 
-        // 快速語音提示（語速較快，不會干擾辨識）
+        // 語音提示（正常語速，清楚發音）
         function speakShort(text, callback) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
-                utterance.rate = 1.3; // 語速加快
+                utterance.rate = 0.9; // 放慢語速，讓使用者聽清楚
                 utterance.pitch = 1.1;
-                utterance.volume = 0.8; // 稍微降低音量
+                utterance.volume = 0.8;
                 if (callback) {
                     utterance.onend = callback;
                 }
