@@ -101,6 +101,28 @@ zhuyin-learning/
 
 作者：陳宜誠律師（Vincent Chen, Attorney at Law）及 Claude Code
 
+### v3.6（2025-02-02）
+- ✅ **Level 1 遊戲更新**
+  - 「射擊遊戲」更名為「發聲練習」
+  - 新增「老鷹抓禮物」射擊遊戲
+- ✅ **所有語音辨識遊戲全面升級**（共 9 個遊戲）
+  - 新增 VAD（語音活動偵測）：使用 Web Audio API 即時偵測聲音
+  - 當偵測到聲音時顯示「🎤 聽到你的聲音了！」回饋
+  - 聆聽時間自動調整：單字 8 秒、2-3 字 6 秒、4-6 字 8 秒、長句 10 秒
+  - 提示語自動調整：單字顯示「請唸 2~3 次！」，多字顯示「請跟著唸！」
+  - 鼓勵語整合使用者名稱（例如：「小明，太棒了！」）
+  - 改進辨識結果處理：過濾系統語音、立即處理結果
+  - 更新的檔案：
+    - Level 1: number-practice.html（數字 0-9）
+    - Level 2: number-practice.html（數字 0-30）、speak-word.html（唸唸看）
+    - Level 3: number-practice.html（數字 0-99）、story-chain.html、read-aloud.html、qa-practice.html、picture-talk.html、daily-dialog.html
+- ✅ **設定頁面「字詞庫管理」功能大幅改進**
+  - 新增類別標籤切換，可瀏覽系統內建的 8 大字詞類別（家人、動物、水果、日常用品、食物、動作、身體、自然）
+  - 新增例句資料庫瀏覽，包含簡單句子、問答練習、填空練習、對話練習
+  - 顯示各類別的字詞數量統計
+  - 點擊系統字詞可複製到自訂區進行修改
+  - 保留原有的自訂字詞新增功能
+
 ### v3.5（2025-01-30）
 - ✅ **修正 Safari 語音辨識相容性問題**
   - Safari 的 Web Speech API 永遠不會回傳 `isFinal: true`
