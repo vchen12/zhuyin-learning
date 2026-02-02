@@ -540,9 +540,53 @@
             </div>
         </div>
 
+        <!-- 麥克風測試 -->
+        <div class="settings-section">
+            <div class="section-title">🎤 麥克風測試</div>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                在開始語音練習前，請先測試麥克風是否正常運作。<br>
+                這會確認瀏覽器已授權麥克風權限，且收音正常。
+            </p>
+
+            <!-- 麥克風狀態 -->
+            <div id="micTestArea" style="background: #f9f9f9; padding: 25px; border-radius: 15px; text-align: center;">
+                <div id="micStatus" style="font-size: 1.2rem; color: #666; margin-bottom: 20px;">
+                    尚未測試麥克風
+                </div>
+
+                <!-- 音量指示條 -->
+                <div style="background: #ddd; height: 25px; border-radius: 15px; overflow: hidden; margin-bottom: 20px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    <div id="volumeMeter" style="height: 100%; background: linear-gradient(90deg, #4caf50, #8bc34a); width: 0%; transition: width 0.1s;"></div>
+                </div>
+
+                <!-- 測試按鈕 -->
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <button id="testMicBtn" onclick="testMicrophone()" class="save-btn" style="background: linear-gradient(135deg, #667eea, #764ba2); min-width: 160px;">
+                        🎤 測試麥克風
+                    </button>
+                    <button id="testSpeechBtn" onclick="testSpeechRecognition()" class="save-btn" style="background: linear-gradient(135deg, #11998e, #38ef7d); min-width: 160px; display: none;">
+                        🗣️ 測試語音辨識
+                    </button>
+                </div>
+
+                <!-- 語音辨識結果 -->
+                <div id="speechResult" style="display: none; margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 12px; text-align: left;">
+                    <strong style="color: #2e7d32;">辨識結果：</strong>
+                    <span id="speechResultText"></span>
+                </div>
+            </div>
+
+            <!-- 測試提示 -->
+            <div id="micTestHint" style="background: #fff3e0; padding: 15px; border-radius: 12px; border-left: 4px solid #ff9800; margin-top: 15px; display: none;">
+                <p style="color: #e65100; font-size: 0.9rem; margin: 0;">
+                    <strong>💡 提示：</strong><span id="micTestHintText"></span>
+                </p>
+            </div>
+        </div>
+
         <!-- 語音辨識設定 -->
         <div class="settings-section">
-            <div class="section-title">🎤 語音辨識設定</div>
+            <div class="section-title">📊 語音辨識門檻設定</div>
             <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
                 調整語音辨識的過關門檻。預設為 0（只要有發聲就過關），<br>
                 可提高標準讓使用者練習更精確的發音。
@@ -1283,6 +1327,235 @@
                 localStorage.removeItem('pronunciationRecords');
                 loadPronunciationRecords();
                 showToast('紀錄已清除', 'success');
+            }
+        }
+
+        // ==========================================
+        // 麥克風測試功能
+        // ==========================================
+        let audioContext = null;
+        let analyser = null;
+        let microphoneStream = null;
+        let volumeInterval = null;
+        let testRecognition = null;
+
+        async function testMicrophone() {
+            const statusEl = document.getElementById('micStatus');
+            const meterEl = document.getElementById('volumeMeter');
+            const testBtn = document.getElementById('testMicBtn');
+            const speechBtn = document.getElementById('testSpeechBtn');
+            const hintEl = document.getElementById('micTestHint');
+            const hintTextEl = document.getElementById('micTestHintText');
+
+            // 如果已經在測試，停止測試
+            if (volumeInterval) {
+                stopMicTest();
+                return;
+            }
+
+            statusEl.textContent = '🔄 正在請求麥克風權限...';
+            statusEl.style.color = '#666';
+            testBtn.textContent = '⏳ 請稍候...';
+            testBtn.disabled = true;
+
+            try {
+                // 請求麥克風權限
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                microphoneStream = stream;
+
+                // 建立音訊分析器
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                const microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                statusEl.textContent = '✅ 麥克風權限已授予！請說話測試音量...';
+                statusEl.style.color = '#4caf50';
+                testBtn.textContent = '⏹️ 停止測試';
+                testBtn.disabled = false;
+                speechBtn.style.display = 'inline-block';
+
+                // 顯示提示
+                hintEl.style.display = 'block';
+                hintTextEl.textContent = '對著麥克風說話，觀察音量條是否有反應。綠色條會隨著音量跳動。';
+
+                let maxVolume = 0;
+                let hasDetectedSound = false;
+
+                // 開始音量偵測
+                volumeInterval = setInterval(() => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                    const volume = Math.min(100, average * 1.5);
+                    meterEl.style.width = volume + '%';
+
+                    if (volume > maxVolume) {
+                        maxVolume = volume;
+                    }
+
+                    if (volume > 10 && !hasDetectedSound) {
+                        hasDetectedSound = true;
+                        statusEl.textContent = '🎤 很好！偵測到聲音！繼續說話或按「測試語音辨識」';
+                        hintTextEl.textContent = '麥克風正常運作！現在可以測試語音辨識功能。';
+                        hintEl.style.background = '#e8f5e9';
+                        hintEl.style.borderColor = '#4caf50';
+                        hintTextEl.parentElement.style.color = '#2e7d32';
+                    }
+                }, 100);
+
+            } catch (err) {
+                console.error('麥克風權限錯誤:', err);
+                statusEl.textContent = '❌ 無法存取麥克風：' + (err.message || err.name);
+                statusEl.style.color = '#f44336';
+                testBtn.textContent = '🎤 重新測試';
+                testBtn.disabled = false;
+
+                // 顯示錯誤提示
+                hintEl.style.display = 'block';
+                hintEl.style.background = '#ffebee';
+                hintEl.style.borderColor = '#f44336';
+                hintTextEl.parentElement.style.color = '#c62828';
+
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    hintTextEl.textContent = '請在瀏覽器設定中允許此網站存取麥克風。在 Safari 中：設定 > Safari > 網站設定 > 麥克風。';
+                } else if (err.name === 'NotFoundError') {
+                    hintTextEl.textContent = '找不到麥克風裝置。請確認您的裝置有麥克風，且已正確連接。';
+                } else {
+                    hintTextEl.textContent = '發生錯誤：' + err.message + '。請嘗試重新整理頁面或使用其他瀏覽器。';
+                }
+            }
+        }
+
+        function stopMicTest() {
+            if (volumeInterval) {
+                clearInterval(volumeInterval);
+                volumeInterval = null;
+            }
+            if (microphoneStream) {
+                microphoneStream.getTracks().forEach(track => track.stop());
+                microphoneStream = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            document.getElementById('volumeMeter').style.width = '0%';
+            document.getElementById('testMicBtn').textContent = '🎤 測試麥克風';
+            document.getElementById('micStatus').textContent = '測試已停止';
+            document.getElementById('micStatus').style.color = '#666';
+        }
+
+        function testSpeechRecognition() {
+            const statusEl = document.getElementById('micStatus');
+            const speechBtn = document.getElementById('testSpeechBtn');
+            const resultEl = document.getElementById('speechResult');
+            const resultTextEl = document.getElementById('speechResultText');
+            const hintEl = document.getElementById('micTestHint');
+            const hintTextEl = document.getElementById('micTestHintText');
+
+            // 檢查瀏覽器支援
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                statusEl.textContent = '❌ 此瀏覽器不支援語音辨識';
+                statusEl.style.color = '#f44336';
+                hintEl.style.display = 'block';
+                hintEl.style.background = '#ffebee';
+                hintEl.style.borderColor = '#f44336';
+                hintTextEl.parentElement.style.color = '#c62828';
+                hintTextEl.textContent = '建議使用 Google Chrome 或 Microsoft Edge 瀏覽器以獲得最佳語音辨識體驗。';
+                return;
+            }
+
+            // 如果已經在辨識，停止
+            if (testRecognition) {
+                testRecognition.stop();
+                testRecognition = null;
+                speechBtn.textContent = '🗣️ 測試語音辨識';
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            testRecognition = new SpeechRecognition();
+            testRecognition.lang = 'zh-TW';
+            testRecognition.continuous = false;
+            testRecognition.interimResults = true;
+            testRecognition.maxAlternatives = 3;
+
+            let lastTranscript = '';
+
+            testRecognition.onstart = () => {
+                statusEl.textContent = '🎙️ 正在聆聽...請說一句話！';
+                statusEl.style.color = '#2196f3';
+                speechBtn.textContent = '⏹️ 停止辨識';
+                resultEl.style.display = 'none';
+            };
+
+            testRecognition.onresult = (event) => {
+                const result = event.results[event.results.length - 1];
+                const transcript = result[0].transcript;
+                const isFinal = result.isFinal;
+
+                lastTranscript = transcript;
+
+                resultEl.style.display = 'block';
+                resultTextEl.textContent = transcript + (isFinal ? '' : '...');
+
+                if (isFinal) {
+                    statusEl.textContent = '✅ 語音辨識成功！';
+                    statusEl.style.color = '#4caf50';
+                }
+            };
+
+            testRecognition.onend = () => {
+                speechBtn.textContent = '🗣️ 測試語音辨識';
+                testRecognition = null;
+
+                // Safari 修正：如果有收到文字但沒有 isFinal，在這裡處理
+                if (lastTranscript) {
+                    resultEl.style.display = 'block';
+                    resultTextEl.textContent = lastTranscript;
+                    statusEl.textContent = '✅ 語音辨識成功！';
+                    statusEl.style.color = '#4caf50';
+
+                    hintEl.style.display = 'block';
+                    hintEl.style.background = '#e8f5e9';
+                    hintEl.style.borderColor = '#4caf50';
+                    hintTextEl.parentElement.style.color = '#2e7d32';
+                    hintTextEl.textContent = '太棒了！語音辨識正常運作。您可以開始使用語音練習遊戲了！';
+                } else {
+                    statusEl.textContent = '沒有聽到聲音，請再試一次';
+                    statusEl.style.color = '#ff9800';
+                }
+            };
+
+            testRecognition.onerror = (event) => {
+                console.error('語音辨識錯誤:', event.error);
+                speechBtn.textContent = '🗣️ 測試語音辨識';
+
+                if (event.error === 'no-speech') {
+                    statusEl.textContent = '沒有偵測到語音，請再試一次';
+                    statusEl.style.color = '#ff9800';
+                } else if (event.error === 'not-allowed') {
+                    statusEl.textContent = '❌ 麥克風權限被拒絕';
+                    statusEl.style.color = '#f44336';
+                } else {
+                    statusEl.textContent = '❌ 語音辨識錯誤：' + event.error;
+                    statusEl.style.color = '#f44336';
+                }
+
+                testRecognition = null;
+            };
+
+            try {
+                testRecognition.start();
+            } catch (err) {
+                console.error('啟動辨識失敗:', err);
+                statusEl.textContent = '❌ 無法啟動語音辨識';
+                statusEl.style.color = '#f44336';
             }
         }
 

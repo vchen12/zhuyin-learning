@@ -125,12 +125,12 @@
         }
         .card-front {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            font-size: 1.8rem;
+            font-size: 2rem;
         }
         .card-back {
             background: white;
             transform: rotateY(180deg);
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             color: #667eea;
             font-weight: bold;
         }
@@ -139,6 +139,24 @@
         }
         .card.matched {
             pointer-events: none;
+        }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn, .complete-btn.highlight {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* 卡片閃爍提示 - 遊戲開始時提示點擊 */
+        .card.hint-glow .card-front {
+            animation: card-hint 1.5s ease-in-out infinite;
+        }
+        @keyframes card-hint {
+            0%, 100% { box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 20px 5px rgba(240, 147, 251, 0.6), 0 0 40px 10px rgba(245, 87, 108, 0.3); }
         }
 
         /* 結果訊息 */
@@ -211,12 +229,15 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 12px 30px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
         }
 
         /* 響應式調整 */
@@ -330,6 +351,12 @@
             renderCards();
             updateStats();
             document.getElementById('message').textContent = '';
+
+            // 為卡片加上閃爍提示
+            setTimeout(() => {
+                const allCards = document.querySelectorAll('.card');
+                allCards.forEach(card => card.classList.add('hint-glow'));
+            }, 500);
         }
 
         // 渲染卡片
@@ -361,6 +388,7 @@
             if (flippedCards.length >= 2) return;
 
             card.classList.add('flipped');
+            card.classList.remove('hint-glow'); // 移除閃爍提示
             flippedCards.push(card);
 
             // 播放音檔

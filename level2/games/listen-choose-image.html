@@ -95,15 +95,16 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.2);
         }
         .play-btn {
-            width: clamp(70px, 15vmin, 100px);
-            height: clamp(70px, 15vmin, 100px);
+            width: clamp(90px, 18vmin, 120px);
+            height: clamp(90px, 18vmin, 120px);
             border-radius: 50%;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            font-size: clamp(2rem, 6vmin, 3rem);
+            font-size: clamp(2.5rem, 7vmin, 3.5rem);
             cursor: pointer;
             box-shadow: 0 6px 15px rgba(79, 172, 254, 0.4);
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
         }
         .play-btn:active { transform: scale(0.95); }
         .play-btn.playing { animation: pulse 0.5s ease-in-out infinite; }
@@ -130,7 +131,7 @@
             background: white;
             border: 3px solid #e0e0e0;
             border-radius: 15px;
-            padding: 10px;
+            padding: 15px;
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -139,8 +140,10 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 0;
+            min-height: 70px;
             overflow: hidden;
+            font-size: 1.4rem;
+            touch-action: manipulation;
         }
         .choice-btn:hover {
             border-color: #11998e;
@@ -236,12 +239,29 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 12px 30px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
+        }
+        .complete-btn:hover { transform: scale(1.05); }
+        .complete-btn:active { transform: scale(0.95); }
+
+        /* \u9583\u720d\u63d0\u793a\u52d5\u756b */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
         }
 
         /* 響應式調整 */
@@ -301,7 +321,7 @@
         </div>
 
         <div class="play-section">
-            <button class="play-btn" id="playBtn" onclick="playCurrentSound()">🔊</button>
+            <button class="play-btn highlight-btn" id="playBtn" onclick="playCurrentSound()">🔊</button>
             <div class="hint-text" id="hintText">點擊播放，聽聽看是什麼？</div>
         </div>
 
@@ -317,7 +337,7 @@
             <div class="complete-icon">🎉</div>
             <div class="complete-title">太棒了！</div>
             <div class="complete-score" id="completeScore">得分：100 分</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
             <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🏠 返回選單</button>
         </div>
     </div>
@@ -399,7 +419,7 @@
 
             choices.forEach((word, index) => {
                 const btn = document.createElement('button');
-                btn.className = 'choice-btn';
+                btn.className = 'choice-btn highlight-btn';
                 btn.innerHTML = `<span class="emoji">${word.emoji}</span><span class="text">${word.text}</span><span class="zhuyin">${word.zhuyin}</span>`;
                 btn.onclick = () => checkAnswer(index);
                 grid.appendChild(btn);

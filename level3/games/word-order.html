@@ -132,13 +132,32 @@
         /* 詞彙卡片 */
         .word-card {
             background: white;
-            padding: 10px 18px;
+            padding: 15px 20px;
             border-radius: 12px;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             transition: all 0.2s;
             user-select: none;
+            min-height: 60px;
+        }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* 詞彙卡片閃爍 */
+        .card-highlight {
+            animation: card-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes card-glow {
+            0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+            50% { box-shadow: 0 0 20px 6px rgba(240, 147, 251, 0.6), 0 0 40px 12px rgba(245, 87, 108, 0.3); }
         }
         .word-card:hover {
             transform: scale(1.05);
@@ -174,12 +193,14 @@
         .action-btn {
             background: white;
             border: none;
-            padding: 12px 24px;
+            padding: 18px 32px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 1.3rem;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             transition: transform 0.2s;
+            min-height: 65px;
+            min-width: 140px;
         }
         .action-btn:active { transform: scale(0.95); }
         .action-btn.check {
@@ -267,12 +288,14 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
+            padding: 18px 32px;
             border-radius: 30px;
             font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
         }
 
         @media (max-width: 500px) {
@@ -306,8 +329,8 @@
             <div class="options-area" id="optionsArea"></div>
 
             <div class="buttons-section">
-                <button class="action-btn reset" onclick="resetAnswer()">🔄 重來</button>
-                <button class="action-btn check" onclick="checkAnswer()">✓ 確認</button>
+                <button class="action-btn reset highlight-btn" onclick="resetAnswer()">🔄 重來</button>
+                <button class="action-btn check highlight-btn" onclick="checkAnswer()">✓ 確認</button>
             </div>
 
             <div class="result-message" id="resultMessage"></div>
@@ -321,8 +344,8 @@
             <div class="complete-icon">🎉</div>
             <div class="complete-title">太棒了！</div>
             <div class="complete-score" id="completeScore">得分：100 分</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
-            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
         </div>
     </div>
 
@@ -401,7 +424,7 @@
 
             availableWords.forEach((word, index) => {
                 const card = document.createElement('div');
-                card.className = 'word-card';
+                card.className = 'word-card card-highlight';
                 card.textContent = word;
                 card.dataset.index = index;
                 card.onclick = () => selectWord(index);

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麥克風測試</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Microsoft JhengHei', sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: white; margin-bottom: 20px; }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        .section h3 { margin-bottom: 10px; color: #667eea; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:disabled { opacity: 0.5; }
+        button.recording { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        #log {
+            background: #1e1e1e;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .status { font-size: 1.5rem; text-align: center; margin: 15px 0; }
+        .meter-container {
+            height: 30px;
+            background: #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .meter {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            width: 0%;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎤 麥克風診斷測試</h1>
+    <div class="container">
+        <!-- 測試 1: 麥克風權限 -->
+        <div class="section">
+            <h3>1️⃣ 麥克風權限測試</h3>
+            <button onclick="testMicPermission()">測試麥克風權限</button>
+            <div id="permissionStatus" class="status">尚未測試</div>
+        </div>
+
+        <!-- 測試 2: 音量偵測 -->
+        <div class="section">
+            <h3>2️⃣ 音量偵測（說話看看音量條有沒有動）</h3>
+            <button onclick="startVolumeMeter()" id="volumeBtn">開始偵測音量</button>
+            <div class="meter-container">
+                <div class="meter" id="volumeMeter"></div>
+            </div>
+            <div id="volumeStatus" class="status">尚未開始</div>
+        </div>
+
+        <!-- 測試 3: Web Speech API -->
+        <div class="section">
+            <h3>3️⃣ 語音辨識測試（說任何話）</h3>
+            <button onclick="testSpeechRecognition()" id="speechBtn">開始語音辨識</button>
+            <div id="speechStatus" class="status">尚未開始</div>
+            <div id="speechResult" style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 5px; display: none;"></div>
+        </div>
+
+        <!-- 日誌 -->
+        <div class="section">
+            <h3>📋 診斷日誌</h3>
+            <button onclick="document.getElementById('log').textContent = ''">清除日誌</button>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let audioContext, analyser, microphone, volumeInterval;
+        let recognition;
+
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logEl.textContent += `[${time}] ${msg}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(msg);
+        }
+
+        // 測試 1: 麥克風權限
+        async function testMicPermission() {
+            log('測試麥克風權限...');
+            const statusEl = document.getElementById('permissionStatus');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                log('✅ 麥克風權限已授予');
+                statusEl.textContent = '✅ 權限已授予';
+                statusEl.style.color = 'green';
+
+                // 列出音訊輸入裝置
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputs = devices.filter(d => d.kind === 'audioinput');
+                log(`找到 ${audioInputs.length} 個音訊輸入裝置:`);
+                audioInputs.forEach((d, i) => {
+                    log(`  ${i+1}. ${d.label || '未命名裝置'}`);
+                });
+
+                stream.getTracks().forEach(track => track.stop());
+            } catch (err) {
+                log(`❌ 麥克風權限錯誤: ${err.name} - ${err.message}`);
+                statusEl.textContent = `❌ ${err.message}`;
+                statusEl.style.color = 'red';
+            }
+        }
+
+        // 測試 2: 音量偵測
+        async function startVolumeMeter() {
+            const btn = document.getElementById('volumeBtn');
+            const statusEl = document.getElementById('volumeStatus');
+            const meterEl = document.getElementById('volumeMeter');
+
+            if (volumeInterval) {
+                clearInterval(volumeInterval);
+                volumeInterval = null;
+                if (microphone) microphone.disconnect();
+                if (audioContext) audioContext.close();
+                btn.textContent = '開始偵測音量';
+                btn.classList.remove('recording');
+                statusEl.textContent = '已停止';
+                meterEl.style.width = '0%';
+                log('音量偵測已停止');
+                return;
+            }
+
+            log('開始音量偵測...');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                btn.textContent = '停止偵測';
+                btn.classList.add('recording');
+
+                let maxVolume = 0;
+                volumeInterval = setInterval(() => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                    const volume = Math.min(100, average * 1.5);
+                    meterEl.style.width = volume + '%';
+
+                    if (volume > maxVolume) {
+                        maxVolume = volume;
+                    }
+
+                    if (volume > 10) {
+                        statusEl.textContent = `🎤 偵測到聲音！音量: ${Math.round(volume)}%`;
+                        statusEl.style.color = 'green';
+                    } else {
+                        statusEl.textContent = `等待聲音... (最大音量: ${Math.round(maxVolume)}%)`;
+                        statusEl.style.color = 'orange';
+                    }
+                }, 100);
+
+                log('✅ 音量偵測已啟動，請說話...');
+            } catch (err) {
+                log(`❌ 音量偵測錯誤: ${err.message}`);
+                statusEl.textContent = `❌ ${err.message}`;
+                statusEl.style.color = 'red';
+            }
+        }
+
+        // 測試 3: 語音辨識
+        function testSpeechRecognition() {
+            const btn = document.getElementById('speechBtn');
+            const statusEl = document.getElementById('speechStatus');
+            const resultEl = document.getElementById('speechResult');
+
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                log('❌ 此瀏覽器不支援 Web Speech API');
+                statusEl.textContent = '❌ 瀏覽器不支援';
+                statusEl.style.color = 'red';
+                return;
+            }
+
+            if (recognition) {
+                recognition.stop();
+                recognition = null;
+                btn.textContent = '開始語音辨識';
+                btn.classList.remove('recording');
+                log('語音辨識已停止');
+                return;
+            }
+
+            log('初始化語音辨識...');
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 3;
+
+            recognition.onstart = () => {
+                log('🎤 語音辨識已開始');
+                statusEl.textContent = '🎤 正在聆聽...';
+                statusEl.style.color = 'blue';
+                btn.textContent = '停止辨識';
+                btn.classList.add('recording');
+            };
+
+            recognition.onaudiostart = () => {
+                log('🔊 音訊輸入開始');
+            };
+
+            recognition.onsoundstart = () => {
+                log('🔉 偵測到聲音');
+            };
+
+            recognition.onspeechstart = () => {
+                log('🗣️ 偵測到語音');
+                statusEl.textContent = '🗣️ 聽到你在說話...';
+            };
+
+            recognition.onspeechend = () => {
+                log('🔇 語音結束');
+                statusEl.textContent = '🔄 正在辨識...';
+            };
+
+            recognition.onsoundend = () => {
+                log('🔈 聲音結束');
+            };
+
+            recognition.onaudioend = () => {
+                log('🔊 音訊輸入結束');
+            };
+
+            recognition.onresult = (event) => {
+                const results = [];
+                for (let i = 0; i < event.results.length; i++) {
+                    const result = event.results[i];
+                    const transcript = result[0].transcript;
+                    const confidence = (result[0].confidence * 100).toFixed(1);
+                    const isFinal = result.isFinal;
+                    results.push({ transcript, confidence, isFinal });
+                    log(`📝 結果 ${i+1}: "${transcript}" (信心度: ${confidence}%, final: ${isFinal})`);
+                }
+
+                const lastResult = results[results.length - 1];
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = `
+                    <strong>辨識結果：</strong> ${lastResult.transcript}<br>
+                    <strong>信心度：</strong> ${lastResult.confidence}%<br>
+                    <strong>是否最終：</strong> ${lastResult.isFinal ? '是' : '否（中間結果）'}
+                `;
+
+                if (lastResult.isFinal) {
+                    statusEl.textContent = '✅ 辨識完成';
+                    statusEl.style.color = 'green';
+                }
+            };
+
+            recognition.onerror = (event) => {
+                log(`❌ 語音辨識錯誤: ${event.error}`);
+                statusEl.textContent = `❌ 錯誤: ${event.error}`;
+                statusEl.style.color = 'red';
+                btn.textContent = '開始語音辨識';
+                btn.classList.remove('recording');
+
+                if (event.error === 'no-speech') {
+                    log('提示：沒有偵測到語音，可能是麥克風沒有收到聲音');
+                } else if (event.error === 'audio-capture') {
+                    log('提示：無法捕獲音訊，請檢查麥克風設定');
+                } else if (event.error === 'not-allowed') {
+                    log('提示：麥克風權限被拒絕');
+                }
+            };
+
+            recognition.onend = () => {
+                log('🔚 語音辨識結束');
+                btn.textContent = '開始語音辨識';
+                btn.classList.remove('recording');
+                recognition = null;
+            };
+
+            try {
+                recognition.start();
+            } catch (err) {
+                log(`❌ 啟動失敗: ${err.message}`);
+            }
+        }
+
+        // 頁面載入時顯示瀏覽器資訊
+        window.onload = () => {
+            log('=== 麥克風診斷工具 ===');
+            log(`瀏覽器: ${navigator.userAgent}`);
+            log(`Web Speech API: ${('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) ? '支援' : '不支援'}`);
+            log(`MediaDevices API: ${('mediaDevices' in navigator) ? '支援' : '不支援'}`);
+            log('');
+            log('請依序執行測試 1、2、3');
+        };
+    </script>
+</body>
+</html>

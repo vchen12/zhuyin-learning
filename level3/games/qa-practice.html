@@ -148,16 +148,34 @@
         .action-btn {
             background: white;
             border: none;
-            padding: 16px 26px;
+            padding: 18px 32px;
             border-radius: 30px;
-            font-size: 1.15rem;
+            font-size: 1.3rem;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 6px 20px rgba(0,0,0,0.2);
             transition: transform 0.2s;
-            min-height: 55px;
-            min-width: 100px;
+            min-height: 65px;
+            min-width: 140px;
             touch-action: manipulation;
+        }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* 麥克風按鈕特別閃爍 */
+        .mic-highlight {
+            animation: mic-glow 1.2s ease-in-out infinite;
+        }
+        @keyframes mic-glow {
+            0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+            50% { box-shadow: 0 0 30px 10px rgba(240, 147, 251, 0.8), 0 0 60px 20px rgba(245, 87, 108, 0.5); }
         }
         .action-btn:hover { transform: scale(1.05); }
         .action-btn:active { transform: scale(0.95); }
@@ -261,12 +279,14 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
+            padding: 18px 32px;
             border-radius: 30px;
             font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
         }
 
         @media (max-width: 500px) {
@@ -298,10 +318,10 @@
             </div>
 
             <div class="buttons-section">
-                <button class="action-btn question" onclick="playQuestion()">❓ 聽問題</button>
-                <button class="action-btn speak" onclick="startListening()" id="speakBtn">🎤 我來答</button>
-                <button class="action-btn" onclick="showAnswer()">👁️ 看答案</button>
-                <button class="action-btn next" onclick="skipToNext()">⏭️ 下一題</button>
+                <button class="action-btn question highlight-btn" onclick="playQuestion()">❓ 聽問題</button>
+                <button class="action-btn speak mic-highlight" onclick="startListening()" id="speakBtn">🎤 我來答</button>
+                <button class="action-btn highlight-btn" onclick="showAnswer()">👁️ 看答案</button>
+                <button class="action-btn next highlight-btn" onclick="skipToNext()">⏭️ 下一題</button>
             </div>
 
             <div class="recognized-text" id="recognizedText">你說：</div>
@@ -316,8 +336,8 @@
             <div class="complete-icon">🎉</div>
             <div class="complete-title">太棒了！</div>
             <div class="complete-score" id="completeScore">得分：100 分</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
-            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
         </div>
     </div>
 
@@ -368,22 +388,32 @@
 
         let isProcessing = false;
         let hasDetectedSound = false;
+        let recognitionTimeout = null;
+        let hasReceivedResult = false;
+        let lastTranscript = '';
 
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
-                recognition.continuous = false;
+                recognition.continuous = false; // 改回 false，讓瀏覽器自動管理
                 recognition.interimResults = true; // 啟用即時反饋
                 recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
                     isListening = true;
                     hasDetectedSound = false;
+                    hasReceivedResult = false;
+                    lastTranscript = '';
                     document.getElementById('speakBtn').textContent = '🎙️ 正在聽...';
                     document.getElementById('speakBtn').disabled = true;
                     if (navigator.vibrate) navigator.vibrate(100);
+                    recognitionTimeout = setTimeout(() => {
+                        if (isListening && !hasReceivedResult) {
+                            try { recognition.stop(); } catch(e) {}
+                        }
+                    }, 10000);
                 };
 
                 recognition.onaudiostart = () => {
@@ -398,21 +428,32 @@
 
                 recognition.onspeechend = () => {
                     document.getElementById('resultMessage').textContent = '🎙️ 正在辨識...';
+                    // 不要在這裡 stop，讓瀏覽器自己決定何時結束
                 };
 
                 recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    const isFinal = event.results[0].isFinal;
+                    const result = event.results[event.results.length - 1];
+                    const transcript = result[0].transcript;
+                    const isFinal = result.isFinal;
+
+                    // 儲存收到的文字
+                    if (transcript) {
+                        lastTranscript = transcript;
+                    }
 
                     document.getElementById('recognizedText').textContent = '你說：' + transcript;
                     document.getElementById('recognizedText').classList.add('show');
 
-                    if (isFinal) {
+                    if (isFinal && !hasReceivedResult) {
+                        hasReceivedResult = true;
+                        clearTimeout(recognitionTimeout);
+                        try { recognition.stop(); } catch(e) {}
                         checkResult(transcript);
                     }
                 };
 
                 recognition.onerror = (event) => {
+                    clearTimeout(recognitionTimeout);
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來答';
                     document.getElementById('speakBtn').disabled = false;
@@ -423,23 +464,27 @@
                             handleCorrect();
                             return;
                         }
-                        document.getElementById('resultMessage').textContent = '沒有聽到聲音，再試一次！';
-                        // 快速重播提示
-                        setTimeout(() => {
-                            playQuestion();
-                            setTimeout(() => {
-                                document.getElementById('resultMessage').textContent = '跟著答 🎤';
-                            }, 800);
-                        }, 400);
+                        // 沒有聽到聲音時，顯示提示讓用戶手動重試，不自動循環
+                        document.getElementById('resultMessage').textContent = '沒聽清楚，點麥克風再試 🎤 或點「下一題」';
                     } else {
                         document.getElementById('resultMessage').textContent = '請再試一次！';
                     }
                 };
 
                 recognition.onend = () => {
+                    clearTimeout(recognitionTimeout);
+                    const wasListening = isListening;
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來答';
                     document.getElementById('speakBtn').disabled = false;
+
+                    // 如果有收到任何文字但還沒處理，現在處理它
+                    if (!hasReceivedResult && lastTranscript && wasListening) {
+                        hasReceivedResult = true;
+                        document.getElementById('recognizedText').textContent = '你說：' + lastTranscript;
+                        document.getElementById('recognizedText').classList.add('show');
+                        checkResult(lastTranscript);
+                    }
                 };
             }
         }
@@ -528,15 +573,8 @@
                 handleCorrect(similarity);
             } else {
                 isProcessing = false;
-                document.getElementById('resultMessage').textContent = '再試一次！';
-                // 快速重播並等待重試
-                setTimeout(() => {
-                    playQuestion();
-                    setTimeout(() => {
-                        document.getElementById('resultMessage').textContent = '跟著答 🎤';
-                        startListening();
-                    }, 700);
-                }, 400);
+                // 沒有達到門檻時，顯示提示讓用戶手動重試，不自動循環
+                document.getElementById('resultMessage').textContent = '再試一次！點麥克風重試 🎤 或點「下一題」';
             }
         }
 

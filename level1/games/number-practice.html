@@ -73,22 +73,25 @@
         .mode-section {
             display: flex;
             justify-content: center;
-            gap: 8px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         .mode-btn {
             background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.5);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
+            border: 3px solid rgba(255,255,255,0.5);
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             color: white;
             cursor: pointer;
             transition: all 0.2s;
+            min-width: 100px;
         }
         .mode-btn.active {
             background: white;
             color: #667eea;
+            border-color: white;
         }
 
         .progress-section {
@@ -172,22 +175,21 @@
             justify-content: center;
             gap: 15px;
             flex-wrap: wrap;
-            padding: 10px;
+            padding: 15px;
         }
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 18px 32px;
+            padding: 20px 36px;
             border-radius: 30px;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             color: white;
             cursor: pointer;
             box-shadow: 0 6px 20px rgba(0,0,0,0.25);
             font-weight: bold;
-            min-width: 140px;
-            min-height: 60px;
+            min-width: 150px;
+            min-height: 70px;
             transition: transform 0.2s, box-shadow 0.2s;
-            /* 增加觸控區域 */
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
@@ -197,6 +199,19 @@
         }
         .action-btn:active {
             transform: scale(0.95);
+        }
+
+        /* 麥克風按鈕閃爍提示 */
+        .action-btn.mic-highlight {
+            animation: mic-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes mic-glow {
+            0%, 100% {
+                box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            }
+            50% {
+                box-shadow: 0 0 30px 10px rgba(240, 147, 251, 0.8), 0 0 60px 20px rgba(245, 87, 108, 0.5);
+            }
         }
 
         .result-message {
@@ -212,34 +227,38 @@
         .number-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
+            gap: 12px;
             width: 100%;
-            max-width: 320px;
+            max-width: 450px;
         }
         .number-card {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 4px;
-            border-radius: 10px;
+            background: rgba(255,255,255,0.25);
+            padding: 15px 10px;
+            border-radius: 15px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .number-card:hover {
-            background: rgba(255,255,255,0.4);
-            transform: scale(1.05);
+            background: rgba(255,255,255,0.45);
+            transform: scale(1.08);
         }
         .number-card.mastered {
-            background: rgba(76, 175, 80, 0.5);
-            border: 2px solid #4caf50;
+            background: rgba(76, 175, 80, 0.6);
+            border: 3px solid #4caf50;
         }
         .number-card .num {
-            font-size: 1.4rem;
+            font-size: 1.8rem;
             color: white;
             font-weight: bold;
         }
         .number-card .zhuyin {
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.8);
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.9);
         }
 
         .fireworks {
@@ -345,8 +364,8 @@
         <div class="action-buttons" id="actionButtons">
             <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
             <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
-            <button class="action-btn" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
-            <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+            <button class="action-btn mic-highlight" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
+            <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
         </div>
 
         <div class="result-message" id="resultMessage"></div>
@@ -511,6 +530,21 @@
 
         // 聽音選數模式
         function startListenMode() {
+            // 先說明玩法，等用戶準備好再開始
+            speak('聽音選數模式！', () => {
+                setTimeout(() => {
+                    speak('聽到數字發音後，選出正確的數字！準備好請點「確定」', () => {
+                        if (confirm('🎮 聽音選數模式\n\n玩法：聽到數字發音後，選出正確的數字\n\n準備好了嗎？')) {
+                            actuallyStartListenMode();
+                        } else {
+                            setMode('learn');
+                        }
+                    });
+                }, 300);
+            });
+        }
+
+        function actuallyStartListenMode() {
             currentRound = 0;
             score = 0;
             questionQueue = shuffle([...NUMBERS, ...NUMBERS]).slice(0, totalRounds);
@@ -520,7 +554,7 @@
             document.getElementById('actionButtons').style.display = 'none';
 
             updateScore();
-            speak('聽音選數模式！聽發音後，選出正確的數字！', () => {
+            speak('開始！', () => {
                 nextListenQuestion();
             });
         }
@@ -614,6 +648,21 @@
 
         // 看數唸出模式
         function startSpeakMode() {
+            // 先說明玩法，等用戶準備好再開始
+            speak('看數唸出模式！', () => {
+                setTimeout(() => {
+                    speak('看到數字後，點麥克風大聲唸出來！準備好請點「確定」', () => {
+                        if (confirm('🎤 看數唸出模式\n\n玩法：看到數字後，點麥克風大聲唸出來\n或點「✅我會唸」按鈕確認\n\n準備好了嗎？')) {
+                            actuallyStartSpeakMode();
+                        } else {
+                            setMode('learn');
+                        }
+                    });
+                }, 300);
+            });
+        }
+
+        function actuallyStartSpeakMode() {
             currentRound = 0;
             score = 0;
             questionQueue = shuffle([...NUMBERS, ...NUMBERS]).slice(0, totalRounds);
@@ -622,10 +671,11 @@
             document.getElementById('optionsGrid').style.display = 'none';
             document.getElementById('actionButtons').style.display = 'flex';
             document.getElementById('speakBtn').style.display = 'inline-block';
+            document.getElementById('manualSpeakBtn').style.display = 'inline-block'; // 總是顯示「我會唸」按鈕
 
             initSpeechRecognition();
             updateScore();
-            speak('看數唸出模式！看到數字後，大聲唸出來！', () => {
+            speak('開始！', () => {
                 nextSpeakQuestion();
             });
         }
@@ -647,28 +697,40 @@
 
         let recognitionFailed = false;
 
+        let recognitionTimeout = null;
+        let hasReceivedResult = false;
+        let lastTranscript = ''; // 儲存最後收到的文字（即使不是 final）
+
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
-                recognition.continuous = false;
+                recognition.continuous = false; // 改回 false，讓瀏覽器自動管理
                 recognition.interimResults = true; // 開啟即時結果回饋
                 recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
                     isListening = true;
+                    hasReceivedResult = false;
+                    lastTranscript = '';
                     document.getElementById('speakBtn').textContent = '🎙️ 正在聽...';
                     document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-                    document.getElementById('resultMessage').textContent = '🎙️ 正在聽你說...';
-                    // 震動回饋
+                    document.getElementById('resultMessage').textContent = '🎙️ 請大聲說出數字！';
                     if (navigator.vibrate) {
                         navigator.vibrate(100);
                     }
+
+                    // 設定 10 秒超時
+                    recognitionTimeout = setTimeout(() => {
+                        if (isListening) {
+                            try { recognition.stop(); } catch(e) {}
+                        }
+                    }, 10000);
                 };
 
                 recognition.onaudiostart = () => {
-                    document.getElementById('resultMessage').textContent = '🎙️ 聽到聲音了！請繼續...';
+                    document.getElementById('resultMessage').textContent = '🎙️ 聽到聲音了！請繼續說...';
                 };
 
                 recognition.onspeechstart = () => {
@@ -677,17 +739,28 @@
 
                 recognition.onspeechend = () => {
                     document.getElementById('resultMessage').textContent = '🎙️ 正在辨識...';
+                    // 不要在這裡 stop，讓瀏覽器自己決定何時結束
                 };
 
                 recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    const isFinal = event.results[0].isFinal;
+                    // 取得最新的辨識結果
+                    const lastResult = event.results[event.results.length - 1];
+                    const transcript = lastResult[0].transcript.trim();
+                    const isFinal = lastResult.isFinal;
+
+                    // 儲存收到的文字
+                    if (transcript) {
+                        lastTranscript = transcript;
+                    }
 
                     // 顯示即時辨識結果
                     document.getElementById('resultMessage').textContent = '聽到：' + transcript + (isFinal ? '' : '...');
 
-                    if (isFinal) {
+                    if (isFinal && !hasReceivedResult) {
+                        hasReceivedResult = true;
+                        clearTimeout(recognitionTimeout);
                         isListening = false;
+                        try { recognition.stop(); } catch(e) {}
                         document.getElementById('speakBtn').textContent = '🎤 我來唸';
                         document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
                         checkSpeakResult(transcript);
@@ -695,36 +768,39 @@
                 };
 
                 recognition.onerror = (event) => {
-                    isListening = false;
-                    document.getElementById('speakBtn').textContent = '🎤 我來唸';
-                    document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+                    clearTimeout(recognitionTimeout);
                     console.error('語音辨識錯誤:', event.error);
 
                     if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
                         recognitionFailed = true;
+                        isListening = false;
+                        document.getElementById('speakBtn').textContent = '🎤 我來唸';
+                        document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
                         document.getElementById('resultMessage').textContent = '❌ 麥克風無法使用，請點「✅我會唸」按鈕';
                         document.getElementById('speakBtn').style.display = 'none';
                         document.getElementById('manualSpeakBtn').style.display = 'inline-block';
                         return;
                     }
 
-                    if (event.error === 'no-speech') {
-                        document.getElementById('resultMessage').textContent = '😊 沒聽到聲音，準備好再按麥克風！';
-                        if (navigator.vibrate) {
-                            navigator.vibrate([50, 50, 50]);
-                        }
-                        setTimeout(() => speak('沒關係，準備好再按麥克風！'), 500);
-                    }
-
-                    if (event.error === 'aborted') {
-                        document.getElementById('resultMessage').textContent = '⏸️ 已暫停，準備好再試';
-                    }
+                    // no-speech 或 aborted 錯誤會繼續到 onend 處理
                 };
 
                 recognition.onend = () => {
+                    clearTimeout(recognitionTimeout);
+                    const wasListening = isListening;
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
                     document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+
+                    // 如果有收到任何文字但還沒處理，現在處理它
+                    if (!hasReceivedResult && lastTranscript && wasListening) {
+                        hasReceivedResult = true;
+                        document.getElementById('resultMessage').textContent = '聽到：' + lastTranscript;
+                        checkSpeakResult(lastTranscript);
+                    } else if (!hasReceivedResult && wasListening) {
+                        // 完全沒聽到任何東西
+                        document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
+                    }
                 };
             }
         }
@@ -780,13 +856,11 @@
             if (passes) {
                 handleSpeakCorrect(similarity);
             } else if (hasSound) {
-                // 有聲音但未達門檻，給予鼓勵並重試
-                document.getElementById('resultMessage').textContent = `加油！再試一次 🔊`;
-                setTimeout(() => speak(currentNumber.text), 500);
+                // 有聲音但未達門檻，顯示提示（不自動重試）
+                document.getElementById('resultMessage').textContent = `聽到了！點🎤再試一次，或點「✅我會唸」`;
             } else {
-                // 快速重試：播放發音讓使用者跟著唸
-                document.getElementById('resultMessage').textContent = '再聽一次 🔊';
-                speak(currentNumber.text);
+                // 沒聽到聲音，顯示提示（不自動重試）
+                document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
             }
         }
 

@@ -80,10 +80,14 @@
             background: #f5f5f5;
             border: 3px solid transparent;
             border-radius: 15px;
-            padding: 15px;
+            padding: 12px 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
+            min-height: 110px;
+        }
+        .mode-btn.highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
         }
         .mode-btn:hover {
             background: #e8e3ff;
@@ -171,18 +175,29 @@
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 12px 24px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             transition: transform 0.2s;
             font-weight: bold;
+            min-height: 65px;
+            min-width: 140px;
         }
         .action-btn:active { transform: scale(0.95); }
         .action-btn.speak { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
         .action-btn.next { background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%); }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn, .action-btn.highlight {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
 
         /* 聲調列表 */
         .tone-list {
@@ -278,10 +293,11 @@
             background: white;
             border: 3px solid #e0e0e0;
             border-radius: 15px;
-            padding: 12px 5px;
+            padding: 15px 5px;
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            min-height: 70px;
         }
         .quiz-choice:hover {
             border-color: #667eea;
@@ -351,12 +367,15 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 12px 30px;
+            padding: 18px 32px;
             border-radius: 25px;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
+            font-weight: bold;
         }
 
         @media (max-width: 480px) {
@@ -416,12 +435,12 @@
         <div class="mode-selector" id="modeSelector">
             <h2>聲調練習</h2>
             <div class="mode-buttons">
-                <div class="mode-btn" onclick="startLearnMode()">
+                <div class="mode-btn highlight-btn" onclick="startLearnMode()">
                     <div class="icon">📖</div>
                     <div class="name">學習模式</div>
                     <div class="desc">認識五種聲調</div>
                 </div>
-                <div class="mode-btn" onclick="startQuizMode()">
+                <div class="mode-btn highlight-btn" onclick="startQuizMode()">
                     <div class="icon">🎯</div>
                     <div class="name">測驗模式</div>
                     <div class="desc">聽音辨識聲調</div>
@@ -446,8 +465,8 @@
             </div>
 
             <div class="buttons">
-                <button class="action-btn" onclick="playToneSound()">🔊 聽發音</button>
-                <button class="action-btn next" onclick="nextTone()">下一個 →</button>
+                <button class="action-btn highlight-btn" onclick="playToneSound()">🔊 聽發音</button>
+                <button class="action-btn next highlight-btn" onclick="nextTone()">下一個 →</button>
             </div>
 
             <div class="tone-list" id="toneList"></div>
@@ -468,7 +487,7 @@
                 <div class="quiz-hint">這個字是第幾聲？</div>
             </div>
 
-            <button class="action-btn" onclick="playQuizSound()">🔊 再聽一次</button>
+            <button class="action-btn highlight-btn" onclick="playQuizSound()">🔊 再聽一次</button>
 
             <div class="quiz-choices" id="quizChoices"></div>
 

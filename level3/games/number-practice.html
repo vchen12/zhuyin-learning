@@ -180,6 +180,25 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             transition: all 0.2s;
+            min-height: 70px;
+        }
+
+        /* 按鈕閃爍提示動畫 */
+        .highlight-btn {
+            animation: btn-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes btn-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 25px 8px rgba(240, 147, 251, 0.7), 0 0 50px 15px rgba(245, 87, 108, 0.4); }
+        }
+
+        /* 麥克風按鈕特別閃爍 */
+        .mic-highlight {
+            animation: mic-glow 1.2s ease-in-out infinite;
+        }
+        @keyframes mic-glow {
+            0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+            50% { box-shadow: 0 0 30px 10px rgba(240, 147, 251, 0.8), 0 0 60px 20px rgba(245, 87, 108, 0.5); }
         }
         .option-btn:hover { transform: scale(1.05); }
         .option-btn.correct { background: #4caf50; color: white; }
@@ -195,12 +214,14 @@
         .action-btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             border: none;
-            padding: 10px 18px;
+            padding: 18px 32px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 1.3rem;
             color: white;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            min-height: 65px;
+            min-width: 140px;
         }
         .action-btn:active { transform: scale(0.95); }
 
@@ -286,12 +307,14 @@
         .complete-btn {
             background: linear-gradient(135deg, #4caf50, #8bc34a);
             border: none;
-            padding: 15px 40px;
+            padding: 18px 32px;
             border-radius: 30px;
             font-size: 1.3rem;
             color: white;
             cursor: pointer;
             margin: 5px;
+            min-height: 65px;
+            min-width: 140px;
         }
 
         .number-grid {
@@ -369,10 +392,10 @@
             <div class="options-grid" id="optionsGrid" style="display: none;"></div>
 
             <div class="action-buttons" id="actionButtons">
-                <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
-                <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
-                <button class="action-btn" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
-                <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+                <button class="action-btn highlight-btn" onclick="playSound()">🔊 聽發音</button>
+                <button class="action-btn highlight-btn" onclick="nextNumber()">⚡ 換一個</button>
+                <button class="action-btn mic-highlight" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
+                <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
             </div>
 
             <div class="result-message" id="resultMessage"></div>
@@ -388,8 +411,8 @@
             <div class="complete-icon">🎉</div>
             <div class="complete-title">太棒了！</div>
             <div class="complete-score" id="completeScore">得分：100 分</div>
-            <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
-            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
+            <button class="complete-btn highlight-btn" onclick="restartGame()">🔄 再玩一次</button>
+            <button class="complete-btn highlight-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏠 返回選單</button>
         </div>
     </div>
 
@@ -532,6 +555,21 @@
         }
 
         function startListenMode() {
+            // 先說明玩法，等用戶準備好再開始
+            speak('聽音選數模式！', () => {
+                setTimeout(() => {
+                    speak('聽到數字發音後，選出正確的數字！準備好請點「確定」', () => {
+                        if (confirm('🎮 聽音選數模式\n\n玩法：聽到數字發音後，選出正確的數字\n\n準備好了嗎？')) {
+                            actuallyStartListenMode();
+                        } else {
+                            setMode('learn');
+                        }
+                    });
+                }, 300);
+            });
+        }
+
+        function actuallyStartListenMode() {
             currentRound = 0;
             score = 0;
             const numbers = getNumbersInRange();
@@ -543,7 +581,7 @@
             document.getElementById('numberGrid').style.display = 'none';
 
             updateScore();
-            speak('聽音選數模式！聽發音後，選出正確的數字！', () => {
+            speak('開始囉！', () => {
                 nextListenQuestion();
             });
         }
@@ -584,7 +622,7 @@
 
             options.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = 'option-btn';
+                btn.className = 'option-btn highlight-btn';
                 btn.textContent = opt.num;
                 btn.onclick = () => checkAnswer(btn, opt);
                 grid.appendChild(btn);
@@ -624,6 +662,21 @@
         }
 
         function startSpeakMode() {
+            // 先說明玩法，等用戶準備好再開始
+            speak('看數唸出模式！', () => {
+                setTimeout(() => {
+                    speak('看到數字後，大聲唸出來！準備好請點「確定」', () => {
+                        if (confirm('🎤 看數唸出模式\n\n玩法：看到數字後，點麥克風大聲唸出來\n\n準備好了嗎？')) {
+                            actuallyStartSpeakMode();
+                        } else {
+                            setMode('learn');
+                        }
+                    });
+                }, 300);
+            });
+        }
+
+        function actuallyStartSpeakMode() {
             currentRound = 0;
             score = 0;
             const numbers = getNumbersInRange();
@@ -637,7 +690,7 @@
 
             initSpeechRecognition();
             updateScore();
-            speak('看數唸出模式！看到數字後，大聲唸出來！', () => {
+            speak('開始囉！', () => {
                 nextSpeakQuestion();
             });
         }
@@ -659,6 +712,9 @@
         }
 
         let recognitionFailed = false;
+        let recognitionTimeout = null;
+        let hasReceivedResult = false;
+        let lastTranscript = '';
 
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -666,20 +722,49 @@
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
                 recognition.continuous = false;
-                recognition.interimResults = false;
+                recognition.interimResults = true;
                 recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
                     isListening = true;
+                    hasReceivedResult = false;
+                    lastTranscript = '';
                     document.getElementById('speakBtn').textContent = '🎤 聽你說...';
+                    document.getElementById('resultMessage').textContent = '';
+
+                    // 設定 10 秒超時
+                    recognitionTimeout = setTimeout(() => {
+                        if (isListening && !hasReceivedResult) {
+                            try { recognition.stop(); } catch(e) {}
+                        }
+                    }, 10000);
                 };
 
                 recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    checkSpeakResult(transcript);
+                    const lastResult = event.results[event.results.length - 1];
+                    const transcript = lastResult[0].transcript.trim();
+                    const isFinal = lastResult.isFinal;
+
+                    // 儲存收到的文字（不管是否 final）
+                    if (transcript) {
+                        lastTranscript = transcript;
+                    }
+
+                    // 顯示即時辨識結果
+                    document.getElementById('resultMessage').textContent = '聽到：' + transcript;
+
+                    // Safari 永遠不會回傳 isFinal: true
+                    // 如果是 final 就立即處理，否則等 onend 時處理
+                    if (isFinal && !hasReceivedResult) {
+                        hasReceivedResult = true;
+                        clearTimeout(recognitionTimeout);
+                        try { recognition.stop(); } catch(e) {}
+                        checkSpeakResult(transcript);
+                    }
                 };
 
                 recognition.onerror = (event) => {
+                    clearTimeout(recognitionTimeout);
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
                     console.error('語音辨識錯誤:', event.error);
@@ -699,8 +784,25 @@
                 };
 
                 recognition.onend = () => {
+                    clearTimeout(recognitionTimeout);
+                    const wasListening = isListening;
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
+
+                    // 如果已經收到結果，不做任何事
+                    if (hasReceivedResult) {
+                        return;
+                    }
+
+                    // Safari 修正：在 onend 時處理 lastTranscript
+                    if (lastTranscript && wasListening) {
+                        hasReceivedResult = true;
+                        console.log('辨識結果 (onend, Safari模式):', lastTranscript);
+                        checkSpeakResult(lastTranscript);
+                    } else if (wasListening) {
+                        // 完全沒聽到任何東西
+                        document.getElementById('resultMessage').textContent = '沒有聽到，點麥克風再試一次！';
+                    }
                 };
             }
         }
