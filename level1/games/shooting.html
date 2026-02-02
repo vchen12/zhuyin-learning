@@ -549,6 +549,7 @@
 
             initGame();
             initRecognition();
+            initVAD(); // 初始化語音活動偵測
 
             // 播放語音引導
             speak('射擊挑戰開始！聽發音後，請大聲唸兩到三次。', () => {
@@ -570,6 +571,88 @@
         let hasReceivedResult = false;
         let lastTranscript = ''; // 儲存最後收到的文字（即使不是 final）
 
+        // VAD（語音活動偵測）相關變數
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let vadInterval = null;
+        let hasDetectedVoice = false;  // 是否偵測到聲音
+        let voiceStartTime = null;     // 開始偵測到聲音的時間
+        const VAD_THRESHOLD = 15;      // 音量門檻（0-255）
+        const MIN_VOICE_DURATION = 100; // 最少要持續 100ms 才算有效聲音
+
+        // 初始化 VAD（語音活動偵測）
+        async function initVAD() {
+            if (audioContext) return;
+
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                microphone = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.5;
+                microphone.connect(analyser);
+                console.log('✅ VAD 初始化成功');
+            } catch (error) {
+                console.error('VAD 初始化失敗:', error);
+            }
+        }
+
+        // 開始 VAD 偵測
+        function startVAD() {
+            if (!analyser) return;
+
+            hasDetectedVoice = false;
+            voiceStartTime = null;
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            vadInterval = setInterval(() => {
+                analyser.getByteFrequencyData(dataArray);
+
+                // 計算平均音量
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / dataArray.length;
+
+                // 偵測到聲音
+                if (average > VAD_THRESHOLD) {
+                    if (!voiceStartTime) {
+                        voiceStartTime = Date.now();
+                    } else if (Date.now() - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
+                        // 聲音持續超過門檻，確認有效
+                        hasDetectedVoice = true;
+                        onVoiceDetected();
+                    }
+                } else {
+                    // 沒有聲音，重置計時
+                    voiceStartTime = null;
+                }
+            }, 50); // 每 50ms 檢查一次
+        }
+
+        // 停止 VAD 偵測
+        function stopVAD() {
+            if (vadInterval) {
+                clearInterval(vadInterval);
+                vadInterval = null;
+            }
+        }
+
+        // 當偵測到聲音時的回調
+        function onVoiceDetected() {
+            console.log('🎙️ VAD: 偵測到聲音！');
+            // 立即給使用者回饋
+            showHint('🎤 聽到你的聲音了！', true);
+            // 震動回饋
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        }
+
         // 初始化語音辨識
         function initRecognition() {
             if (recognition) return;
@@ -590,14 +673,26 @@
                 if (navigator.vibrate) {
                     navigator.vibrate(50);
                 }
-                // 設定 4 秒超時（縮短，讓系統更快重試）
+                // 根據練習內容設定超時時間
+                // 單字（注音符號）：3秒
+                const listenDuration = getListenDuration(currentSymbol);
                 recognitionTimeout = setTimeout(() => {
                     if (isRecognizing && !hasReceivedResult) {
                         console.log('辨識超時，停止');
                         try { recognition.stop(); } catch(e) {}
                     }
-                }, 4000);
+                }, listenDuration);
             };
+
+            // 根據內容長度決定聆聽時間
+            function getListenDuration(text) {
+                if (!text) return 3000;
+                const len = text.length;
+                if (len === 1) return 3000;      // 單字：3秒
+                if (len <= 3) return 4000;       // 2-3字：4秒
+                if (len <= 6) return 5000;       // 4-6字：5秒
+                return 6000;                      // 更長：6秒
+            }
 
             // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
             recognition.onaudiostart = () => {
@@ -629,8 +724,10 @@
                     return;
                 }
 
-                // 過濾掉「請跟著唸」（系統語音可能被辨識到）
-                if (transcript.includes('請跟著') || transcript.includes('跟著唸')) {
+                // 過濾掉系統語音（可能被辨識到）
+                if (transcript.includes('請跟著') || transcript.includes('跟著唸') ||
+                    transcript.includes('請唸') || transcript.includes('兩到三次') ||
+                    transcript.includes('2到3次')) {
                     console.log('過濾系統語音:', transcript);
                     return;
                 }
@@ -653,6 +750,7 @@
 
                 hasReceivedResult = true;
                 clearTimeout(recognitionTimeout);
+                stopVAD(); // 停止 VAD
                 try { recognition.stop(); } catch(e) {}
                 isRecognizing = false;
                 document.getElementById('micIndicator').classList.remove('listening');
@@ -679,6 +777,7 @@
 
             recognition.onend = () => {
                 clearTimeout(recognitionTimeout);
+                stopVAD(); // 停止 VAD
                 const wasRecognizing = isRecognizing;
                 isRecognizing = false;
                 document.getElementById('micIndicator').classList.remove('listening');
@@ -863,6 +962,10 @@
             // 重置狀態
             lastTranscript = '';
             hasReceivedResult = false;
+            hasDetectedVoice = false;
+
+            // 啟動 VAD
+            startVAD();
 
             try {
                 console.log('🚀 啟動語音辨識...');
@@ -870,6 +973,7 @@
             } catch (error) {
                 console.error('啟動辨識失敗:', error);
                 isRecognizing = false;
+                stopVAD();
                 document.getElementById('micIndicator').classList.remove('listening');
                 document.getElementById('hintMessage').classList.remove('listening');
 
