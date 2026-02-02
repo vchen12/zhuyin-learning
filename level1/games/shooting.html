@@ -578,8 +578,8 @@
         let vadInterval = null;
         let hasDetectedVoice = false;  // 是否偵測到聲音
         let voiceStartTime = null;     // 開始偵測到聲音的時間
-        const VAD_THRESHOLD = 15;      // 音量門檻（0-255）
-        const MIN_VOICE_DURATION = 100; // 最少要持續 100ms 才算有效聲音
+        const VAD_THRESHOLD = 35;      // 音量門檻（0-255），提高以避免風扇聲誤觸發
+        const MIN_VOICE_DURATION = 200; // 最少要持續 200ms 才算有效聲音
 
         // 初始化 VAD（語音活動偵測）
         async function initVAD() {
@@ -684,14 +684,14 @@
                 }, listenDuration);
             };
 
-            // 根據內容長度決定聆聽時間
+            // 根據內容長度決定聆聽時間（為失語症患者延長時間）
             function getListenDuration(text) {
-                if (!text) return 3000;
+                if (!text) return 6000;
                 const len = text.length;
-                if (len === 1) return 3000;      // 單字：3秒
-                if (len <= 3) return 4000;       // 2-3字：4秒
-                if (len <= 6) return 5000;       // 4-6字：5秒
-                return 6000;                      // 更長：6秒
+                if (len === 1) return 6000;      // 單字：6秒（原3秒，加倍）
+                if (len <= 3) return 8000;       // 2-3字：8秒
+                if (len <= 6) return 10000;      // 4-6字：10秒
+                return 12000;                     // 更長：12秒
             }
 
             // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
@@ -1184,15 +1184,15 @@
             }
         }
 
-        // 快速語音提示（語速較快，不會干擾辨識）
+        // 語音提示（正常語速，清楚發音）
         function speakShort(text, callback) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
-                utterance.rate = 1.3; // 語速加快
+                utterance.rate = 0.9; // 放慢語速，讓使用者聽清楚
                 utterance.pitch = 1.1;
-                utterance.volume = 0.8; // 稍微降低音量
+                utterance.volume = 0.8;
                 if (callback) {
                     utterance.onend = callback;
                 }
