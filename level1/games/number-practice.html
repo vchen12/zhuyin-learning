@@ -402,6 +402,18 @@
 
         const ENCOURAGEMENTS = ['太棒了！', '好厲害！', '答對了！', '真聰明！', '很棒喔！', '太厲害了！'];
 
+        // 取得使用者名稱
+        function getUserName() {
+            return localStorage.getItem('userName') || '';
+        }
+
+        // 取得帶名字的鼓勵語
+        function getEncouragement() {
+            const name = getUserName();
+            const base = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+            return name ? `${name}，${base}` : base;
+        }
+
         let currentMode = 'learn';
         let currentNumber = null;
         let currentRound = 0;
@@ -463,6 +475,18 @@
                 window.speechSynthesis.speak(utterance);
             } else if (callback) {
                 callback();
+            }
+        }
+
+        // 快速短語音提示（不中斷辨識）
+        function speakShort(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.1;
+                utterance.volume = 0.7;
+                window.speechSynthesis.speak(utterance);
             }
         }
 
@@ -616,7 +640,7 @@
                 updateScore();
                 saveMastered(currentNumber.num);
 
-                const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+                const encouragement = getEncouragement();
                 document.getElementById('resultMessage').textContent = '✨ ' + encouragement + ' ✨';
                 document.getElementById('numberDisplay').textContent = currentNumber.num;
                 document.getElementById('zhuyinDisplay').textContent = currentNumber.zhuyin;
@@ -696,18 +720,77 @@
         }
 
         let recognitionFailed = false;
-
         let recognitionTimeout = null;
         let hasReceivedResult = false;
-        let lastTranscript = ''; // 儲存最後收到的文字（即使不是 final）
+        let lastTranscript = '';
+
+        // VAD（語音活動偵測）相關變數
+        let audioContext = null;
+        let analyser = null;
+        let vadInterval = null;
+        let hasDetectedVoice = false;
+        const VAD_THRESHOLD = 35;
+        const MIN_VOICE_DURATION = 200;
+        let voiceStartTime = null;
+
+        // 初始化 VAD
+        async function initVAD() {
+            if (audioContext) return;
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const microphone = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.5;
+                microphone.connect(analyser);
+                console.log('✅ VAD 初始化成功');
+            } catch (error) {
+                console.error('VAD 初始化失敗:', error);
+            }
+        }
+
+        // 開始 VAD 偵測
+        function startVAD() {
+            if (!analyser) return;
+            hasDetectedVoice = false;
+            voiceStartTime = null;
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            vadInterval = setInterval(() => {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                const average = sum / dataArray.length;
+
+                if (average > VAD_THRESHOLD) {
+                    if (!voiceStartTime) {
+                        voiceStartTime = Date.now();
+                    } else if (Date.now() - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
+                        hasDetectedVoice = true;
+                        document.getElementById('resultMessage').textContent = '🎤 聽到你的聲音了！';
+                        if (navigator.vibrate) navigator.vibrate(30);
+                    }
+                } else {
+                    voiceStartTime = null;
+                }
+            }, 50);
+        }
+
+        function stopVAD() {
+            if (vadInterval) {
+                clearInterval(vadInterval);
+                vadInterval = null;
+            }
+        }
 
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'zh-TW';
-                recognition.continuous = false; // 改回 false，讓瀏覽器自動管理
-                recognition.interimResults = true; // 開啟即時結果回饋
+                recognition.continuous = true;
+                recognition.interimResults = true;
                 recognition.maxAlternatives = 5;
 
                 recognition.onstart = () => {
@@ -716,51 +799,52 @@
                     lastTranscript = '';
                     document.getElementById('speakBtn').textContent = '🎙️ 正在聽...';
                     document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-                    document.getElementById('resultMessage').textContent = '🎙️ 請大聲說出數字！';
-                    if (navigator.vibrate) {
-                        navigator.vibrate(100);
-                    }
+                    document.getElementById('resultMessage').textContent = '🎙️ 請大聲唸 2~3 次！';
+                    if (navigator.vibrate) navigator.vibrate(100);
 
-                    // 設定 10 秒超時
+                    // 短提示音
+                    speakShort('請唸兩到三次');
+
+                    // 8 秒超時（單字需要多唸幾次）
                     recognitionTimeout = setTimeout(() => {
                         if (isListening) {
                             try { recognition.stop(); } catch(e) {}
                         }
-                    }, 10000);
+                    }, 8000);
                 };
 
                 recognition.onaudiostart = () => {
-                    document.getElementById('resultMessage').textContent = '🎙️ 聽到聲音了！請繼續說...';
+                    console.log('onaudiostart');
                 };
 
                 recognition.onspeechstart = () => {
-                    document.getElementById('resultMessage').textContent = '🎙️ 聽到你在說話！';
+                    console.log('onspeechstart');
                 };
 
                 recognition.onspeechend = () => {
-                    document.getElementById('resultMessage').textContent = '🎙️ 正在辨識...';
-                    // 不要在這裡 stop，讓瀏覽器自己決定何時結束
+                    console.log('onspeechend');
                 };
 
                 recognition.onresult = (event) => {
-                    // 取得最新的辨識結果
                     const lastResult = event.results[event.results.length - 1];
                     const transcript = lastResult[0].transcript.trim();
                     const isFinal = lastResult.isFinal;
 
-                    // 儲存收到的文字
+                    if (hasReceivedResult) return;
+
+                    // 過濾系統語音
+                    if (transcript.includes('請唸') || transcript.includes('兩到三次')) return;
+
                     if (transcript) {
                         lastTranscript = transcript;
-                    }
+                        document.getElementById('resultMessage').textContent = '🎤 聽到：' + transcript;
 
-                    // 顯示即時辨識結果
-                    document.getElementById('resultMessage').textContent = '聽到：' + transcript + (isFinal ? '' : '...');
-
-                    if (isFinal && !hasReceivedResult) {
+                        // 立即處理
                         hasReceivedResult = true;
                         clearTimeout(recognitionTimeout);
-                        isListening = false;
+                        stopVAD();
                         try { recognition.stop(); } catch(e) {}
+                        isListening = false;
                         document.getElementById('speakBtn').textContent = '🎤 我來唸';
                         document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
                         checkSpeakResult(transcript);
@@ -769,6 +853,7 @@
 
                 recognition.onerror = (event) => {
                     clearTimeout(recognitionTimeout);
+                    stopVAD();
                     console.error('語音辨識錯誤:', event.error);
 
                     if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
@@ -781,28 +866,28 @@
                         document.getElementById('manualSpeakBtn').style.display = 'inline-block';
                         return;
                     }
-
-                    // no-speech 或 aborted 錯誤會繼續到 onend 處理
                 };
 
                 recognition.onend = () => {
                     clearTimeout(recognitionTimeout);
+                    stopVAD();
                     const wasListening = isListening;
                     isListening = false;
                     document.getElementById('speakBtn').textContent = '🎤 我來唸';
                     document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
 
-                    // 如果有收到任何文字但還沒處理，現在處理它
                     if (!hasReceivedResult && lastTranscript && wasListening) {
                         hasReceivedResult = true;
                         document.getElementById('resultMessage').textContent = '聽到：' + lastTranscript;
                         checkSpeakResult(lastTranscript);
                     } else if (!hasReceivedResult && wasListening) {
-                        // 完全沒聽到任何東西
                         document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
                     }
                 };
             }
+
+            // 初始化 VAD
+            initVAD();
         }
 
         function manualSpeakConfirm() {
@@ -826,10 +911,14 @@
 
             if (isListening) return;
 
+            // 啟動 VAD
+            startVAD();
+
             try {
                 recognition.start();
             } catch (error) {
                 console.error('啟動辨識失敗:', error);
+                stopVAD();
             }
         }
 
@@ -874,7 +963,7 @@
                 navigator.vibrate([100, 50, 100]);
             }
 
-            const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+            const encouragement = getEncouragement();
             document.getElementById('resultMessage').textContent = '🎉 ' + encouragement + ' 🎉';
 
             // 立即播放鼓勵語，不要延遲

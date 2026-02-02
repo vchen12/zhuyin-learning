@@ -468,6 +468,104 @@
         .progress-item .target { font-weight: bold; color: #2e7d32; }
         .progress-item .improvement { font-size: 0.85rem; color: #4caf50; }
 
+        /* 類別標籤 */
+        .category-tab {
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .category-tab:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        .category-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* 例句分類標籤 */
+        .sentence-tab {
+            background: #fff3e0;
+            border: 2px solid #ffcc80;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .sentence-tab:hover {
+            border-color: #ff9800;
+            background: #ffe0b2;
+        }
+        .sentence-tab.active {
+            background: #ff9800;
+            color: white;
+            border-color: #ff9800;
+        }
+
+        /* 字詞卡片 */
+        .word-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .word-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .word-card .emoji { font-size: 1.3rem; }
+        .word-card .text { font-weight: bold; color: #333; }
+        .word-card .zhuyin { font-size: 0.8rem; color: #667eea; }
+
+        /* 例句卡片 */
+        .sentence-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        .sentence-card:hover {
+            border-color: #ff9800;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .sentence-card .sentence-text {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .sentence-card .sentence-parts {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        /* 統計小卡 */
+        .mini-stat {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .mini-stat .value { font-size: 1.3rem; font-weight: bold; }
+        .mini-stat .label { font-size: 0.8rem; opacity: 0.9; }
+
         @media (max-width: 600px) {
             .character-grid {
                 grid-template-columns: repeat(3, 1fr);
@@ -475,6 +573,7 @@
             .character-item .emoji { font-size: 2rem; }
             .character-item .name { font-size: 0.85rem; }
             .threshold-preset { font-size: 0.8rem; padding: 8px 12px; }
+            .category-tab { font-size: 0.75rem; padding: 6px 10px; }
         }
     </style>
 </head>
@@ -702,52 +801,122 @@
 
         <!-- 自訂字詞功能 -->
         <div class="settings-section">
-            <div class="section-title">📝 自訂字詞與句子</div>
+            <div class="section-title">📝 字詞庫管理</div>
             <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
-                新增自訂的生活用字或句子，這些字詞會出現在遊戲中。<br>
-                例如：常用的人名、地名、日常用語等。
+                管理系統內建的字詞庫與自訂字詞。<br>
+                可以查看、新增或刪除各類別的字詞。
             </p>
 
-            <!-- 新增字詞表單 -->
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-                    <div style="flex: 1; min-width: 150px;">
-                        <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 5px;">中文字詞</label>
-                        <input type="text" id="newWord" class="modal-input" placeholder="例如：媽媽、蘋果" style="margin: 0; width: 100%;">
+            <!-- 類別選擇標籤 -->
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+                <button class="category-tab active" data-category="custom" onclick="switchVocabCategory('custom')">
+                    ✏️ 自訂字詞
+                </button>
+                <button class="category-tab" data-category="family" onclick="switchVocabCategory('family')">
+                    👨‍👩‍👧 家人
+                </button>
+                <button class="category-tab" data-category="animals" onclick="switchVocabCategory('animals')">
+                    🐾 動物
+                </button>
+                <button class="category-tab" data-category="fruits" onclick="switchVocabCategory('fruits')">
+                    🍎 水果
+                </button>
+                <button class="category-tab" data-category="items" onclick="switchVocabCategory('items')">
+                    📦 日常用品
+                </button>
+                <button class="category-tab" data-category="food" onclick="switchVocabCategory('food')">
+                    🍜 食物
+                </button>
+                <button class="category-tab" data-category="actions" onclick="switchVocabCategory('actions')">
+                    🏃 動作
+                </button>
+                <button class="category-tab" data-category="body" onclick="switchVocabCategory('body')">
+                    🧍 身體
+                </button>
+                <button class="category-tab" data-category="nature" onclick="switchVocabCategory('nature')">
+                    🌳 自然
+                </button>
+                <button class="category-tab" data-category="sentences" onclick="switchVocabCategory('sentences')">
+                    💬 例句
+                </button>
+            </div>
+
+            <!-- 自訂字詞區塊 -->
+            <div id="customWordSection">
+                <!-- 新增字詞表單 -->
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                    <h4 style="color: #667eea; margin-bottom: 15px;">➕ 新增自訂字詞</h4>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 5px;">中文字詞</label>
+                            <input type="text" id="newWord" class="modal-input" placeholder="例如：媽媽、蘋果" style="margin: 0; width: 100%;">
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 5px;">注音（選填）</label>
+                            <input type="text" id="newWordZhuyin" class="modal-input" placeholder="例如：ㄇㄚ ㄇㄚ˙" style="margin: 0; width: 100%;">
+                        </div>
+                        <div style="flex: 0 0 auto; display: flex; align-items: flex-end;">
+                            <button class="save-btn" onclick="addCustomWord()" style="margin: 0; padding: 15px 25px;">➕ 新增</button>
+                        </div>
                     </div>
-                    <div style="flex: 1; min-width: 150px;">
-                        <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 5px;">注音（選填）</label>
-                        <input type="text" id="newWordZhuyin" class="modal-input" placeholder="例如：ㄇㄚ ㄇㄚ˙" style="margin: 0; width: 100%;">
-                    </div>
-                    <div style="flex: 0 0 auto; display: flex; align-items: flex-end;">
-                        <button class="save-btn" onclick="addCustomWord()" style="margin: 0; padding: 15px 25px;">➕ 新增</button>
+
+                    <!-- 分類選擇 -->
+                    <div>
+                        <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 8px;">分類</label>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="wordCategory" value="daily" checked> 日常用語
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="wordCategory" value="family"> 人名稱呼
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="wordCategory" value="place"> 地點
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="wordCategory" value="sentence"> 句子
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 分類選擇 -->
-                <div>
-                    <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 8px;">分類</label>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                            <input type="radio" name="wordCategory" value="daily" checked> 日常用語
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                            <input type="radio" name="wordCategory" value="family"> 人名稱呼
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                            <input type="radio" name="wordCategory" value="place"> 地點
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                            <input type="radio" name="wordCategory" value="sentence"> 句子
-                        </label>
-                    </div>
+                <!-- 已新增的字詞列表 -->
+                <div id="customWordsList" style="display: none;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">📋 已新增的自訂字詞</h4>
+                    <div id="customWordsContainer" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
                 </div>
             </div>
 
-            <!-- 已新增的字詞列表 -->
-            <div id="customWordsList" style="display: none;">
-                <h4 style="color: #667eea; margin-bottom: 10px;">📋 已新增的字詞</h4>
-                <div id="customWordsContainer" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
+            <!-- 系統字詞區塊 -->
+            <div id="systemWordSection" style="display: none;">
+                <div style="background: #f0f8ff; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
+                    <p style="color: #1565c0; font-size: 0.9rem; margin: 0;">
+                        <strong>💡 提示：</strong>這些是系統內建的字詞，用於遊戲中的學習內容。<br>
+                        可以點擊字詞複製到自訂區，或直接在此預覽。
+                    </p>
+                </div>
+                <div id="systemWordStats" style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;"></div>
+                <div id="systemWordsContainer" style="display: flex; flex-wrap: wrap; gap: 10px; max-height: 400px; overflow-y: auto; padding: 10px; background: #f9f9f9; border-radius: 15px;"></div>
+            </div>
+
+            <!-- 例句區塊 -->
+            <div id="sentenceSection" style="display: none;">
+                <div style="background: #fff3e0; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #ff9800;">
+                    <p style="color: #e65100; font-size: 0.9rem; margin: 0;">
+                        <strong>💬 例句資料庫：</strong>這些例句用於第三關的句子練習遊戲。
+                    </p>
+                </div>
+
+                <!-- 例句分類標籤 -->
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button class="sentence-tab active" data-type="simple" onclick="switchSentenceType('simple')">📝 簡單句子</button>
+                    <button class="sentence-tab" data-type="questions" onclick="switchSentenceType('questions')">❓ 問答練習</button>
+                    <button class="sentence-tab" data-type="fillBlanks" onclick="switchSentenceType('fillBlanks')">📋 填空練習</button>
+                    <button class="sentence-tab" data-type="dialogs" onclick="switchSentenceType('dialogs')">💬 對話練習</button>
+                </div>
+
+                <div id="sentenceStats" style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;"></div>
+                <div id="sentencesContainer" style="max-height: 400px; overflow-y: auto; padding: 10px; background: #f9f9f9; border-radius: 15px;"></div>
             </div>
         </div>
 
@@ -788,6 +957,8 @@
     <!-- Toast 通知 -->
     <div class="toast" id="toast">設定已儲存</div>
 
+    <!-- 載入詞彙資料庫 -->
+    <script src="js/vocabulary.js"></script>
     <script>
         // 預設家人資料
         const DEFAULT_FAMILY = [
@@ -814,6 +985,8 @@
         // 自訂字詞功能
         // ==========================================
         let customWords = [];
+        let currentVocabCategory = 'custom';
+        let currentSentenceType = 'simple';
 
         function loadCustomWords() {
             customWords = JSON.parse(localStorage.getItem('customWords') || '[]');
@@ -927,6 +1100,173 @@
                     ">✕</button>
                 </div>
             `).join('');
+        }
+
+        // ==========================================
+        // 字詞庫類別切換功能
+        // ==========================================
+        function switchVocabCategory(category) {
+            currentVocabCategory = category;
+
+            // 更新標籤狀態
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.category === category);
+            });
+
+            // 切換顯示區塊
+            const customSection = document.getElementById('customWordSection');
+            const systemSection = document.getElementById('systemWordSection');
+            const sentenceSection = document.getElementById('sentenceSection');
+
+            customSection.style.display = 'none';
+            systemSection.style.display = 'none';
+            sentenceSection.style.display = 'none';
+
+            if (category === 'custom') {
+                customSection.style.display = 'block';
+            } else if (category === 'sentences') {
+                sentenceSection.style.display = 'block';
+                renderSentences();
+            } else {
+                systemSection.style.display = 'block';
+                renderSystemWords(category);
+            }
+        }
+
+        function renderSystemWords(category) {
+            const statsContainer = document.getElementById('systemWordStats');
+            const wordsContainer = document.getElementById('systemWordsContainer');
+
+            // 檢查 VOCABULARY 是否已載入
+            if (typeof VOCABULARY === 'undefined') {
+                wordsContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">詞彙資料載入中...</p>';
+                return;
+            }
+
+            const vocab = VOCABULARY[category];
+            if (!vocab) {
+                wordsContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">找不到此類別的資料</p>';
+                return;
+            }
+
+            // 顯示統計
+            statsContainer.innerHTML = `
+                <div class="mini-stat">
+                    <div class="value">${vocab.words.length}</div>
+                    <div class="label">字詞數量</div>
+                </div>
+                <div class="mini-stat" style="background: linear-gradient(135deg, ${vocab.color}, ${vocab.color}dd);">
+                    <div class="value">${vocab.icon}</div>
+                    <div class="label">${vocab.name}</div>
+                </div>
+            `;
+
+            // 顯示字詞卡片
+            wordsContainer.innerHTML = vocab.words.map(word => `
+                <div class="word-card" onclick="copyToCustom('${word.text}', '${word.zhuyin}', '${word.emoji}')" title="點擊複製到自訂字詞">
+                    <span class="emoji">${word.emoji}</span>
+                    <span class="text">${word.text}</span>
+                    <span class="zhuyin">${word.zhuyin}</span>
+                </div>
+            `).join('');
+        }
+
+        function copyToCustom(text, zhuyin, emoji) {
+            // 填入表單
+            document.getElementById('newWord').value = text;
+            document.getElementById('newWordZhuyin').value = zhuyin;
+
+            // 切換到自訂字詞區
+            switchVocabCategory('custom');
+
+            showToast(`已複製「${text}」，可直接新增或修改`, 'success');
+        }
+
+        // ==========================================
+        // 例句區塊功能
+        // ==========================================
+        function switchSentenceType(type) {
+            currentSentenceType = type;
+
+            // 更新標籤狀態
+            document.querySelectorAll('.sentence-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.type === type);
+            });
+
+            renderSentences();
+        }
+
+        function renderSentences() {
+            const statsContainer = document.getElementById('sentenceStats');
+            const container = document.getElementById('sentencesContainer');
+
+            // 檢查 SENTENCES 是否已載入
+            if (typeof SENTENCES === 'undefined') {
+                container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">例句資料載入中...</p>';
+                return;
+            }
+
+            const typeLabels = {
+                simple: '簡單句子',
+                questions: '問答練習',
+                fillBlanks: '填空練習',
+                dialogs: '對話練習'
+            };
+
+            const typeColors = {
+                simple: '#4caf50',
+                questions: '#2196f3',
+                fillBlanks: '#9c27b0',
+                dialogs: '#ff9800'
+            };
+
+            const data = SENTENCES[currentSentenceType];
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">此類型尚無例句</p>';
+                statsContainer.innerHTML = '';
+                return;
+            }
+
+            // 顯示統計
+            statsContainer.innerHTML = `
+                <div class="mini-stat" style="background: linear-gradient(135deg, ${typeColors[currentSentenceType]}, ${typeColors[currentSentenceType]}aa);">
+                    <div class="value">${data.length}</div>
+                    <div class="label">${typeLabels[currentSentenceType]}</div>
+                </div>
+            `;
+
+            // 根據類型顯示不同格式
+            if (currentSentenceType === 'simple') {
+                container.innerHTML = data.map(s => `
+                    <div class="sentence-card">
+                        <div class="sentence-text">${s.text}</div>
+                        <div class="sentence-parts">組成：${s.parts.join(' + ')}</div>
+                    </div>
+                `).join('');
+            } else if (currentSentenceType === 'questions') {
+                container.innerHTML = data.map(s => `
+                    <div class="sentence-card">
+                        <div class="sentence-text">❓ ${s.question}</div>
+                        <div class="sentence-parts">答案：${s.answer}（關鍵詞：${s.word}）</div>
+                    </div>
+                `).join('');
+            } else if (currentSentenceType === 'fillBlanks') {
+                container.innerHTML = data.map(s => `
+                    <div class="sentence-card">
+                        <div class="sentence-text">📋 ${s.sentence}</div>
+                        <div class="sentence-parts">選項：${s.options.join('、')} → 正確答案：<strong>${s.answer}</strong></div>
+                    </div>
+                `).join('');
+            } else if (currentSentenceType === 'dialogs') {
+                container.innerHTML = data.map(d => `
+                    <div class="sentence-card">
+                        <div class="sentence-text">💬 ${d.title}</div>
+                        <div class="sentence-parts">
+                            ${d.lines.map(line => `<div style="margin-top: 5px;"><strong>${line.role}：</strong>${line.text}</div>`).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
         }
 
         // ==========================================
@@ -1571,6 +1911,8 @@
             renderFamilyGrid();
             renderUploadedImages();
             setupUploadEvents();
+            // 預設顯示自訂字詞區
+            switchVocabCategory('custom');
         }
 
         // 載入設定
@@ -1778,24 +2120,64 @@
 
         // 重置學習進度
         function resetProgress() {
-            if (confirm('確定要重置所有學習進度嗎？這個動作無法復原！')) {
-                localStorage.removeItem('masteredZhuyin');
-                localStorage.removeItem('masteredWords_level2');
-                showToast('學習進度已重置', 'success');
+            // 第一次確認
+            if (!confirm('⚠️ 警告！\n\n確定要重置所有學習進度嗎？\n\n這將清除：\n• 已掌握的注音符號\n• 已學習的字詞\n• 所有發音練習紀錄\n\n此動作無法復原！')) {
+                return;
             }
+            // 第二次確認
+            if (!confirm('⚠️ 最後確認！\n\n真的要刪除所有學習紀錄嗎？\n\n請按「確定」繼續，或「取消」保留資料。')) {
+                showToast('已取消重置', '');
+                return;
+            }
+
+            // 執行重置
+            localStorage.removeItem('masteredZhuyin');
+            localStorage.removeItem('masteredWords_level2');
+            localStorage.removeItem('masteredWords_level3');
+            localStorage.removeItem('pronunciationRecords');
+
+            // 重新載入紀錄顯示
+            loadPronunciationRecords();
+
+            showToast('✅ 學習進度已重置', 'success');
         }
 
         // 還原預設值
         function resetAll() {
-            if (confirm('確定要還原所有設定為預設值嗎？這個動作無法復原！')) {
-                familySettings = JSON.parse(JSON.stringify(DEFAULT_FAMILY));
-                uploadedImages = [];
-                localStorage.removeItem('familySettings');
-                localStorage.removeItem('uploadedImages');
-                renderFamilyGrid();
-                renderUploadedImages();
-                showToast('已還原預設值', 'success');
+            // 第一次確認
+            if (!confirm('⚠️ 警告！\n\n確定要還原所有設定為預設值嗎？\n\n這將清除：\n• 使用者名稱\n• 家人角色設定\n• 自訂圖片\n• 自訂字詞\n• 語音辨識門檻設定\n\n此動作無法復原！')) {
+                return;
             }
+            // 第二次確認
+            if (!confirm('⚠️ 最後確認！\n\n真的要還原所有設定嗎？\n\n請按「確定」繼續，或「取消」保留設定。')) {
+                showToast('已取消還原', '');
+                return;
+            }
+
+            // 執行還原
+            familySettings = JSON.parse(JSON.stringify(DEFAULT_FAMILY));
+            uploadedImages = [];
+            customWords = [];
+            userName = '';
+
+            localStorage.removeItem('familySettings');
+            localStorage.removeItem('uploadedImages');
+            localStorage.removeItem('customWords');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('similarityThreshold');
+
+            // 更新 UI
+            document.getElementById('userName').value = '';
+            document.getElementById('userNamePreview').style.display = 'none';
+            document.getElementById('similarityThreshold').value = 0;
+            document.getElementById('thresholdValue').textContent = '0%';
+            updateThresholdPresets(0);
+
+            renderFamilyGrid();
+            renderUploadedImages();
+            renderCustomWords();
+
+            showToast('✅ 已還原預設值', 'success');
         }
 
         // 顯示通知
