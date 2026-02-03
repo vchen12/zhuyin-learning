@@ -630,9 +630,15 @@
                         return;
                     }
 
-                    // 如果 VAD 有檢測到聲音但辨識失敗，仍然算通過（對失語症患者友善）
+                    // 如果 VAD 有檢測到聲音但辨識失敗
                     if (hasDetectedVoice || hasDetectedSound) {
-                        handleCorrect();
+                        // 只有在門檻為 0 時才算通過（對失語症患者友善）
+                        if (getSimilarityThreshold() === 0) {
+                            handleCorrect();
+                            return;
+                        }
+                        // 門檻大於 0 時，提示重試
+                        document.getElementById('micHint').textContent = '🎤 聽到聲音了，但辨識不清楚，請再試一次！';
                         return;
                     }
                 };

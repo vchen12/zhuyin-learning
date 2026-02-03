@@ -945,10 +945,16 @@
             if (passes) {
                 handleSpeakCorrect(similarity);
             } else if (hasSound) {
-                // 有聲音但未達門檻，顯示提示（不自動重試）
-                document.getElementById('resultMessage').textContent = `聽到了！點🎤再試一次，或點「✅我會唸」`;
+                // 有聲音但未達門檻
+                // 檢查門檻設定：門檻為 0 時（失語症友善），有聲音就算通過
+                if (getSimilarityThreshold() === 0) {
+                    handleSpeakCorrect(similarity);
+                } else {
+                    // 門檻大於 0，提示重試
+                    document.getElementById('resultMessage').textContent = '🎤 聽到聲音了，但辨識不清楚，請再試一次！';
+                }
             } else {
-                // 沒聽到聲音，顯示提示（不自動重試）
+                // 沒聽到聲音，顯示提示
                 document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
             }
         }
