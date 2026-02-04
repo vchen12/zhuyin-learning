@@ -101,6 +101,16 @@ zhuyin-learning/
 
 作者：陳宜誠律師（Vincent Chen, Attorney at Law）及 Claude Code
 
+### v3.6.1（2025-02-03）
+- ✅ **修正 VAD 偵測邏輯**
+  - 修正「偵測到聲音但辨識失敗」時的處理邏輯
+  - 門檻為 0 時（失語症友善模式）：偵測到聲音就算通過
+  - 門檻大於 0 時：顯示「聽到聲音了，但辨識不清楚，請再試一次！」提示重試
+  - 修正的檔案：
+    - Level 1: number-practice.html
+    - Level 2: number-practice.html、learn-words.html、speak-word.html
+    - Level 3: number-practice.html、story-chain.html、read-aloud.html、qa-practice.html、picture-talk.html、daily-dialog.html
+
 ### v3.6（2025-02-02）
 - ✅ **Level 1 遊戲更新**
   - 「射擊遊戲」更名為「發聲練習」

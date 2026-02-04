@@ -602,7 +602,13 @@
 
                     if (event.error === 'no-speech') {
                         if (hasDetectedSound || hasDetectedVoice) {
-                            handleCorrect();
+                            // 只有在門檻為 0 時才算通過（對失語症患者友善）
+                            if (getSimilarityThreshold() === 0) {
+                                handleCorrect();
+                                return;
+                            }
+                            // 門檻大於 0 時，提示重試
+                            document.getElementById('resultMessage').textContent = '🎤 聽到聲音了，但辨識不清楚，請再試一次！';
                             return;
                         }
                         document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試 或點「跳過」';
