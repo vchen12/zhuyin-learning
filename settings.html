@@ -607,15 +607,7 @@
             </div>
         </div>
 
-        <!-- 角色選擇 -->
-        <div class="settings-section">
-            <div class="section-title">👨‍👩‍👧 家人角色設定</div>
-            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
-                點選角色進行啟用/停用。停用的角色不會出現在遊戲中。<br>
-                你可以重新命名角色，例如將「爸爸」改成實際稱呼。
-            </p>
-            <div class="character-grid" id="familyGrid"></div>
-        </div>
+        <!-- 家人角色設定已整合到「字詞庫管理」的「家人」類別中 -->
 
         <!-- 圖片上傳 -->
         <div class="settings-section">
@@ -973,7 +965,9 @@
             { id: 'young_brother', emoji: '👦', name: '弟弟', enabled: true, customImage: null },
             { id: 'young_sister', emoji: '👧', name: '妹妹', enabled: true, customImage: null },
             { id: 'uncle', emoji: '👨', name: '叔叔', enabled: true, customImage: null },
-            { id: 'aunt', emoji: '👩', name: '阿姨', enabled: true, customImage: null }
+            { id: 'aunt', emoji: '👩', name: '阿姨', enabled: true, customImage: null },
+            { id: 'uncle2', emoji: '👨', name: '舅舅', enabled: true, customImage: null },
+            { id: 'aunt2', emoji: '👩', name: '姑姑', enabled: true, customImage: null }
         ];
 
         let familySettings = [];
@@ -1133,6 +1127,32 @@
             }
         }
 
+        // 遊戲對應表
+        function getGameMappingForCategory(category) {
+            const mapping = {
+                family: 'Level 2: 看圖學詞、圖文配對、看圖選字、聽聲選圖、記憶翻牌、跟讀練習｜Level 3: 賽車遊戲、寶藏獵人',
+                animals: 'Level 2: 看圖學詞、圖文配對、看圖選字、聽聲選圖、記憶翻牌、跟讀練習｜Level 3: 賽車遊戲、寶藏獵人',
+                fruits: 'Level 2: 看圖學詞、圖文配對、看圖選字、聽聲選圖、記憶翻牌、跟讀練習｜Level 3: 賽車遊戲、寶藏獵人',
+                items: 'Level 2: 看圖學詞、圖文配對、看圖選字、聽聲選圖、記憶翻牌、跟讀練習｜Level 3: 賽車遊戲、寶藏獵人',
+                food: 'Level 2: 看圖學詞、圖文配對、看圖選字、聽聲選圖、記憶翻牌、跟讀練習｜Level 3: 賽車遊戲、寶藏獵人',
+                actions: 'Level 2: 看圖學詞、圖文配對、看圖選字、聽聲選圖、記憶翻牌、跟讀練習｜Level 3: 賽車遊戲、寶藏獵人',
+                body: 'Level 2: 看圖學詞、圖文配對、看圖選字、聽聲選圖、記憶翻牌、跟讀練習｜Level 3: 賽車遊戲、寶藏獵人',
+                nature: 'Level 2: 看圖學詞、圖文配對、看圖選字、聽聲選圖、記憶翻牌、跟讀練習｜Level 3: 賽車遊戲、寶藏獵人'
+            };
+            return mapping[category] || '所有字詞類遊戲';
+        }
+
+        // 詞彙修改記錄
+        let vocabularyModifications = { deleted: {}, edited: {}, added: {} };
+
+        function loadVocabularyModifications() {
+            vocabularyModifications = JSON.parse(localStorage.getItem('vocabularyModifications') || '{"deleted":{},"edited":{},"added":{}}');
+        }
+
+        function saveVocabularyModifications() {
+            localStorage.setItem('vocabularyModifications', JSON.stringify(vocabularyModifications));
+        }
+
         function renderSystemWords(category) {
             const statsContainer = document.getElementById('systemWordStats');
             const wordsContainer = document.getElementById('systemWordsContainer');
@@ -1149,26 +1169,465 @@
                 return;
             }
 
-            // 顯示統計
+            // 家人類別特殊處理
+            if (category === 'family') {
+                renderFamilyManagement(vocab, statsContainer, wordsContainer);
+                return;
+            }
+
+            // 獲取該類別的修改記錄
+            loadVocabularyModifications();
+            const deletedWords = vocabularyModifications.deleted[category] || [];
+            const editedWords = vocabularyModifications.edited[category] || {};
+            const addedWords = vocabularyModifications.added[category] || [];
+
+            // 合併並過濾詞彙
+            let words = vocab.words
+                .filter(w => !deletedWords.includes(w.text))
+                .map(w => editedWords[w.text] ? { ...w, ...editedWords[w.text], isEdited: true } : w);
+            words = words.concat(addedWords.map(w => ({ ...w, isAdded: true })));
+
+            const gameMapping = getGameMappingForCategory(category);
+
+            // 顯示統計和遊戲對應
             statsContainer.innerHTML = `
                 <div class="mini-stat">
-                    <div class="value">${vocab.words.length}</div>
+                    <div class="value">${words.length}</div>
                     <div class="label">字詞數量</div>
                 </div>
                 <div class="mini-stat" style="background: linear-gradient(135deg, ${vocab.color}, ${vocab.color}dd);">
                     <div class="value">${vocab.icon}</div>
                     <div class="label">${vocab.name}</div>
                 </div>
+                <div style="flex: 1; background: #e3f2fd; padding: 10px 15px; border-radius: 12px; border-left: 4px solid #2196f3; font-size: 0.85rem;">
+                    <strong style="color: #1565c0;">🎮 使用此類別的遊戲：</strong><br>
+                    <span style="color: #666;">${gameMapping}</span>
+                </div>
             `;
 
-            // 顯示字詞卡片
-            wordsContainer.innerHTML = vocab.words.map(word => `
-                <div class="word-card" onclick="copyToCustom('${word.text}', '${word.zhuyin}', '${word.emoji}')" title="點擊複製到自訂字詞">
-                    <span class="emoji">${word.emoji}</span>
-                    <span class="text">${word.text}</span>
-                    <span class="zhuyin">${word.zhuyin}</span>
+            // 顯示字詞卡片（帶編輯/刪除按鈕）
+            wordsContainer.innerHTML = `
+                <div style="width: 100%; padding: 10px; background: #e8f5e9; border-radius: 12px; margin-bottom: 15px;">
+                    <button onclick="showAddWordToCategory('${category}')" style="background: #4caf50; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; font-weight: bold;">
+                        ➕ 新增字詞到「${vocab.name}」
+                    </button>
+                </div>
+                ${words.map(word => `
+                    <div class="word-card" style="position: relative; flex-wrap: wrap;">
+                        <span class="emoji">${word.emoji}</span>
+                        <div style="flex: 1; min-width: 80px;">
+                            <span class="text">${word.text}</span>
+                            <span class="zhuyin">${word.zhuyin}</span>
+                        </div>
+                        ${word.isAdded ? '<span style="background: #4caf50; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 8px; margin-right: 5px;">新增</span>' : ''}
+                        ${word.isEdited ? '<span style="background: #ff9800; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 8px; margin-right: 5px;">已修改</span>' : ''}
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="event.stopPropagation(); editSystemWord('${category}', '${word.text}')"
+                                    style="background: #2196f3; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                                編輯
+                            </button>
+                            <button onclick="event.stopPropagation(); deleteSystemWord('${category}', '${word.text}', ${word.isAdded || false})"
+                                    style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                                刪除
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // 家人類別專用渲染函數
+        function renderFamilyManagement(vocab, statsContainer, wordsContainer) {
+            // 確保 familySettings 已初始化
+            if (!familySettings || familySettings.length === 0) {
+                loadSettings();
+            }
+
+            const enabledCount = familySettings.filter(m => m.enabled).length;
+            const gameMapping = getGameMappingForCategory('family');
+
+            // 顯示統計和遊戲對應
+            statsContainer.innerHTML = `
+                <div class="mini-stat">
+                    <div class="value">${familySettings.length}</div>
+                    <div class="label">總角色數</div>
+                </div>
+                <div class="mini-stat" style="background: linear-gradient(135deg, #4caf50, #8bc34a);">
+                    <div class="value">${enabledCount}</div>
+                    <div class="label">已啟用</div>
+                </div>
+                <div style="flex: 1; background: #e3f2fd; padding: 10px 15px; border-radius: 12px; border-left: 4px solid #2196f3; font-size: 0.85rem;">
+                    <strong style="color: #1565c0;">🎮 使用此類別的遊戲：</strong><br>
+                    <span style="color: #666;">${gameMapping}</span>
+                </div>
+            `;
+
+            // 讀取用戶新增的家人
+            loadVocabularyModifications();
+            const addedFamily = vocabularyModifications.added['family'] || [];
+
+            // 提示訊息
+            const tipHtml = `
+                <div style="width: 100%; padding: 12px 15px; background: #fff3e0; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #ff9800;">
+                    <p style="color: #e65100; font-size: 0.9rem; margin: 0;">
+                        <strong>💡 提示：</strong>點擊「改名」可將角色改成實際稱呼（如：爺爺→阿公）。<br>
+                        「停用」的角色不會出現在遊戲中。修改會自動儲存。
+                    </p>
+                </div>
+            `;
+
+            // 新增家人按鈕
+            const addButtonHtml = `
+                <div style="width: 100%; padding: 10px; background: #e8f5e9; border-radius: 12px; margin-bottom: 15px;">
+                    <button onclick="showAddFamilyMember()" style="background: #4caf50; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; font-weight: bold;">
+                        ➕ 新增家人角色
+                    </button>
+                </div>
+            `;
+
+            // 渲染系統家人卡片（帶啟用/停用和改名功能）
+            const systemFamilyHtml = familySettings.map((member, index) => {
+                const vocabWord = vocab.words.find(w => w.text === DEFAULT_FAMILY[index]?.name);
+                const zhuyin = vocabWord ? vocabWord.zhuyin : '';
+
+                return `
+                    <div class="word-card" style="position: relative; ${!member.enabled ? 'opacity: 0.5; border-color: #f44336; background: #ffebee;' : ''}">
+                        <span class="emoji">${member.customImage ?
+                            '<img src="' + member.customImage + '" style="width:35px;height:35px;border-radius:50%;object-fit:cover;">' :
+                            member.emoji}</span>
+                        <div style="flex: 1; min-width: 60px;">
+                            <span class="text">${member.name}</span>
+                            <span class="zhuyin">${zhuyin}</span>
+                        </div>
+                        ${!member.enabled ? '<span style="background: #f44336; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 8px; margin-right: 5px;">已停用</span>' : ''}
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="event.stopPropagation(); uploadFamilyPhoto('${member.id}')"
+                                    style="background: #9c27b0; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                                換照片
+                            </button>
+                            <button onclick="event.stopPropagation(); openRenameModal('${member.id}')"
+                                    style="background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                                改名
+                            </button>
+                            <button onclick="event.stopPropagation(); toggleMemberAndRefresh('${member.id}')"
+                                    style="background: ${member.enabled ? '#f44336' : '#4caf50'}; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                                ${member.enabled ? '停用' : '啟用'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 渲染用戶新增的家人卡片
+            const addedFamilyHtml = addedFamily.map(member => `
+                <div class="word-card" style="position: relative; border-color: #4caf50; background: #f1f8e9;">
+                    <span class="emoji">${member.customImage ?
+                        '<img src="' + member.customImage + '" style="width:35px;height:35px;border-radius:50%;object-fit:cover;">' :
+                        member.emoji}</span>
+                    <div style="flex: 1; min-width: 60px;">
+                        <span class="text">${member.text}</span>
+                        <span class="zhuyin">${member.zhuyin || ''}</span>
+                    </div>
+                    <span style="background: #4caf50; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 8px; margin-right: 5px;">新增</span>
+                    <div style="display: flex; gap: 5px;">
+                        <button onclick="event.stopPropagation(); uploadAddedFamilyPhoto('${member.text}')"
+                                style="background: #9c27b0; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                            換照片
+                        </button>
+                        <button onclick="event.stopPropagation(); editAddedFamilyMember('${member.text}')"
+                                style="background: #2196f3; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                            編輯
+                        </button>
+                        <button onclick="event.stopPropagation(); deleteAddedFamilyMember('${member.text}')"
+                                style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                            刪除
+                        </button>
+                    </div>
                 </div>
             `).join('');
+
+            wordsContainer.innerHTML = tipHtml + addButtonHtml + systemFamilyHtml + addedFamilyHtml;
+        }
+
+        // 切換家人啟用狀態並刷新顯示
+        function toggleMemberAndRefresh(id) {
+            toggleMember(id);
+            renderSystemWords('family');
+        }
+
+        // ==========================================
+        // 家人角色專用功能
+        // ==========================================
+
+        // 新增家人角色（彈出對話框選擇性別）
+        function showAddFamilyMember() {
+            const name = prompt('輸入家人稱呼（如：大舅、二姑、表哥）：');
+            if (!name || !name.trim()) return;
+
+            const zhuyin = prompt('輸入注音（選填）：') || '';
+
+            // 選擇性別
+            const genderChoice = prompt('選擇性別：\n1. 男性 👨\n2. 女性 👩\n\n請輸入 1 或 2：');
+            let gender = 'unknown';
+            let emoji = '👤';
+            if (genderChoice === '1') {
+                gender = 'male';
+                emoji = '👨';
+            } else if (genderChoice === '2') {
+                gender = 'female';
+                emoji = '👩';
+            }
+
+            loadVocabularyModifications();
+            if (!vocabularyModifications.added['family']) {
+                vocabularyModifications.added['family'] = [];
+            }
+
+            // 檢查重複
+            const existsInSystem = familySettings.some(m => m.name === name.trim());
+            const existsInAdded = vocabularyModifications.added['family'].some(w => w.text === name.trim());
+
+            if (existsInSystem || existsInAdded) {
+                showToast('此家人角色已存在！', 'error');
+                return;
+            }
+
+            vocabularyModifications.added['family'].push({
+                text: name.trim(),
+                zhuyin: zhuyin,
+                emoji: emoji,
+                gender: gender,
+                customImage: null
+            });
+
+            saveVocabularyModifications();
+            renderSystemWords('family');
+            showToast(`已新增「${name.trim()}」`, 'success');
+        }
+
+        // 上傳系統家人的照片
+        function uploadFamilyPhoto(memberId) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const member = familySettings.find(m => m.id === memberId);
+                    if (member) {
+                        member.customImage = event.target.result;
+                        localStorage.setItem('familySettings', JSON.stringify(familySettings));
+                        renderSystemWords('family');
+                        showToast(`已更新「${member.name}」的照片`, 'success');
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        // 上傳新增家人的照片
+        function uploadAddedFamilyPhoto(memberName) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    loadVocabularyModifications();
+                    const member = (vocabularyModifications.added['family'] || []).find(m => m.text === memberName);
+                    if (member) {
+                        member.customImage = event.target.result;
+                        saveVocabularyModifications();
+                        renderSystemWords('family');
+                        showToast(`已更新「${memberName}」的照片`, 'success');
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        // 編輯新增的家人
+        function editAddedFamilyMember(memberName) {
+            loadVocabularyModifications();
+            const member = (vocabularyModifications.added['family'] || []).find(m => m.text === memberName);
+            if (!member) {
+                showToast('找不到此家人', 'error');
+                return;
+            }
+
+            const newName = prompt('編輯稱呼：', member.text);
+            if (newName === null) return;
+
+            const newZhuyin = prompt('編輯注音：', member.zhuyin || '');
+            if (newZhuyin === null) return;
+
+            const genderChoice = prompt(`目前性別：${member.gender === 'male' ? '男性' : member.gender === 'female' ? '女性' : '未知'}\n\n選擇新性別：\n1. 男性 👨\n2. 女性 👩\n0. 保持不變\n\n請輸入 0、1 或 2：`);
+
+            let newGender = member.gender;
+            let newEmoji = member.emoji;
+            if (genderChoice === '1') {
+                newGender = 'male';
+                newEmoji = '👨';
+            } else if (genderChoice === '2') {
+                newGender = 'female';
+                newEmoji = '👩';
+            }
+
+            // 更新資料
+            member.text = newName.trim() || member.text;
+            member.zhuyin = newZhuyin;
+            member.gender = newGender;
+            member.emoji = newEmoji;
+
+            saveVocabularyModifications();
+            renderSystemWords('family');
+            showToast(`已修改「${memberName}」`, 'success');
+        }
+
+        // 刪除新增的家人
+        function deleteAddedFamilyMember(memberName) {
+            if (!confirm(`確定要刪除「${memberName}」嗎？`)) return;
+
+            loadVocabularyModifications();
+            vocabularyModifications.added['family'] = (vocabularyModifications.added['family'] || []).filter(m => m.text !== memberName);
+            saveVocabularyModifications();
+            renderSystemWords('family');
+            showToast(`已刪除「${memberName}」`, 'success');
+        }
+
+        // ==========================================
+        // 一般字詞編輯功能
+        // ==========================================
+
+        // 編輯系統字詞
+        function editSystemWord(category, wordText) {
+            loadVocabularyModifications();
+            const vocab = VOCABULARY[category];
+            const originalWord = vocab.words.find(w => w.text === wordText);
+            const editedVersion = (vocabularyModifications.edited[category] || {})[wordText];
+            const addedVersion = (vocabularyModifications.added[category] || []).find(w => w.text === wordText);
+            const currentWord = addedVersion || editedVersion || originalWord;
+
+            if (!currentWord) {
+                showToast('找不到此字詞', 'error');
+                return;
+            }
+
+            const newText = prompt('編輯字詞名稱：', currentWord.text);
+            if (newText === null) return;
+
+            const newZhuyin = prompt('編輯注音：', currentWord.zhuyin);
+            if (newZhuyin === null) return;
+
+            const newEmoji = prompt('編輯圖示 (emoji)：', currentWord.emoji);
+            if (newEmoji === null) return;
+
+            if (addedVersion) {
+                // 如果是新增的字詞，直接修改 added 列表
+                const idx = vocabularyModifications.added[category].findIndex(w => w.text === wordText);
+                if (idx !== -1) {
+                    vocabularyModifications.added[category][idx] = {
+                        text: newText || currentWord.text,
+                        zhuyin: newZhuyin || currentWord.zhuyin,
+                        emoji: newEmoji || currentWord.emoji
+                    };
+                }
+            } else {
+                // 系統字詞，記錄到 edited
+                if (!vocabularyModifications.edited[category]) {
+                    vocabularyModifications.edited[category] = {};
+                }
+                vocabularyModifications.edited[category][wordText] = {
+                    text: newText || currentWord.text,
+                    zhuyin: newZhuyin || currentWord.zhuyin,
+                    emoji: newEmoji || currentWord.emoji
+                };
+            }
+
+            saveVocabularyModifications();
+            renderSystemWords(category);
+            showToast(`已修改「${wordText}」`, 'success');
+        }
+
+        // 刪除系統字詞
+        function deleteSystemWord(category, wordText, isAdded) {
+            if (!confirm(`確定要刪除「${wordText}」嗎？`)) return;
+
+            loadVocabularyModifications();
+
+            if (isAdded) {
+                // 如果是新增的字詞，直接從 added 列表移除
+                vocabularyModifications.added[category] =
+                    (vocabularyModifications.added[category] || []).filter(w => w.text !== wordText);
+            } else {
+                // 如果是系統字詞，加入 deleted 列表
+                if (!vocabularyModifications.deleted[category]) {
+                    vocabularyModifications.deleted[category] = [];
+                }
+                if (!vocabularyModifications.deleted[category].includes(wordText)) {
+                    vocabularyModifications.deleted[category].push(wordText);
+                }
+                // 同時移除可能的編輯記錄
+                if (vocabularyModifications.edited[category]) {
+                    delete vocabularyModifications.edited[category][wordText];
+                }
+            }
+
+            saveVocabularyModifications();
+            renderSystemWords(category);
+            showToast(`已刪除「${wordText}」`);
+        }
+
+        // 新增字詞到類別
+        function showAddWordToCategory(category) {
+            const vocab = VOCABULARY[category];
+            const text = prompt(`新增字詞到「${vocab.name}」：`);
+            if (!text || !text.trim()) return;
+
+            const zhuyin = prompt('輸入注音（選填）：') || '';
+            const emoji = prompt('輸入圖示 emoji（選填）：') || '📝';
+
+            loadVocabularyModifications();
+
+            if (!vocabularyModifications.added[category]) {
+                vocabularyModifications.added[category] = [];
+            }
+
+            // 檢查重複
+            const existsInSystem = vocab.words.some(w => w.text === text.trim());
+            const existsInAdded = vocabularyModifications.added[category].some(w => w.text === text.trim());
+            const isDeleted = (vocabularyModifications.deleted[category] || []).includes(text.trim());
+
+            if ((existsInSystem && !isDeleted) || existsInAdded) {
+                showToast('此字詞已存在！', 'error');
+                return;
+            }
+
+            // 如果是恢復已刪除的字詞
+            if (isDeleted) {
+                vocabularyModifications.deleted[category] =
+                    vocabularyModifications.deleted[category].filter(t => t !== text.trim());
+                showToast(`已恢復「${text.trim()}」`, 'success');
+            } else {
+                vocabularyModifications.added[category].push({
+                    text: text.trim(),
+                    zhuyin: zhuyin,
+                    emoji: emoji,
+                    image: null
+                });
+                showToast(`已新增「${text.trim()}」到${vocab.name}`, 'success');
+            }
+
+            saveVocabularyModifications();
+            renderSystemWords(category);
         }
 
         function copyToCustom(text, zhuyin, emoji) {
@@ -1227,11 +1686,23 @@
                 return;
             }
 
-            // 顯示統計
+            // 例句遊戲對應
+            const sentenceGameMapping = {
+                simple: '詞彙排序',
+                questions: '問答練習',
+                fillBlanks: '句子填空',
+                dialogs: '生活對話、朗讀練習'
+            };
+
+            // 顯示統計和遊戲對應
             statsContainer.innerHTML = `
                 <div class="mini-stat" style="background: linear-gradient(135deg, ${typeColors[currentSentenceType]}, ${typeColors[currentSentenceType]}aa);">
                     <div class="value">${data.length}</div>
                     <div class="label">${typeLabels[currentSentenceType]}</div>
+                </div>
+                <div style="flex: 1; background: #fff3e0; padding: 10px 15px; border-radius: 12px; border-left: 4px solid #ff9800; font-size: 0.85rem;">
+                    <strong style="color: #e65100;">🎮 使用此類別的遊戲：</strong><br>
+                    <span style="color: #666;">${sentenceGameMapping[currentSentenceType] || '例句類遊戲'}</span>
                 </div>
             `;
 
@@ -1906,9 +2377,10 @@
             loadUserName();
             loadCustomWords();
             loadSettings();
+            loadVocabularyModifications();
             loadSimilarityThreshold();
             loadPronunciationRecords();
-            renderFamilyGrid();
+            // renderFamilyGrid(); // 家人設定已整合到字詞庫管理
             renderUploadedImages();
             setupUploadEvents();
             // 預設顯示自訂字詞區
@@ -1920,6 +2392,12 @@
             const saved = localStorage.getItem('familySettings');
             if (saved) {
                 familySettings = JSON.parse(saved);
+                // 合併新增的預設角色（如舅舅、姑姑）
+                DEFAULT_FAMILY.forEach(defaultMember => {
+                    if (!familySettings.find(m => m.id === defaultMember.id)) {
+                        familySettings.push(JSON.parse(JSON.stringify(defaultMember)));
+                    }
+                });
             } else {
                 familySettings = JSON.parse(JSON.stringify(DEFAULT_FAMILY));
             }
@@ -1930,9 +2408,10 @@
             }
         }
 
-        // 渲染家人網格
+        // 渲染家人網格（用於圖片上傳選擇）
         function renderFamilyGrid() {
             const grid = document.getElementById('familyGrid');
+            if (!grid) return; // 家人設定區塊已移除，跳過
             grid.innerHTML = '';
 
             familySettings.forEach((member) => {
@@ -1957,8 +2436,10 @@
             const member = familySettings.find(m => m.id === id);
             if (member) {
                 member.enabled = !member.enabled;
+                // 自動儲存到 localStorage
+                localStorage.setItem('familySettings', JSON.stringify(familySettings));
                 renderFamilyGrid();
-                showToast(member.enabled ? `已啟用「${member.name}」` : `已停用「${member.name}」`);
+                showToast(member.enabled ? `已啟用「${member.name}」` : `已停用「${member.name}」`, 'success');
             }
         }
 
@@ -1982,8 +2463,10 @@
             if (newName && currentEditingId) {
                 const member = familySettings.find(m => m.id === currentEditingId);
                 member.name = newName;
+                // 自動儲存到 localStorage
+                localStorage.setItem('familySettings', JSON.stringify(familySettings));
                 renderFamilyGrid();
-                showToast(`已改名為「${newName}」`);
+                showToast(`已改名為「${newName}」`, 'success');
             }
             closeModal();
         }

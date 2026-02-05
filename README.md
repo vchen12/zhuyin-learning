@@ -101,6 +101,29 @@ zhuyin-learning/
 
 作者：陳宜誠律師（Vincent Chen, Attorney at Law）及 Claude Code
 
+### v3.7.0（2025-02-05）
+- ✅ **字詞庫管理系統全面升級**
+  - 新增 `getEffectiveVocabulary()` 函數，讓遊戲讀取用戶修改後的詞彙
+  - 用戶在設定頁面新增、編輯、刪除的字詞，現在會正確反映在所有遊戲中
+  - 家人類別整合 `familySettings` 和 `vocabularyModifications` 兩套系統
+  - 支援新增自訂家人角色（可選擇男/女性別）
+  - 支援上傳家人照片（系統角色和自訂角色都支援）
+  - 自訂照片會在遊戲中正確顯示
+  - 修改的檔案：
+    - js/vocabulary.js（新增 getEffectiveVocabulary 系列函數）
+    - settings.html（新增家人管理功能）
+    - Level 2 全部 6 個遊戲（使用新的詞彙載入機制）
+    - Level 3: racing.html、treasure-hunter.html
+
+### v3.6.2（2025-02-05）
+- ✅ **設定頁面「字詞庫管理」大幅改進**
+  - 新增「舅舅」與「姑姑」家人角色
+  - 家人角色設定整合至字詞庫管理的「家人」類別
+  - 修正家人角色（停用/改名）不會儲存的問題，改為自動儲存
+  - 支援直接在系統字詞列表中新增、編輯、刪除字詞
+  - 各類別顯示對應使用的遊戲（例如：Level 2 看圖學詞、Level 3 賽車遊戲等）
+  - 修改的檔案：settings.html、js/vocabulary.js
+
 ### v3.6.1（2025-02-03）
 - ✅ **修正 VAD 偵測邏輯**
   - 修正「偵測到聲音但辨識失敗」時的處理邏輯
