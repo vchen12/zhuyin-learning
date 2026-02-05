@@ -394,32 +394,148 @@
         // VAD 相關變數
         let audioContext = null;
         let analyser = null;
+        let vadStream = null;
         let vadInterval = null;
         let hasDetectedVoice = false;
-        const VAD_THRESHOLD = 35;
-        const MIN_VOICE_DURATION = 200;
+        const VAD_THRESHOLD = 50;
+        const MIN_VOICE_DURATION = 300;
         let voiceStartTime = null;
+        let totalVoiceDuration = 0;
+
+        // 錄音相關變數
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let lastRecordedAudioUrl = null;
 
         async function initVAD() {
             if (audioContext) return;
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const microphone = audioContext.createMediaStreamSource(stream);
+                vadStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const microphone = audioContext.createMediaStreamSource(vadStream);
                 analyser = audioContext.createAnalyser();
                 analyser.fftSize = 256;
                 analyser.smoothingTimeConstant = 0.5;
                 microphone.connect(analyser);
+
+                // 初始化錄音器
+                initRecorder(vadStream);
+
+                console.log('✅ VAD 和錄音功能初始化成功');
             } catch (error) {
                 console.error('VAD 初始化失敗:', error);
             }
+        }
+
+        // 初始化錄音器
+        function initRecorder(stream) {
+            try {
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' :
+                                MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+                mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    if (audioChunks.length > 0) {
+                        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                        if (lastRecordedAudioUrl) URL.revokeObjectURL(lastRecordedAudioUrl);
+                        lastRecordedAudioUrl = URL.createObjectURL(audioBlob);
+                    }
+                };
+            } catch (error) {
+                console.error('錄音器初始化失敗:', error);
+            }
+        }
+
+        // 開始錄音
+        function startRecording() {
+            if (!mediaRecorder) return;
+            audioChunks = [];
+            if (mediaRecorder.state === 'inactive') {
+                try { mediaRecorder.start(); } catch (e) {}
+            }
+        }
+
+        // 停止錄音
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                try { mediaRecorder.stop(); } catch (e) {}
+            }
+        }
+
+        // 回放錄音
+        function playbackRecording() {
+            return new Promise((resolve) => {
+                if (!lastRecordedAudioUrl) { resolve(); return; }
+                const audio = new Audio(lastRecordedAudioUrl);
+                audio.onended = () => resolve();
+                audio.onerror = () => resolve();
+                audio.play().catch(() => resolve());
+            });
+        }
+
+        // 播放語音（返回 Promise）
+        function speakAsync(text) {
+            return new Promise((resolve) => {
+                if (!('speechSynthesis' in window)) { resolve(); return; }
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.1;
+                utterance.onend = () => resolve();
+                utterance.onerror = () => resolve();
+                window.speechSynthesis.speak(utterance);
+            });
+        }
+
+        // 計算最小需要的聲音長度（每字 400ms）
+        function getMinVoiceDuration(text) {
+            if (!text) return 500;
+            return Math.max(400, text.length * 400);
+        }
+
+        // 辨識失敗後的回放流程
+        async function handleRecognitionFailed(target, transcript, similarity) {
+            // 顯示辨識結果
+            if (transcript) {
+                document.getElementById('recognizedText').textContent = '🎤 聽到：' + transcript;
+                document.getElementById('recognizedText').classList.add('show');
+            }
+
+            // 如果有錄音，回放給使用者聽
+            if (lastRecordedAudioUrl) {
+                document.getElementById('resultMessage').textContent = '🔊 讓我們聽聽你的發音...';
+                await new Promise(r => setTimeout(r, 500));
+                await playbackRecording();
+                await new Promise(r => setTimeout(r, 300));
+            }
+
+            // 播放正確發音
+            document.getElementById('resultMessage').textContent = '🔊 正確的發音是...';
+            await new Promise(r => setTimeout(r, 300));
+            await speakAsync(target);
+            await new Promise(r => setTimeout(r, 500));
+
+            // 提示重試
+            isProcessing = false;
+            document.getElementById('resultMessage').textContent = '再試一次！點麥克風重試 🎤 或點「下一題」';
         }
 
         function startVAD() {
             if (!analyser) return;
             hasDetectedVoice = false;
             voiceStartTime = null;
+            totalVoiceDuration = 0;
+
+            // 開始錄音
+            startRecording();
+
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            let lastVoiceTime = null;
 
             vadInterval = setInterval(() => {
                 analyser.getByteFrequencyData(dataArray);
@@ -428,15 +544,23 @@
                 const average = sum / dataArray.length;
 
                 if (average > VAD_THRESHOLD) {
+                    const now = Date.now();
                     if (!voiceStartTime) {
-                        voiceStartTime = Date.now();
-                    } else if (Date.now() - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
+                        voiceStartTime = now;
+                    }
+                    // 累計聲音長度
+                    if (lastVoiceTime) {
+                        totalVoiceDuration += (now - lastVoiceTime);
+                    }
+                    lastVoiceTime = now;
+
+                    if (now - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
                         hasDetectedVoice = true;
                         document.getElementById('resultMessage').textContent = '🎤 聽到你的聲音了！';
                         if (navigator.vibrate) navigator.vibrate(30);
                     }
                 } else {
-                    voiceStartTime = null;
+                    lastVoiceTime = null;
                 }
             }, 50);
         }
@@ -446,13 +570,15 @@
                 clearInterval(vadInterval);
                 vadInterval = null;
             }
+            // 停止錄音
+            stopRecording();
         }
 
         function getListenDuration(text) {
             const len = text.length;
-            if (len <= 3) return 6000;
-            if (len <= 6) return 8000;
-            return 10000;
+            if (len <= 3) return 8000;
+            if (len <= 6) return 10000;
+            return 15000;
         }
 
         function shuffle(array) {
@@ -641,6 +767,7 @@
 
             const target = currentScene.sentence;
             const hasSound = transcript && transcript.trim().length > 0;
+            const threshold = getSimilarityThreshold();
 
             // 計算相似度（使用 config.js 的函數）
             const similarity = hasSound ? calculateSimilarity(transcript, target) : 0;
@@ -650,21 +777,40 @@
                 recordPronunciation('sentence', target, transcript, similarity);
             }
 
-            // 檢查是否通過門檻
-            const passes = (hasSound || hasDetectedSound) && passesSimilarityThreshold(similarity);
+            // 檢查聲音長度是否足夠
+            const minDuration = getMinVoiceDuration(target);
+            const durationSufficient = totalVoiceDuration >= minDuration;
+
+            // 門檻為 0 時的特殊處理
+            if (threshold === 0) {
+                // 必須滿足：有聲音 + 聲音長度足夠
+                if ((hasSound || hasDetectedVoice || hasDetectedSound) && durationSufficient) {
+                    handleCorrect(similarity);
+                    return;
+                } else if (hasDetectedVoice && !durationSufficient) {
+                    // 有聲音但長度不夠
+                    isProcessing = false;
+                    const needed = (minDuration / 1000).toFixed(1);
+                    const actual = (totalVoiceDuration / 1000).toFixed(1);
+                    document.getElementById('resultMessage').textContent = `聲音太短了！(${actual}秒/${needed}秒)`;
+                    return;
+                }
+            }
+
+            // 門檻 > 0 時的處理
+            const passes = hasSound && passesSimilarityThreshold(similarity) && durationSufficient;
 
             // 顯示相似度資訊（如果門檻不是0）
-            if (getSimilarityThreshold() > 0 && hasSound) {
+            if (threshold > 0 && hasSound) {
                 const level = getSimilarityLevel(similarity);
-                document.getElementById('resultMessage').textContent = `${level.emoji} ${similarity}% - ${level.label}`;
+                document.getElementById('resultMessage').textContent = `${level.emoji} ${Math.round(similarity)}% - ${level.label}`;
             }
 
             if (passes) {
                 handleCorrect(similarity);
             } else {
-                isProcessing = false;
-                // 沒有達到門檻時，顯示提示讓用戶手動重試，不自動循環
-                document.getElementById('resultMessage').textContent = '再試一次！點麥克風重試 🎤 或點「下一題」';
+                // 辨識失敗，執行回放流程
+                handleRecognitionFailed(target, transcript, similarity);
             }
         }
 

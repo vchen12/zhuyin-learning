@@ -752,8 +752,8 @@
         let analyser = null;
         let vadInterval = null;
         let hasDetectedVoice = false;
-        const VAD_THRESHOLD = 35;
-        const MIN_VOICE_DURATION = 200;
+        const VAD_THRESHOLD = 50;
+        const MIN_VOICE_DURATION = 300;
         let voiceStartTime = null;
 
         async function initVAD() {
@@ -806,9 +806,9 @@
 
         function getListenDuration(text) {
             const len = text.length;
-            if (len === 1) return 8000;
-            if (len <= 3) return 6000;
-            return 8000;
+            if (len === 1) return 10000;
+            if (len <= 3) return 8000;
+            return 10000;
         }
 
         function initSpeechRecognition() {

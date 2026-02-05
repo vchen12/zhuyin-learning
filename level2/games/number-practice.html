@@ -709,8 +709,8 @@
         let analyser = null;
         let vadInterval = null;
         let hasDetectedVoice = false;
-        const VAD_THRESHOLD = 35;
-        const MIN_VOICE_DURATION = 200;
+        const VAD_THRESHOLD = 50;
+        const MIN_VOICE_DURATION = 300;
         let voiceStartTime = null;
 
         // 初始化 VAD
@@ -767,9 +767,9 @@
         // 根據文字長度決定聆聽時間
         function getListenDuration(text) {
             const len = text.length;
-            if (len === 1) return 8000;      // 單字：8秒（要唸2-3次）
-            if (len <= 3) return 6000;       // 2-3字：6秒
-            return 8000;                      // 更長：8秒
+            if (len === 1) return 10000;      // 單字：10秒（要唸2-3次）
+            if (len <= 3) return 8000;       // 2-3字：8秒
+            return 10000;                      // 更長：10秒
         }
 
         function initSpeechRecognition() {
