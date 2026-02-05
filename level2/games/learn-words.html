@@ -8,6 +8,7 @@
     <link rel="manifest" href="../../manifest.json">
     <title>看圖學詞</title>
     <script src="../../js/config.js"></script>
+    <script src="../../js/vocabulary.js"></script>
     <script src="../../js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -370,9 +371,20 @@
         // 遊戲狀態
         let currentCategory = 'animals';
         let currentWordIndex = 0;
+        let currentWords = []; // 當前類別的有效詞彙（考慮用戶修改）
         let masteredWords = JSON.parse(localStorage.getItem('masteredWords_level2') || '{}');
         let recognition = null;
         let isRecognizing = false;
+
+        // 取得當前類別的有效詞彙
+        function getCurrentWords() {
+            // 使用 getEffectiveVocabulary 取得考慮用戶修改後的詞彙
+            if (typeof getEffectiveVocabulary === 'function') {
+                return getEffectiveVocabulary(currentCategory);
+            }
+            // 降級：如果函數不存在，使用原始詞彙
+            return VOCABULARY[currentCategory].words;
+        }
 
         // 初始化
         function init() {
@@ -381,6 +393,9 @@
             if (savedCategory && VOCABULARY[savedCategory]) {
                 currentCategory = savedCategory;
             }
+
+            // 載入當前類別的有效詞彙
+            currentWords = getCurrentWords();
 
             renderCategories();
             initSpeechRecognition();
@@ -407,6 +422,7 @@
         function selectCategory(key) {
             currentCategory = key;
             currentWordIndex = 0;
+            currentWords = getCurrentWords(); // 重新載入有效詞彙
             renderCategories();
             showCurrentWord();
             renderWordList();
@@ -414,8 +430,14 @@
 
         // 顯示當前詞彙
         function showCurrentWord() {
-            const word = VOCABULARY[currentCategory].words[currentWordIndex];
-            document.getElementById('wordEmoji').textContent = word.emoji;
+            const word = currentWords[currentWordIndex];
+            if (!word) return;
+            // 處理自訂照片
+            if (word.customImage) {
+                document.getElementById('wordEmoji').innerHTML = `<img src="${word.customImage}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">`;
+            } else {
+                document.getElementById('wordEmoji').textContent = word.emoji;
+            }
             document.getElementById('wordText').textContent = word.text;
             document.getElementById('wordZhuyin').textContent = word.zhuyin;
             document.getElementById('statusMessage').textContent = '點擊「聽發音」開始學習！';
@@ -424,10 +446,9 @@
         // 渲染詞彙列表
         function renderWordList() {
             const list = document.getElementById('wordList');
-            const words = VOCABULARY[currentCategory].words;
             list.innerHTML = '';
 
-            words.forEach((word, index) => {
+            currentWords.forEach((word, index) => {
                 const item = document.createElement('div');
                 item.className = 'word-item';
 
@@ -438,8 +459,13 @@
                     item.classList.add('current');
                 }
 
+                // 處理自訂照片
+                const emojiHtml = word.customImage
+                    ? `<img src="${word.customImage}" style="width:25px;height:25px;border-radius:50%;object-fit:cover;">`
+                    : word.emoji;
+
                 item.innerHTML = `
-                    <div class="word-item-emoji">${word.emoji}</div>
+                    <div class="word-item-emoji">${emojiHtml}</div>
                     <div class="word-item-text">${word.text}</div>
                 `;
                 item.onclick = () => {
@@ -453,7 +479,7 @@
 
         // 播放發音 (TTS)
         function playSound() {
-            const word = VOCABULARY[currentCategory].words[currentWordIndex];
+            const word = currentWords[currentWordIndex];
 
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -577,7 +603,7 @@
                     if (navigator.vibrate) navigator.vibrate(100);
 
                     // 根據字詞長度決定提示和聆聽時間
-                    const word = VOCABULARY[currentCategory].words[currentWordIndex];
+                    const word = currentWords[currentWordIndex];
                     const textLen = word.text.length;
                     const listenTime = getListenDuration(word.text);
 
@@ -686,7 +712,7 @@
         function startListening() {
             if (!recognition) {
                 // 沒有語音辨識，用手動確認
-                const word = VOCABULARY[currentCategory].words[currentWordIndex];
+                const word = currentWords[currentWordIndex];
                 if (confirm(`你唸的是「${word.text}」嗎？`)) {
                     handleCorrect();
                 }
@@ -707,7 +733,7 @@
             if (isProcessing) return;
             isProcessing = true;
 
-            const word = VOCABULARY[currentCategory].words[currentWordIndex];
+            const word = currentWords[currentWordIndex];
             const target = word.text;
             const hasSound = transcript && transcript.trim().length > 0;
 
@@ -751,7 +777,7 @@
         // 答對處理
         function handleCorrect(similarity = 100) {
             isProcessing = true;
-            const word = VOCABULARY[currentCategory].words[currentWordIndex];
+            const word = currentWords[currentWordIndex];
 
             // 儲存進度
             if (!masteredWords[currentCategory]) {
@@ -780,16 +806,14 @@
 
         // 下一個詞彙
         function nextWord() {
-            const words = VOCABULARY[currentCategory].words;
-            currentWordIndex = (currentWordIndex + 1) % words.length;
+            currentWordIndex = (currentWordIndex + 1) % currentWords.length;
             showCurrentWord();
             renderWordList();
         }
 
         // 上一個詞彙
         function prevWord() {
-            const words = VOCABULARY[currentCategory].words;
-            currentWordIndex = (currentWordIndex - 1 + words.length) % words.length;
+            currentWordIndex = (currentWordIndex - 1 + currentWords.length) % currentWords.length;
             showCurrentWord();
             renderWordList();
         }

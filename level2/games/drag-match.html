@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#11998e">
     <link rel="manifest" href="../../manifest.json">
     <title>圖文配對</title>
+    <script src="../../js/vocabulary.js"></script>
     <script src="../../js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -327,8 +328,12 @@
 
         function getAllWords() {
             let allWords = [];
-            for (const [catKey, cat] of Object.entries(VOCABULARY)) {
-                cat.words.forEach((word, index) => {
+            for (const catKey of Object.keys(VOCABULARY)) {
+                // 使用 getEffectiveVocabulary 取得考慮用戶修改後的詞彙
+                const words = typeof getEffectiveVocabulary === 'function'
+                    ? getEffectiveVocabulary(catKey)
+                    : VOCABULARY[catKey].words;
+                words.forEach((word, index) => {
                     allWords.push({ ...word, category: catKey, index });
                 });
             }
