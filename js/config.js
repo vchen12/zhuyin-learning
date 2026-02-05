@@ -5,7 +5,7 @@
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '3.7.0',
+    version: '3.8.1',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -252,7 +252,38 @@ function setSimilarityThreshold(threshold) {
 }
 
 /**
- * 計算兩個字串的相似度（Levenshtein 距離為基礎）
+ * 常見語音辨識錯誤映射表
+ * 中文語音辨識常會把某些字辨識成同音字
+ */
+const SPEECH_ERROR_MAP = {
+    '爸爸': ['八八', '叭叭', '拔拔'],
+    '媽媽': ['嗎嗎', '馬馬', '罵罵'],
+    '哥哥': ['歌歌', '鴿鴿', '割割'],
+    '姐姐': ['借借', '解解', '接接'],
+    '弟弟': ['地地', '第第', '帝帝'],
+    '妹妹': ['沒沒', '美美', '妺妺'],
+    '爺爺': ['耶耶', '也也', '夜夜'],
+    '奶奶': ['耐耐', '奈奈', '乃乃'],
+    '叔叔': ['書書', '樹樹', '輸輸'],
+    '阿姨': ['阿一', '阿宜', '啊姨'],
+    '狗': ['夠', '購', '構', '溝'],
+    '貓': ['毛', '矛', '茅', '錨'],
+    '魚': ['雨', '與', '語', '羽', '于'],
+    '鳥': ['尿', '裊'],
+    '蘋果': ['拼過', '頻果', '瓶果'],
+    '香蕉': ['相蕉', '想交', '鄉焦'],
+    '西瓜': ['稀瓜', '希瓜', '吸瓜'],
+    '草莓': ['操沒', '曹梅', '糙霉'],
+    '太陽': ['抬樣', '台樣', '態揚'],
+    '月亮': ['約量', '越亮', '悅量'],
+    '星星': ['心心', '欣欣', '新新'],
+    '我愛你': ['我矮你', '窩愛你', '我唉你'],
+    '謝謝': ['寫寫', '些些', '謝ㄒㄧㄝˋ'],
+    '你好': ['擬好', '妮好', '尼好']
+};
+
+/**
+ * 計算兩個字串的相似度（改進版，針對中文語音辨識優化）
  * @param {string} str1 - 第一個字串（使用者發音辨識結果）
  * @param {string} str2 - 第二個字串（標準答案）
  * @returns {number} 0-100 的相似度百分比
@@ -261,30 +292,81 @@ function calculateSimilarity(str1, str2) {
     if (!str1 || !str2) return 0;
 
     // 清理字串：移除空白和標點
-    const clean1 = str1.replace(/[\s。，！？、]/g, '');
-    const clean2 = str2.replace(/[\s。，！？、]/g, '');
+    const clean1 = str1.replace(/[\s。，！？、～~]/g, '');
+    const clean2 = str2.replace(/[\s。，！？、～~]/g, '');
 
+    // 完全匹配
     if (clean1 === clean2) return 100;
     if (clean1.length === 0 || clean2.length === 0) return 0;
 
-    // 方法1：字元匹配度
-    const chars1 = clean1.split('');
-    const chars2 = clean2.split('');
-    let matches = 0;
-
-    for (const char of chars1) {
-        if (chars2.includes(char)) matches++;
+    // 檢查是否是常見的語音辨識錯誤
+    const errorMappings = SPEECH_ERROR_MAP[clean2] || [];
+    if (errorMappings.includes(clean1)) {
+        return 95;  // 是已知的辨識錯誤，給高分
     }
 
-    const charSimilarity = (matches / Math.max(chars1.length, chars2.length)) * 100;
+    // 短詞特殊處理（1-2字）- 對失語症患者更寬容
+    if (clean2.length <= 2) {
+        // 辨識結果包含目標文字就給高分
+        if (clean1.includes(clean2)) return 95;
+
+        // 目標文字包含在辨識結果中
+        if (clean2.includes(clean1) && clean1.length > 0) return 85;
+
+        // 至少有一半以上字元匹配
+        let matches = 0;
+        for (const char of clean2) {
+            if (clean1.includes(char)) matches++;
+        }
+        if (matches >= clean2.length * 0.5) return 80;
+        if (matches > 0) return 60;  // 只要有匹配到一個字就給分
+    }
+
+    // 方法1：字元匹配度（雙向檢查）
+    const chars1 = clean1.split('');
+    const chars2 = clean2.split('');
+
+    // 計算目標文字中有多少字元出現在辨識結果中
+    let targetMatches = 0;
+    for (const char of chars2) {
+        if (clean1.includes(char)) targetMatches++;
+    }
+
+    // 計算辨識結果中有多少字元出現在目標文字中
+    let resultMatches = 0;
+    for (const char of chars1) {
+        if (clean2.includes(char)) resultMatches++;
+    }
+
+    // 取較高的匹配率
+    const targetMatchRate = (targetMatches / chars2.length) * 100;
+    const resultMatchRate = chars1.length > 0 ? (resultMatches / chars1.length) * 100 : 0;
+    const charSimilarity = Math.max(targetMatchRate, resultMatchRate);
 
     // 方法2：包含關係加分
     let containsBonus = 0;
-    if (clean1.includes(clean2) || clean2.includes(clean1)) {
-        containsBonus = 30;
+    if (clean1.includes(clean2)) {
+        containsBonus = 40;  // 辨識結果完整包含目標
+    } else if (clean2.includes(clean1) && clean1.length >= clean2.length * 0.5) {
+        containsBonus = 30;  // 目標包含辨識結果（且辨識結果夠長）
     }
 
-    // 方法3：Levenshtein 距離
+    // 方法3：順序匹配（檢查字元是否按順序出現）
+    let orderScore = 0;
+    let lastIndex = -1;
+    let orderedMatches = 0;
+    for (const char of chars2) {
+        const index = clean1.indexOf(char, lastIndex + 1);
+        if (index > lastIndex) {
+            orderedMatches++;
+            lastIndex = index;
+        }
+    }
+    if (orderedMatches > 0) {
+        orderScore = (orderedMatches / chars2.length) * 100;
+    }
+
+    // 方法4：Levenshtein 距離（編輯距離）
     const matrix = [];
     const len1 = clean1.length;
     const len2 = clean2.length;
@@ -309,8 +391,19 @@ function calculateSimilarity(str1, str2) {
 
     const levenshteinSimilarity = (1 - matrix[len1][len2] / Math.max(len1, len2)) * 100;
 
-    // 綜合計算：取最高分
-    return Math.min(100, Math.max(charSimilarity, levenshteinSimilarity) + containsBonus);
+    // 綜合計算：取最高分並加上額外獎勵
+    const baseSimilarity = Math.max(charSimilarity, levenshteinSimilarity, orderScore);
+    const finalScore = Math.min(100, baseSimilarity + containsBonus);
+
+    console.log(`相似度計算: "${clean1}" vs "${clean2}"`, {
+        charSimilarity: charSimilarity.toFixed(1),
+        levenshteinSimilarity: levenshteinSimilarity.toFixed(1),
+        orderScore: orderScore.toFixed(1),
+        containsBonus,
+        finalScore: finalScore.toFixed(1)
+    });
+
+    return finalScore;
 }
 
 /**

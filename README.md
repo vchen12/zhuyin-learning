@@ -101,6 +101,28 @@ zhuyin-learning/
 
 作者：陳宜誠律師（Vincent Chen, Attorney at Law）及 Claude Code
 
+### v3.8.1（2025-02-05）
+- ✅ **所有語音練習遊戲統一加入錄音回放功能**
+  - 辨識失敗時：先播放使用者的錄音 → 再播放正確發音 → 提示重試
+  - 加入聲音長度檢查：確保使用者發出足夠長的聲音
+  - 統一 VAD 參數和聆聽時間設定
+  - 更新的檔案：
+    - level1/games/number-practice.html
+    - level2/games/learn-words.html、speak-word.html
+    - level3/games/read-aloud.html、daily-dialog.html、qa-practice.html、picture-talk.html、story-chain.html
+
+### v3.8.0（2025-02-05）
+- ✅ **語音辨識系統全面改進**
+  - **降低 VAD 靈敏度**：VAD 門檻從 35 提高到 50，過濾風扇、電視等背景噪音
+  - **聲音長度檢查**：根據字數檢查聲音是否足夠長（每字至少 0.4 秒）
+  - **適度延長聆聽時間**：單字 10 秒、2-3字 8 秒、4-6字 10 秒、長句 12-15 秒
+  - **錄音回放功能**：辨識失敗時會回放使用者的錄音，再播放正確發音
+  - **改進相似度比對**：新增常見語音辨識錯誤映射表，對短詞更寬容
+  - 修改的檔案：
+    - js/speech-recognition.js（全面重寫，新增錄音功能）
+    - js/config.js（改進 calculateSimilarity 函數）
+    - 所有 12 個語音辨識遊戲（更新 VAD 常數和聆聯時間）
+
 ### v3.7.0（2025-02-05）
 - ✅ **字詞庫管理系統全面升級**
   - 新增 `getEffectiveVocabulary()` 函數，讓遊戲讀取用戶修改後的詞彙

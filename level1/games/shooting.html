@@ -580,8 +580,8 @@
         let vadInterval = null;
         let hasDetectedVoice = false;  // 是否偵測到聲音
         let voiceStartTime = null;     // 開始偵測到聲音的時間
-        const VAD_THRESHOLD = 35;      // 音量門檻（0-255），提高以避免風扇聲誤觸發
-        const MIN_VOICE_DURATION = 200; // 最少要持續 200ms 才算有效聲音
+        const VAD_THRESHOLD = 50;      // 音量門檻（0-255），提高以避免風扇聲誤觸發
+        const MIN_VOICE_DURATION = 300; // 最少要持續 300ms 才算有效聲音
 
         // 初始化 VAD（語音活動偵測）
         async function initVAD() {
@@ -688,14 +688,14 @@
 
             // 根據內容長度決定聆聽時間（為失語症患者延長時間）
             function getListenDuration(text) {
-                if (!text) return 8000;
+                if (!text) return 10000;
                 const len = text.length;
                 // 單字需要唸 2-3 次，所以給更多時間
-                if (len === 1) return 8000;      // 單字：8秒（要唸2-3次）
+                if (len === 1) return 10000;      // 單字：10秒（要唸2-3次）
                 // 詞語/句子只需唸一次
-                if (len <= 3) return 6000;       // 2-3字：6秒
-                if (len <= 6) return 8000;       // 4-6字：8秒
-                return 10000;                     // 更長：10秒
+                if (len <= 3) return 8000;       // 2-3字：8秒
+                if (len <= 6) return 10000;       // 4-6字：10秒
+                return 15000;                     // 更長：15秒
             }
 
             // 移除這些會造成誤導的提示，因為它們在使用者還沒真正開口時就會觸發
