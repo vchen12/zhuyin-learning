@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v3.10.0
+- **版本**: v3.12.0
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -23,6 +23,7 @@
 js/config.js              - 全域配置、版本號、鼓勵語、相似度計算
 js/speech-recognition.js  - 語音辨識核心（VAD、錄音回放、閃爍動畫）
 js/vocabulary.js          - 詞彙資料庫（8大分類、80+詞彙）
+js/sentence-generator.js  - 句型產生器（從字詞庫動態產生遊戲內容）
 js/prevent-zoom.js        - 防止雙擊放大
 sw.js                     - Service Worker 快取策略
 settings.html             - 設定頁面（字詞庫管理、麥克風測試）
@@ -98,6 +99,8 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v3.12.0**: 失語症深度優化（錄音回放修復、我會唸按鈕、跳過按鈕、自動TTS讀題、單人練習模式、按鈕放大、延長換題時間）
+- **v3.11.0**: 字詞庫與所有遊戲連動（sentence-generator.js、8 個遊戲動態化、customImage 支援）
 - **v3.10.0**: 失語症可用性全面修復（SW快取補齊、競賽減速、按鈕放大、跳過按鈕、設定頁 Modal 化）
 - **v3.9.0**: 語音即時回饋優化（VAD 強化震動、辨識中提示）+ iPad 選單溢出修正
 - **v3.8.1**: 所有語音練習加入錄音回放

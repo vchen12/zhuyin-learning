@@ -295,6 +295,10 @@
 
             <div class="choices-section" id="choicesSection"></div>
 
+            <div style="flex-shrink: 0; text-align: center;">
+                <button onclick="skipQuestion()" style="background: linear-gradient(135deg, #78909c 0%, #546e7a 100%); color: white; border: none; padding: 14px 24px; border-radius: 25px; font-size: 1.1rem; font-weight: bold; cursor: pointer; min-height: 50px; touch-action: manipulation;">⏭️ 跳過</button>
+            </div>
+
             <div class="result-message" id="resultMessage"></div>
         </div>
     </div>
@@ -311,9 +315,11 @@
         </div>
     </div>
 
+    <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/sentence-generator.js"></script>
     <script>
-        // 填空題資料
-        const FILL_BLANKS = [
+        // 填空題資料（預設）
+        const DEFAULT_FILL_BLANKS = [
             { sentence: '我愛吃___', options: ['蘋果', '椅子', '太陽', '書'], answer: '蘋果' },
             { sentence: '___在天上飛', options: ['魚', '鳥', '狗', '貓'], answer: '鳥' },
             { sentence: '我用___寫字', options: ['筆', '碗', '床', '門'], answer: '筆' },
@@ -330,6 +336,15 @@
             { sentence: '___是紅色的', options: ['蘋果', '香蕉', '月亮', '雲'], answer: '蘋果' },
             { sentence: '我和姐姐一起___', options: ['玩', '雨', '太陽', '床'], answer: '玩' }
         ];
+
+        // 動態產生填空題資料（從字詞庫）+ 預設資料作為 fallback
+        let FILL_BLANKS;
+        try {
+            const generated = generateFillBlankData(15);
+            FILL_BLANKS = generated.length >= 10 ? generated : DEFAULT_FILL_BLANKS;
+        } catch(e) {
+            FILL_BLANKS = DEFAULT_FILL_BLANKS;
+        }
 
         let currentRound = 0;
         let totalRounds = 10;
@@ -434,7 +449,28 @@
                 speak('答案是' + currentQuestion.answer);
             }
 
-            setTimeout(nextRound, 2500);
+            setTimeout(nextRound, 4000);
+        }
+
+        function skipQuestion() {
+            if (answered) return;
+            answered = true;
+
+            const buttons = document.querySelectorAll('.choice-btn');
+            buttons.forEach(b => b.disabled = true);
+
+            // 高亮正確答案
+            const correctBtn = Array.from(buttons).find(b => b.textContent === currentQuestion.answer);
+            if (correctBtn) correctBtn.classList.add('correct');
+
+            // 填入正確答案
+            document.getElementById('blankWord').textContent = currentQuestion.answer;
+            document.getElementById('blankWord').classList.add('filled');
+
+            document.getElementById('resultMessage').textContent = '正確答案是「' + currentQuestion.answer + '」';
+            speak('正確答案是，' + currentQuestion.sentence.replace('___', currentQuestion.answer));
+
+            setTimeout(nextRound, 4000);
         }
 
         function endGame() {
