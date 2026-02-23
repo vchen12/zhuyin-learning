@@ -35,11 +35,16 @@
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
         }
         .score-display {
             font-size: 1rem;
@@ -331,6 +336,7 @@
             <div class="buttons-section">
                 <button class="action-btn reset highlight-btn" onclick="resetAnswer()">🔄 重來</button>
                 <button class="action-btn check highlight-btn" onclick="checkAnswer()">✓ 確認</button>
+                <button class="action-btn highlight-btn" onclick="skipQuestion()" style="background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%); color: white;">⏭️ 跳過</button>
             </div>
 
             <div class="result-message" id="resultMessage"></div>
@@ -499,6 +505,18 @@
                 document.getElementById('resultMessage').textContent = '順序不對，再試試看！';
                 speak('再試一次！');
             }
+        }
+
+        function skipQuestion() {
+            // 顯示正確答案
+            selectedWords = [...currentQuestion.parts];
+            availableWords = [];
+            renderOptions();
+            renderAnswer();
+            document.getElementById('answerArea').classList.add('correct');
+            document.getElementById('resultMessage').textContent = '正確答案：' + currentQuestion.sentence;
+            speak('正確答案是，' + currentQuestion.sentence);
+            setTimeout(nextRound, 3000);
         }
 
         function endGame() {

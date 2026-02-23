@@ -434,7 +434,8 @@
                 const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
                 if (average > VAD_THRESHOLD && !hasDetectedVoice) {
                     hasDetectedVoice = true;
-                    showHint('🎤 聽到你的聲音了！');
+                    showHint('🎤 聽到你的聲音了！正在辨識...');
+                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                 }
             }, 50);
         }
@@ -496,6 +497,10 @@
 
                 if (!hasResult && lastTranscript) {
                     processResult(lastTranscript);
+                } else if (!hasResult && !lastTranscript) {
+                    if (hasDetectedVoice) {
+                        showHint('聽到聲音了，但辨識不清楚，請再試一次！');
+                    }
                 }
 
                 // 如果遊戲還在進行且有老鷹在飛，繼續聆聽

@@ -36,11 +36,16 @@
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
         }
         .score-display {
             font-size: 1rem;
@@ -885,8 +890,8 @@
 
                     if (now - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
                         hasDetectedVoice = true;
-                        document.getElementById('resultMessage').textContent = '🎤 聽到你的聲音了！';
-                        if (navigator.vibrate) navigator.vibrate(30);
+                        document.getElementById('resultMessage').textContent = '🎤 聽到你的聲音了！正在辨識...';
+                        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                     }
                 } else {
                     lastVoiceTime = null;
@@ -999,7 +1004,11 @@
                         document.getElementById('resultMessage').textContent = '聽到：' + lastTranscript;
                         checkSpeakResult(lastTranscript);
                     } else if (!hasReceivedResult && wasListening) {
-                        document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
+                        if (hasDetectedVoice) {
+                            document.getElementById('resultMessage').textContent = '🎤 聽到聲音了，但辨識不清楚，請再試一次！';
+                        } else {
+                            document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
+                        }
                     }
                 };
             }
