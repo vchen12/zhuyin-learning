@@ -36,11 +36,16 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
         .race-info {
             font-size: 0.9rem;
@@ -450,12 +455,12 @@
             renderChoices();
             document.getElementById('resultMessage').textContent = '';
 
-            // 電腦延遲答題（模擬思考）
+            // 電腦延遲答題（放慢速度，適合失語症患者）
             setTimeout(() => {
                 if (!answered && !gameOver) {
                     computerAnswer();
                 }
-            }, 2000 + Math.random() * 2000);
+            }, 8000 + Math.random() * 7000);
         }
 
         function updateQuestionUI() {
@@ -512,8 +517,8 @@
         function computerAnswer() {
             if (answered || gameOver) return;
 
-            // 電腦有 70% 機率答對
-            if (Math.random() < 0.7) {
+            // 電腦有 50% 機率答對（降低難度，鼓勵患者）
+            if (Math.random() < 0.5) {
                 computerPosition++;
                 updateCarPositions();
                 document.getElementById('resultMessage').textContent = '電腦答對了！🚙💨';

@@ -648,10 +648,10 @@
         function onVoiceDetected() {
             console.log('🎙️ VAD: 偵測到聲音！');
             // 立即給使用者回饋
-            showHint('🎤 聽到你的聲音了！', true);
+            showHint('🎤 聽到你的聲音了！正在辨識...', true);
             // 震動回饋
             if (navigator.vibrate) {
-                navigator.vibrate(30);
+                navigator.vibrate([50, 30, 50]);
             }
         }
 
@@ -804,9 +804,14 @@
                 if (lastTranscript && wasRecognizing) {
                     processResult(lastTranscript, 'onend');
                 } else if (wasRecognizing) {
-                    // 完全沒聽到任何東西，快速重新播放發音並聆聽
-                    console.log('沒聽到任何東西，快速重試');
-                    showHint('再聽一次 🔊', false);
+                    // 沒聽到文字結果
+                    if (hasDetectedVoice) {
+                        console.log('聽到聲音但辨識不清楚');
+                        showHint('聽到聲音了，但辨識不清楚，請再試一次！', false);
+                    } else {
+                        console.log('沒聽到任何東西，快速重試');
+                        showHint('再聽一次 🔊', false);
+                    }
                     // 縮短等待時間，快速重試
                     setTimeout(() => {
                         if (!isProcessing && !hasReceivedResult) {

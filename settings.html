@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#667eea">
     <link rel="manifest" href="manifest.json">
@@ -10,11 +10,17 @@
     <script src="js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { height: 100%; overflow: hidden; }
         body {
-            min-height: 100vh;
+            height: 100%;
+            height: 100dvh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
             padding: 20px;
+            padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
         }
 
         .nav-bar {
@@ -138,10 +144,11 @@
             background: #667eea;
             color: white;
             border: none;
-            padding: 5px 12px;
-            border-radius: 10px;
-            font-size: 0.8rem;
+            padding: 12px 20px;
+            border-radius: 15px;
+            font-size: 1rem;
             cursor: pointer;
+            min-height: 44px;
         }
         .edit-btn.delete {
             background: #f44336;
@@ -946,12 +953,94 @@
         </div>
     </div>
 
+    <!-- 通用輸入 Modal（替代 prompt） -->
+    <div class="modal" id="promptModal">
+        <div class="modal-content">
+            <div class="modal-title" id="promptModalTitle">輸入</div>
+            <input type="text" class="modal-input" id="promptModalInput" placeholder="">
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="resolvePromptModal(null)" style="padding: 15px 30px; font-size: 1.1rem; min-height: 50px;">取消</button>
+                <button class="modal-btn confirm" onclick="resolvePromptModal(document.getElementById('promptModalInput').value)" style="padding: 15px 30px; font-size: 1.1rem; min-height: 50px;">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用選擇 Modal（替代 prompt 選項） -->
+    <div class="modal" id="choiceModal">
+        <div class="modal-content">
+            <div class="modal-title" id="choiceModalTitle">選擇</div>
+            <div id="choiceModalOptions" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button class="modal-btn cancel" onclick="resolveChoiceModal(null)" style="padding: 15px 30px; font-size: 1.1rem; min-height: 50px;">取消</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 通知 -->
     <div class="toast" id="toast">設定已儲存</div>
 
     <!-- 載入詞彙資料庫 -->
     <script src="js/vocabulary.js"></script>
     <script>
+        // ==========================================
+        // 通用 Modal 替代 prompt()（大輸入框，適合失語症患者）
+        // ==========================================
+        let _promptResolve = null;
+        let _choiceResolve = null;
+
+        function modalPrompt(title, defaultValue) {
+            return new Promise((resolve) => {
+                _promptResolve = resolve;
+                document.getElementById('promptModalTitle').textContent = title;
+                const input = document.getElementById('promptModalInput');
+                input.value = defaultValue || '';
+                input.placeholder = '';
+                document.getElementById('promptModal').classList.add('show');
+                setTimeout(() => input.focus(), 100);
+            });
+        }
+
+        function resolvePromptModal(value) {
+            document.getElementById('promptModal').classList.remove('show');
+            if (_promptResolve) {
+                _promptResolve(value);
+                _promptResolve = null;
+            }
+        }
+
+        function modalChoice(title, options) {
+            return new Promise((resolve) => {
+                _choiceResolve = resolve;
+                document.getElementById('choiceModalTitle').textContent = title;
+                const container = document.getElementById('choiceModalOptions');
+                container.innerHTML = '';
+                options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'modal-btn confirm';
+                    btn.style.cssText = 'padding: 18px 30px; font-size: 1.2rem; min-height: 55px; width: 100%;';
+                    btn.textContent = opt.label;
+                    btn.onclick = () => resolveChoiceModal(opt.value);
+                    container.appendChild(btn);
+                });
+                document.getElementById('choiceModal').classList.add('show');
+            });
+        }
+
+        function resolveChoiceModal(value) {
+            document.getElementById('choiceModal').classList.remove('show');
+            if (_choiceResolve) {
+                _choiceResolve(value);
+                _choiceResolve = null;
+            }
+        }
+
+        // Enter 鍵確認 modal
+        document.getElementById('promptModalInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                resolvePromptModal(e.target.value);
+            }
+        });
+
         // 預設家人資料
         const DEFAULT_FAMILY = [
             { id: 'dad', emoji: '👨', name: '爸爸', enabled: true, customImage: null },
@@ -1360,14 +1449,14 @@
         // ==========================================
 
         // 新增家人角色（彈出對話框選擇性別）
-        function showAddFamilyMember() {
-            const name = prompt('輸入家人稱呼（如：大舅、二姑、表哥）：');
+        async function showAddFamilyMember() {
+            const name = await modalPrompt('輸入家人稱呼（如：大舅、二姑、表哥）：');
             if (!name || !name.trim()) return;
 
-            const zhuyin = prompt('輸入注音（選填）：') || '';
+            const zhuyin = await modalPrompt('輸入注音（選填）：') || '';
 
             // 選擇性別
-            const genderChoice = prompt('選擇性別：\n1. 男性 👨\n2. 女性 👩\n\n請輸入 1 或 2：');
+            const genderChoice = await modalChoice('選擇性別', [{label: '👨 男性', value: '1'}, {label: '👩 女性', value: '2'}]);
             let gender = 'unknown';
             let emoji = '👤';
             if (genderChoice === '1') {
@@ -1455,7 +1544,7 @@
         }
 
         // 編輯新增的家人
-        function editAddedFamilyMember(memberName) {
+        async function editAddedFamilyMember(memberName) {
             loadVocabularyModifications();
             const member = (vocabularyModifications.added['family'] || []).find(m => m.text === memberName);
             if (!member) {
@@ -1463,13 +1552,13 @@
                 return;
             }
 
-            const newName = prompt('編輯稱呼：', member.text);
+            const newName = await modalPrompt('編輯稱呼：', member.text);
             if (newName === null) return;
 
-            const newZhuyin = prompt('編輯注音：', member.zhuyin || '');
+            const newZhuyin = await modalPrompt('編輯注音：', member.zhuyin || '');
             if (newZhuyin === null) return;
 
-            const genderChoice = prompt(`目前性別：${member.gender === 'male' ? '男性' : member.gender === 'female' ? '女性' : '未知'}\n\n選擇新性別：\n1. 男性 👨\n2. 女性 👩\n0. 保持不變\n\n請輸入 0、1 或 2：`);
+            const genderChoice = await modalChoice('選擇性別', [{label: '👨 男性', value: '1'}, {label: '👩 女性', value: '2'}, {label: '保持不變', value: '0'}]);
 
             let newGender = member.gender;
             let newEmoji = member.emoji;
@@ -1508,7 +1597,7 @@
         // ==========================================
 
         // 編輯系統字詞
-        function editSystemWord(category, wordText) {
+        async function editSystemWord(category, wordText) {
             loadVocabularyModifications();
             const vocab = VOCABULARY[category];
             const originalWord = vocab.words.find(w => w.text === wordText);
@@ -1521,13 +1610,13 @@
                 return;
             }
 
-            const newText = prompt('編輯字詞名稱：', currentWord.text);
+            const newText = await modalPrompt('編輯字詞名稱：', currentWord.text);
             if (newText === null) return;
 
-            const newZhuyin = prompt('編輯注音：', currentWord.zhuyin);
+            const newZhuyin = await modalPrompt('編輯注音：', currentWord.zhuyin);
             if (newZhuyin === null) return;
 
-            const newEmoji = prompt('編輯圖示 (emoji)：', currentWord.emoji);
+            const newEmoji = await modalPrompt('編輯圖示 (emoji)：', currentWord.emoji);
             if (newEmoji === null) return;
 
             if (addedVersion) {
@@ -1587,13 +1676,13 @@
         }
 
         // 新增字詞到類別
-        function showAddWordToCategory(category) {
+        async function showAddWordToCategory(category) {
             const vocab = VOCABULARY[category];
-            const text = prompt(`新增字詞到「${vocab.name}」：`);
+            const text = await modalPrompt(`新增字詞到「${vocab.name}」：`);
             if (!text || !text.trim()) return;
 
-            const zhuyin = prompt('輸入注音（選填）：') || '';
-            const emoji = prompt('輸入圖示 emoji（選填）：') || '📝';
+            const zhuyin = await modalPrompt('輸入注音（選填）：') || '';
+            const emoji = await modalPrompt('輸入圖示 emoji（選填）：') || '📝';
 
             loadVocabularyModifications();
 

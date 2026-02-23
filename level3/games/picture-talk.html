@@ -556,8 +556,8 @@
 
                     if (now - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
                         hasDetectedVoice = true;
-                        document.getElementById('resultMessage').textContent = '🎤 聽到你的聲音了！';
-                        if (navigator.vibrate) navigator.vibrate(30);
+                        document.getElementById('resultMessage').textContent = '🎤 聽到你的聲音了！正在辨識...';
+                        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                     }
                 } else {
                     lastVoiceTime = null;
@@ -697,7 +697,11 @@
                         document.getElementById('recognizedText').classList.add('show');
                         checkResult(lastTranscript);
                     } else if (!hasReceivedResult && wasListening) {
-                        document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試 或點「下一題」';
+                        if (hasDetectedVoice) {
+                            document.getElementById('resultMessage').textContent = '🎤 聽到聲音了，但辨識不清楚，請再試一次！';
+                        } else {
+                            document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試 或點「下一題」';
+                        }
                     }
                 };
             }

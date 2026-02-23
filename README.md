@@ -101,6 +101,30 @@ zhuyin-learning/
 
 作者：陳宜誠律師（Vincent Chen, Attorney at Law）及 Claude Code
 
+### v3.10.0（2025-02-23）
+- ✅ **失語症可用性全面修復**（全站 30+ 頁面審計後修正）
+  - **Service Worker 快取補齊**：新增 31 個遺漏檔案，確保離線可用
+  - **競賽遊戲減速**：電腦對手延遲從 2-4.5 秒改為 8-15 秒，準確率降低（賽車 50%、寶物 40%）
+  - **按鈕統一放大**：6 個遊戲的返回按鈕統一為 `padding: 14px 24px; font-size: 1.1rem`
+  - **詞彙排序新增跳過按鈕**：卡住時可跳過並查看正確答案
+  - **設定頁面 Modal 化**：12 個 `prompt()` 對話框全部改為自訂 Modal（大按鈕、大輸入框）
+  - **麥克風測試頁面修正**：加入 100dvh、viewport-fit=cover、返回按鈕、防縮放
+  - 更新的檔案：
+    - sw.js（快取清單 + 版本 v1.4.0）
+    - settings.html（Modal 系統 + 按鈕放大）
+    - mic-test.html（viewport + 返回按鈕）
+    - level3/games/racing.html、treasure-hunter.html（減速 + 按鈕）
+    - level3/games/fill-blank.html、word-order.html、listen-sentence.html、number-practice.html（按鈕放大）
+
+### v3.9.0（2025-02-23）
+- ✅ **語音即時回饋優化**
+  - **VAD 強化震動回饋**：偵測到聲音時觸發裝置震動，增強感官回饋
+  - **辨識中提示**：語音辨識進行中顯示即時狀態提示
+  - **iPad 選單溢出修正**：修正各關卡選單頁面在 iPad 上的內容溢出問題
+  - 更新的檔案：
+    - js/speech-recognition.js（震動回饋 + 辨識中提示）
+    - 各 level index.html（iPad 溢出修正）
+
 ### v3.8.1（2025-02-05）
 - ✅ **所有語音練習遊戲統一加入錄音回放功能**
   - 辨識失敗時：先播放使用者的錄音 → 再播放正確發音 → 提示重試

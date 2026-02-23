@@ -1,6 +1,6 @@
 // 注音符號學習樂園 Service Worker
 // 版本號 - 更新此值會觸發快取更新
-const CACHE_VERSION = 'v1.2.0';
+const CACHE_VERSION = 'v1.4.0';
 const CACHE_NAME = `zhuyin-learning-${CACHE_VERSION}`;
 
 // 需要快取的檔案清單
@@ -8,9 +8,45 @@ const CACHE_FILES = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/settings.html',
+  '/mic-test.html',
+  // 共享 JS
+  '/js/config.js',
+  '/js/vocabulary.js',
+  '/js/speech-recognition.js',
+  '/js/prevent-zoom.js',
+  // 第0關
   '/level0/index.html',
+  // 第1關
   '/level1/index.html',
+  '/level1/games/listen-choose.html',
+  '/level1/games/memory-match.html',
+  '/level1/games/shooting.html',
+  '/level1/games/eagle-shooting.html',
+  '/level1/games/tone-practice.html',
+  '/level1/games/number-practice.html',
+  // 第2關
   '/level2/index.html',
+  '/level2/games/learn-words.html',
+  '/level2/games/listen-choose-image.html',
+  '/level2/games/image-choose-word.html',
+  '/level2/games/drag-match.html',
+  '/level2/games/memory-image.html',
+  '/level2/games/speak-word.html',
+  '/level2/games/number-practice.html',
+  // 第3關
+  '/level3/index.html',
+  '/level3/games/picture-talk.html',
+  '/level3/games/fill-blank.html',
+  '/level3/games/word-order.html',
+  '/level3/games/listen-sentence.html',
+  '/level3/games/story-chain.html',
+  '/level3/games/qa-practice.html',
+  '/level3/games/daily-dialog.html',
+  '/level3/games/read-aloud.html',
+  '/level3/games/number-practice.html',
+  '/level3/games/racing.html',
+  '/level3/games/treasure-hunter.html',
   // 音檔
   '/sounds/F1.mp3',
   '/sounds/F2.mp3',

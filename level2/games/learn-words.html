@@ -644,8 +644,8 @@
 
                     if (now - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
                         hasDetectedVoice = true;
-                        document.getElementById('statusMessage').textContent = '🎤 聽到你的聲音了！';
-                        if (navigator.vibrate) navigator.vibrate(30);
+                        document.getElementById('statusMessage').textContent = '🎤 聽到你的聲音了！正在辨識...';
+                        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                     }
                 } else {
                     lastVoiceTime = null;

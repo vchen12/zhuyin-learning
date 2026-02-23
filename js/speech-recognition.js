@@ -1,5 +1,6 @@
 /**
- * 語音辨識共用模組 v2.0
+ * 語音辨識共用模組 v3.0
+ * 即時回饋架構：VAD 偵測 → interim 即時顯示 → final 立即處理
  * 包含 VAD（語音活動偵測）、錄音回放、和 Web Speech API 整合
  * 針對失語症患者優化
  */
@@ -42,10 +43,11 @@ let sharedCurrentTarget = '';  // 目前要辨識的目標文字
 
 // 回調函數
 let onVoiceDetectedCallback = null;
+let onInterimResultCallback = null;   // 新增：即時中間結果回調
 let onResultCallback = null;
 let onTimeoutCallback = null;
 let onErrorCallback = null;
-let onVoiceDurationUpdateCallback = null;  // 聲音長度更新回調
+let onVoiceDurationUpdateCallback = null;
 
 // ==========================================
 // 初始化函數
@@ -341,6 +343,21 @@ function getPromptByLength(text) {
 }
 
 // ==========================================
+// 系統語音過濾
+// ==========================================
+
+/**
+ * 檢查是否為系統語音（被麥克風錄到的提示語音）
+ * @param {string} transcript - 辨識結果
+ * @returns {boolean} 是否為系統語音
+ */
+function isSystemVoice(transcript) {
+    return transcript.includes('請跟著') || transcript.includes('跟著唸') ||
+           transcript.includes('請唸') || transcript.includes('兩到三次') ||
+           transcript.includes('2到3次') || transcript.includes('再試一次');
+}
+
+// ==========================================
 // 語音辨識核心函數
 // ==========================================
 
@@ -402,16 +419,23 @@ function initSharedRecognition() {
         }
 
         // 過濾掉系統語音
-        if (transcript.includes('請跟著') || transcript.includes('跟著唸') ||
-            transcript.includes('請唸') || transcript.includes('兩到三次') ||
-            transcript.includes('2到3次')) {
+        if (isSystemVoice(transcript)) {
             console.log('過濾系統語音:', transcript);
             return;
         }
 
         if (transcript) {
             sharedLastTranscript = transcript;
-            processSharedResult(transcript, isFinal ? 'final' : 'immediate');
+
+            if (!isFinal) {
+                // 即時中間結果：立即通知遊戲頁面顯示
+                if (onInterimResultCallback) {
+                    onInterimResultCallback(transcript);
+                }
+            } else {
+                // 最終結果：立即處理
+                processSharedResult(transcript, 'final');
+            }
         }
     };
 
@@ -422,8 +446,19 @@ function initSharedRecognition() {
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
             sharedRecognitionFailed = true;
             sharedIsRecognizing = false;
+            stopSharedVAD();
             if (onErrorCallback) {
                 onErrorCallback(event.error);
+            }
+            return;
+        }
+
+        // no-speech 錯誤：如果 VAD 有偵測到聲音，通知遊戲處理
+        if (event.error === 'no-speech' && vadHasDetectedVoice) {
+            stopSharedVAD();
+            sharedIsRecognizing = false;
+            if (onTimeoutCallback) {
+                onTimeoutCallback({ hadVoice: true, duration: vadTotalVoiceDuration });
             }
         }
     };
@@ -444,10 +479,11 @@ function initSharedRecognition() {
             return;
         }
 
+        // 有累積的 transcript，立即處理
         if (sharedLastTranscript && wasRecognizing) {
             processSharedResult(sharedLastTranscript, 'onend');
         } else if (wasRecognizing && onTimeoutCallback) {
-            onTimeoutCallback();
+            onTimeoutCallback({ hadVoice: vadHasDetectedVoice, duration: vadTotalVoiceDuration });
         }
     };
 
@@ -455,7 +491,7 @@ function initSharedRecognition() {
 }
 
 /**
- * 處理辨識結果
+ * 處理辨識結果（final 或 onend 時呼叫）
  */
 function processSharedResult(transcript, source) {
     if (sharedHasReceivedResult || sharedIsProcessing) return;
@@ -476,7 +512,8 @@ function processSharedResult(transcript, source) {
 /**
  * 開始聆聽
  * @param {string} targetText - 目標文字（用於決定聆聽時間）
- * @param {object} callbacks - 回調函數 { onVoiceDetected, onResult, onTimeout, onError, onVoiceDurationUpdate }
+ * @param {object} callbacks - 回調函數
+ *   { onVoiceDetected, onInterimResult, onResult, onTimeout, onError, onVoiceDurationUpdate }
  */
 function startSharedListening(targetText, callbacks = {}) {
     if (sharedIsRecognizing) {
@@ -496,6 +533,7 @@ function startSharedListening(targetText, callbacks = {}) {
 
     // 設定回調
     onVoiceDetectedCallback = callbacks.onVoiceDetected || null;
+    onInterimResultCallback = callbacks.onInterimResult || null;
     onResultCallback = callbacks.onResult || null;
     onTimeoutCallback = callbacks.onTimeout || null;
     onErrorCallback = callbacks.onError || null;
@@ -505,6 +543,7 @@ function startSharedListening(targetText, callbacks = {}) {
     sharedCurrentTarget = targetText || '';
     sharedLastTranscript = '';
     sharedHasReceivedResult = false;
+    sharedIsProcessing = false;
     vadHasDetectedVoice = false;
     vadTotalVoiceDuration = 0;
 
@@ -636,6 +675,9 @@ window.SpeechModule = {
 
     // 語音合成
     speakAsync: speakAsync,
+
+    // 工具函數
+    isSystemVoice: isSystemVoice,
 
     // 常數（供外部參考）
     VAD_THRESHOLD: VAD_THRESHOLD,
