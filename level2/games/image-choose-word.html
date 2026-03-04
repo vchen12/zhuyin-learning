@@ -34,14 +34,18 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .back-btn {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
             cursor: pointer;
             text-decoration: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
         }
         .score-display {
             font-size: 1rem;
@@ -316,6 +320,10 @@
 
         <div class="choices-grid" id="choicesGrid"></div>
 
+        <div style="flex-shrink: 0; text-align: center;">
+            <button onclick="skipQuestion()" style="background: linear-gradient(135deg, #78909c 0%, #546e7a 100%); color: white; border: none; padding: 14px 24px; border-radius: 25px; font-size: 1.1rem; font-weight: bold; cursor: pointer; min-height: 50px; touch-action: manipulation;">⏭️ 跳過</button>
+        </div>
+
         <div class="result-message" id="resultMessage"></div>
     </div>
 
@@ -394,6 +402,9 @@
             updateUI();
             renderChoices();
             document.getElementById('resultMessage').textContent = '';
+
+            // 自動朗讀目標詞彙，幫助失語症患者理解題目
+            setTimeout(() => speak(currentAnswer.text), 500);
         }
 
         function updateUI() {
@@ -447,7 +458,23 @@
                 speak('沒關係，再試試看！');
             }
 
-            setTimeout(nextRound, 2000);
+            setTimeout(nextRound, 4000);
+        }
+
+        function skipQuestion() {
+            if (answered) return;
+            answered = true;
+
+            const buttons = document.querySelectorAll('.choice-btn');
+            buttons.forEach(btn => btn.disabled = true);
+
+            const correctIndex = choices.findIndex(w => w.text === currentAnswer.text);
+            buttons[correctIndex].classList.add('correct');
+
+            document.getElementById('resultMessage').textContent = '正確答案是「' + currentAnswer.text + '」';
+            speak('正確答案是，' + currentAnswer.text);
+
+            setTimeout(nextRound, 2500);
         }
 
         function saveMastered(word) {

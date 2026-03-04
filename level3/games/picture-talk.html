@@ -321,6 +321,7 @@
                 <button class="action-btn listen highlight-btn" onclick="playHint()">🔊 聽示範</button>
                 <button class="action-btn speak mic-highlight" onclick="startListening()" id="speakBtn">🎤 我來說</button>
                 <button class="action-btn highlight-btn" onclick="showSentence()">👁️ 看句子</button>
+                <button class="action-btn highlight-btn" onclick="handleCorrect()" style="background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); color: white;">✅ 我會唸</button>
                 <button class="action-btn next highlight-btn" onclick="skipToNext()">⏭️ 下一題</button>
             </div>
 
@@ -341,9 +342,11 @@
         </div>
     </div>
 
+    <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/sentence-generator.js"></script>
     <script>
-        // 情境句子資料
-        const SCENES = [
+        // 情境句子資料（預設）
+        const DEFAULT_SCENES = [
             { image: '👨❤️👩', sentence: '我愛媽媽', hint: '表達愛的句子' },
             { image: '👨🍚', sentence: '爸爸吃飯', hint: '爸爸在做什麼？' },
             { image: '🐕🏃', sentence: '狗在跑', hint: '狗在做什麼？' },
@@ -357,6 +360,15 @@
             { image: '🌧️☔', sentence: '今天下雨', hint: '描述天氣' },
             { image: '👦👧🎮', sentence: '我們一起玩', hint: '你們在做什麼？' }
         ];
+
+        // 動態產生場景資料（從字詞庫）+ 預設資料作為 fallback
+        let SCENES;
+        try {
+            const generated = generateSceneData(12);
+            SCENES = generated.length >= 8 ? generated : DEFAULT_SCENES;
+        } catch(e) {
+            SCENES = DEFAULT_SCENES;
+        }
 
         let currentRound = 0;
         let totalRounds = 8;
@@ -728,7 +740,13 @@
         function updateUI() {
             document.getElementById('currentRound').textContent = currentRound;
             document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
-            document.getElementById('sceneImage').textContent = currentScene.image;
+            if (currentScene._subjectData) {
+                document.getElementById('sceneImage').innerHTML = buildSceneImageHtml(
+                    [currentScene._subjectData, currentScene._objectData].filter(Boolean), 50
+                );
+            } else {
+                document.getElementById('sceneImage').textContent = currentScene.image;
+            }
             document.getElementById('sceneHint').textContent = currentScene.hint;
         }
 

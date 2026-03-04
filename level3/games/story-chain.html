@@ -8,6 +8,8 @@
     <link rel="manifest" href="../../manifest.json">
     <title>📖 故事接龍</title>
     <script src="../../js/config.js"></script>
+    <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/sentence-generator.js"></script>
     <script src="../../js/prevent-zoom.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -314,7 +316,7 @@
 <body>
     <nav class="nav-bar">
         <a href="../index.html" class="back-btn">← 返回</a>
-        <div class="story-progress">故事 <span id="storyNum">1</span>/3</div>
+        <div class="story-progress">故事 <span id="storyNum">1</span>/<span id="storyTotal">3</span></div>
     </nav>
 
     <div class="game-area">
@@ -332,6 +334,7 @@
             <div class="buttons-section">
                 <button class="action-btn listen highlight-btn" onclick="playHint()">🔊 聽示範</button>
                 <button class="action-btn speak mic-highlight" onclick="startListening()" id="speakBtn">🎤 我來說</button>
+                <button class="action-btn highlight-btn" onclick="handleCorrect()" style="background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); color: white;">✅ 我會唸</button>
                 <button class="action-btn next highlight-btn" onclick="skipScene()">⏭️ 跳過</button>
             </div>
 
@@ -386,6 +389,16 @@
                 ]
             }
         ];
+
+        // 從字詞庫動態補充故事
+        try {
+            const dynamicStories = generateStoryData();
+            if (dynamicStories.length > 0) {
+                STORIES.push(...dynamicStories);
+            }
+        } catch(e) {
+            // 字詞庫不可用時，使用原始故事即可
+        }
 
         let currentStoryIndex = 0;
         let currentSceneIndex = 0;
@@ -619,6 +632,7 @@
             currentStory = STORIES[currentStoryIndex];
 
             document.getElementById('storyNum').textContent = currentStoryIndex + 1;
+            document.getElementById('storyTotal').textContent = STORIES.length;
             document.getElementById('storyTitle').textContent = currentStory.title;
 
             renderSceneCards();

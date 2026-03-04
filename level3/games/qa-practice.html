@@ -321,6 +321,7 @@
                 <button class="action-btn question highlight-btn" onclick="playQuestion()">❓ 聽問題</button>
                 <button class="action-btn speak mic-highlight" onclick="startListening()" id="speakBtn">🎤 我來答</button>
                 <button class="action-btn highlight-btn" onclick="showAnswer()">👁️ 看答案</button>
+                <button class="action-btn highlight-btn" onclick="handleCorrect()" style="background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); color: white;">✅ 我會唸</button>
                 <button class="action-btn next highlight-btn" onclick="skipToNext()">⏭️ 下一題</button>
             </div>
 
@@ -341,9 +342,11 @@
         </div>
     </div>
 
+    <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/sentence-generator.js"></script>
     <script>
-        // 問答資料
-        const QA_DATA = [
+        // 問答資料（預設）
+        const DEFAULT_QA_DATA = [
             { image: '🍎', question: '這是什麼？', answer: '這是蘋果', keyword: '蘋果' },
             { image: '🐕', question: '這是什麼動物？', answer: '這是狗', keyword: '狗' },
             { image: '👨', question: '這是誰？', answer: '這是爸爸', keyword: '爸爸' },
@@ -360,6 +363,15 @@
             { image: '🏠', question: '這是什麼？', answer: '這是房子', keyword: '房' },
             { image: '👵', question: '這是誰？', answer: '這是奶奶', keyword: '奶奶' }
         ];
+
+        // 動態產生問答資料（從字詞庫）+ 預設資料作為 fallback
+        let QA_DATA;
+        try {
+            const generated = generateQAData(15);
+            QA_DATA = generated.length >= 10 ? generated : DEFAULT_QA_DATA;
+        } catch(e) {
+            QA_DATA = DEFAULT_QA_DATA;
+        }
 
         let currentRound = 0;
         let totalRounds = 10;
@@ -731,7 +743,11 @@
         function updateUI() {
             document.getElementById('currentRound').textContent = currentRound;
             document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
-            document.getElementById('qaImage').textContent = currentQA.image;
+            if (currentQA._wordData) {
+                document.getElementById('qaImage').innerHTML = renderImageHtml(currentQA._wordData, 80);
+            } else {
+                document.getElementById('qaImage').textContent = currentQA.image;
+            }
             document.getElementById('qaQuestion').textContent = currentQA.question;
             document.getElementById('qaAnswer').textContent = currentQA.answer;
         }

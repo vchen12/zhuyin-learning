@@ -366,6 +366,7 @@
             <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
             <button class="action-btn mic-highlight" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
             <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+            <button class="action-btn" id="skipBtn" onclick="skipCurrentNumber()" style="display: none; background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%); color: white;">⏭️ 跳過</button>
         </div>
 
         <div class="result-message" id="resultMessage"></div>
@@ -506,6 +507,7 @@
             document.getElementById('progressSection').style.display = 'none';
             document.getElementById('numberGrid').style.display = mode === 'learn' ? 'grid' : 'none';
             document.getElementById('speakBtn').style.display = 'none';
+            document.getElementById('skipBtn').style.display = 'none';
             document.getElementById('resultMessage').textContent = '';
 
             if (mode === 'learn') {
@@ -696,6 +698,7 @@
             document.getElementById('actionButtons').style.display = 'flex';
             document.getElementById('speakBtn').style.display = 'inline-block';
             document.getElementById('manualSpeakBtn').style.display = 'inline-block'; // 總是顯示「我會唸」按鈕
+            document.getElementById('skipBtn').style.display = 'inline-block'; // 顯示跳過按鈕
 
             initSpeechRecognition();
             updateScore();
@@ -1012,6 +1015,35 @@
                     speak('沒關係，再聽一次！');
                 }
             });
+        }
+
+        // 跳過當前數字（speak 模式專用）
+        function skipCurrentNumber() {
+            // 停止正在進行的語音辨識
+            if (recognition) {
+                try { recognition.abort(); } catch(e) {}
+            }
+            isListening = false;
+            stopVAD();
+            clearTimeout(recognitionTimeout);
+
+            // 重設麥克風按鈕狀態
+            document.getElementById('speakBtn').textContent = '🎤 我來唸';
+            document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+
+            // 顯示正確答案
+            var correctText = currentNumber.text;
+            document.getElementById('resultMessage').textContent = '正確答案：' + correctText;
+            document.getElementById('resultMessage').style.color = '#ff9800';
+
+            // 播放正確發音
+            speak(correctText);
+
+            // 延遲後自動進入下一題
+            setTimeout(function() {
+                document.getElementById('resultMessage').style.color = 'white';
+                nextSpeakQuestion();
+            }, 2500);
         }
 
         function startSpeaking() {

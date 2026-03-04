@@ -321,7 +321,7 @@
 <body>
     <nav class="nav-bar">
         <a href="../index.html" class="back-btn">← 返回</a>
-        <div class="dialog-info">對話 <span id="dialogNum">1</span>/4</div>
+        <div class="dialog-info">對話 <span id="dialogNum">1</span>/<span id="dialogTotal">4</span></div>
     </nav>
 
     <div class="game-area">
@@ -341,6 +341,7 @@
             <div class="buttons-section">
                 <button class="action-btn listen highlight-btn" onclick="playLine()">🔊 聽示範</button>
                 <button class="action-btn speak mic-highlight" onclick="startListening()" id="speakBtn">🎤 我來說</button>
+                <button class="action-btn highlight-btn" onclick="handleCorrect()" style="background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); color: white;">✅ 我會唸</button>
                 <button class="action-btn next highlight-btn" onclick="skipLine()">⏭️ 跳過</button>
             </div>
 
@@ -361,6 +362,8 @@
         </div>
     </div>
 
+    <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/sentence-generator.js"></script>
     <script>
         // 對話情境資料
         const DIALOGS = [
@@ -411,6 +414,16 @@
                 ]
             }
         ];
+
+        // 從字詞庫動態補充對話
+        try {
+            const dynamicDialogs = generateDialogData();
+            if (dynamicDialogs.length > 0) {
+                DIALOGS.push(...dynamicDialogs);
+            }
+        } catch(e) {
+            // 字詞庫不可用時，使用原始對話即可
+        }
 
         let currentDialogIndex = 0;
         let currentLineIndex = 0;
@@ -643,6 +656,7 @@
             currentDialog = DIALOGS[currentDialogIndex];
 
             document.getElementById('dialogNum').textContent = currentDialogIndex + 1;
+            document.getElementById('dialogTotal').textContent = DIALOGS.length;
             document.getElementById('sceneTitle').textContent = currentDialog.title;
             document.getElementById('sceneImage').textContent = currentDialog.image;
 

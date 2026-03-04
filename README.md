@@ -101,6 +101,49 @@ zhuyin-learning/
 
 作者：陳宜誠律師（Vincent Chen, Attorney at Law）及 Claude Code
 
+### v3.12.0（2025-02-23）
+- ✅ **失語症深度優化**（全站可用性第二輪修復）
+  - **射擊遊戲錄音回放修復**：加入錄音回放 + 最低聲音長度檢查（≥ 0.4 秒）
+  - **Level 1 數字練習跳過按鈕**：說話模式新增「⏭️ 跳過」按鈕
+  - **5 個 L3 語音遊戲加「✅ 我會唸」按鈕**：qa-practice、picture-talk、story-chain、daily-dialog、read-aloud，讓語音辨識不佳的患者可手動確認
+  - **6 個非語音遊戲加「⏭️ 跳過」按鈕**：fill-blank、listen-sentence、word-order、racing、treasure-hunter、image-choose-word
+  - **Level 2 返回按鈕統一放大**：4 個遊戲的返回按鈕加大為 `padding: 14px 24px; font-size: 1.1rem`
+  - **7 個遊戲加自動 TTS 讀題**：顯示題目時自動朗讀，降低閱讀門檻
+  - **自動換題延長至 4 秒**：從 2-2.5 秒延長至 4 秒，給患者更多反應時間
+  - **賽車衝刺 / 寶物獵人新增「🧑 單人練習」模式**：
+    - 遊戲開始前顯示模式選擇畫面（單人練習 vs 對戰電腦）
+    - 單人模式隱藏電腦賽道/寶物箱，電腦不會自動答題
+    - 完成訊息改為非競爭性（「恭喜完成！」而非「恭喜獲勝！」）
+  - 更新的檔案：
+    - level1/games/shooting.html、number-practice.html
+    - level2/games/image-choose-word.html、listen-choose-image.html、drag-match.html、memory-image.html
+    - level3/games/qa-practice.html、picture-talk.html、story-chain.html、daily-dialog.html、read-aloud.html
+    - level3/games/fill-blank.html、listen-sentence.html、word-order.html、racing.html、treasure-hunter.html
+    - sw.js（版本 v1.6.0）
+
+### v3.11.0（2025-02-23）
+- ✅ **字詞庫與所有遊戲全面連動**
+  - **新增 `js/sentence-generator.js` 句型產生器模組**：從字詞庫動態產生各遊戲所需的句子、問答、填空等資料
+  - **Tier A 完全動態化（5 個遊戲）**：
+    - 問答練習：從字詞庫自動生成「這是什麼？」→「這是{word}」
+    - 句子填空：句型模板 + 從字詞庫隨機取答案和干擾項
+    - 看圖說話：從字詞庫組合「{family}{action}」場景句
+    - 詞彙排序：同上，拆分為可排序的詞彙片段
+    - 聽句選圖：場景句 + 自動生成干擾選項（換主語/換動作/換賓語）
+  - **Tier B 混合模式（3 個遊戲）**：保留原始內容 + 從字詞庫動態補充
+    - 故事接龍：新增「{family}的一天」「我的{animal}」動態故事
+    - 生活對話：新增「買{fruit/food}」「看到{animal}」動態對話
+    - 朗讀練習：新增「我的家」「好吃的食物」「可愛的動物」動態短文
+  - **customImage 支援**：家人上傳的真實照片可在問答練習、看圖說話、詞彙排序等遊戲中顯示
+  - **Fallback 機制**：字詞庫太小時自動回退到原始硬編碼資料
+  - **設定頁面遊戲映射更新**：各類別正確顯示所有使用它的遊戲
+  - 更新的檔案：
+    - js/sentence-generator.js（新增）
+    - level3/games/qa-practice.html、fill-blank.html、picture-talk.html、word-order.html、listen-sentence.html（完全動態化）
+    - level3/games/story-chain.html、daily-dialog.html、read-aloud.html（混合模式）
+    - settings.html（遊戲映射更新）
+    - sw.js（快取清單 + 版本 v1.5.0）
+
 ### v3.10.0（2025-02-23）
 - ✅ **失語症可用性全面修復**（全站 30+ 頁面審計後修正）
   - **Service Worker 快取補齊**：新增 31 個遺漏檔案，確保離線可用

@@ -355,9 +355,11 @@
         </div>
     </div>
 
+    <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/sentence-generator.js"></script>
     <script>
         // 排序題資料
-        const SENTENCES = [
+        const DEFAULT_SENTENCES = [
             { image: '👨❤️👩', sentence: '我愛媽媽', parts: ['我', '愛', '媽媽'] },
             { image: '👨🍚', sentence: '爸爸吃飯', parts: ['爸爸', '吃', '飯'] },
             { image: '🐕🏃', sentence: '狗在跑', parts: ['狗', '在', '跑'] },
@@ -371,6 +373,15 @@
             { image: '👦👧🎮', sentence: '我們一起玩', parts: ['我們', '一起', '玩'] },
             { image: '🌧️☔', sentence: '今天下雨了', parts: ['今天', '下雨', '了'] }
         ];
+
+        // 動態產生排序題資料（從字詞庫）+ 預設資料作為 fallback
+        let SENTENCES;
+        try {
+            const generated = generateWordOrderData(12);
+            SENTENCES = generated.length >= 8 ? generated : DEFAULT_SENTENCES;
+        } catch(e) {
+            SENTENCES = DEFAULT_SENTENCES;
+        }
 
         let currentRound = 0;
         let totalRounds = 8;
@@ -412,12 +423,21 @@
             renderAnswer();
             document.getElementById('resultMessage').textContent = '';
             document.getElementById('answerArea').classList.remove('correct');
+
+            // 自動朗讀目標句子，幫助失語症患者理解題目
+            setTimeout(() => speak(currentQuestion.sentence), 500);
         }
 
         function updateUI() {
             document.getElementById('currentRound').textContent = currentRound;
             document.getElementById('progressFill').style.width = ((currentRound - 1) / totalRounds * 100) + '%';
-            document.getElementById('hintImage').textContent = currentQuestion.image;
+            if (currentQuestion._subjectData) {
+                document.getElementById('hintImage').innerHTML = buildSceneImageHtml(
+                    [currentQuestion._subjectData, currentQuestion._objectData].filter(Boolean), 50
+                );
+            } else {
+                document.getElementById('hintImage').textContent = currentQuestion.image;
+            }
         }
 
         function updateScore() {

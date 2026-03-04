@@ -299,7 +299,7 @@
 <body>
     <nav class="nav-bar">
         <a href="../index.html" class="back-btn">← 返回</a>
-        <div class="passage-info">短文 <span id="passageNum">1</span>/3</div>
+        <div class="passage-info">短文 <span id="passageNum">1</span>/<span id="passageTotal">3</span></div>
     </nav>
 
     <div class="game-area">
@@ -318,6 +318,7 @@
             <div class="buttons-section">
                 <button class="action-btn listen highlight-btn" onclick="playSentence()">🔊 聽示範</button>
                 <button class="action-btn speak mic-highlight" onclick="startListening()" id="speakBtn">🎤 我來讀</button>
+                <button class="action-btn highlight-btn" onclick="handleCorrect()" style="background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); color: white;">✅ 我會唸</button>
                 <button class="action-btn next highlight-btn" onclick="skipSentence()">⏭️ 跳過</button>
             </div>
 
@@ -338,6 +339,8 @@
         </div>
     </div>
 
+    <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/sentence-generator.js"></script>
     <script>
         // 短文資料
         const PASSAGES = [
@@ -375,6 +378,16 @@
                 ]
             }
         ];
+
+        // 從字詞庫動態補充短文
+        try {
+            const dynamicPassages = generatePassageData();
+            if (dynamicPassages.length > 0) {
+                PASSAGES.push(...dynamicPassages);
+            }
+        } catch(e) {
+            // 字詞庫不可用時，使用原始短文即可
+        }
 
         let currentPassageIndex = 0;
         let currentSentenceIndex = 0;
@@ -608,6 +621,7 @@
             currentPassage = PASSAGES[currentPassageIndex];
 
             document.getElementById('passageNum').textContent = currentPassageIndex + 1;
+            document.getElementById('passageTotal').textContent = PASSAGES.length;
             document.getElementById('passageTitle').textContent = currentPassage.title;
             document.getElementById('passageImage').textContent = currentPassage.image;
 

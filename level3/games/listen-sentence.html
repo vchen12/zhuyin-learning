@@ -316,6 +316,10 @@
 
             <div class="choices-grid" id="choicesGrid"></div>
 
+            <div style="flex-shrink: 0; text-align: center;">
+                <button onclick="skipQuestion()" style="background: linear-gradient(135deg, #78909c 0%, #546e7a 100%); color: white; border: none; padding: 14px 24px; border-radius: 25px; font-size: 1.1rem; font-weight: bold; cursor: pointer; min-height: 50px; touch-action: manipulation;">⏭️ 跳過</button>
+            </div>
+
             <div class="result-message" id="resultMessage"></div>
         </div>
     </div>
@@ -332,9 +336,11 @@
         </div>
     </div>
 
+    <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/sentence-generator.js"></script>
     <script>
-        // 聽句選圖資料
-        const QUESTIONS = [
+        // 聽句選圖預設資料
+        const DEFAULT_QUESTIONS = [
             { sentence: '爸爸在吃飯', correct: { image: '👨🍚', desc: '爸爸吃飯' }, wrongs: [
                 { image: '👩🍚', desc: '媽媽吃飯' },
                 { image: '👨📖', desc: '爸爸看書' },
@@ -397,6 +403,15 @@
             ]}
         ];
 
+        // 動態產生聽句選圖資料（從字詞庫）+ 預設資料作為 fallback
+        let QUESTIONS;
+        try {
+            const generated = generateListenSentenceData(12);
+            QUESTIONS = generated.length >= 8 ? generated : DEFAULT_QUESTIONS;
+        } catch(e) {
+            QUESTIONS = DEFAULT_QUESTIONS;
+        }
+
         let currentRound = 0;
         let totalRounds = 10;
         let score = 0;
@@ -439,6 +454,9 @@
             renderChoices();
             document.getElementById('resultMessage').textContent = '';
             document.getElementById('playHint').textContent = '點擊播放，聽句子選圖片';
+
+            // 自動播放句子語音，幫助失語症患者理解題目
+            setTimeout(() => playSentence(), 500);
         }
 
         function updateUI() {
@@ -499,7 +517,23 @@
                 speak('答案是' + currentQuestion.correct.desc);
             }
 
-            setTimeout(nextRound, 2500);
+            setTimeout(nextRound, 4000);
+        }
+
+        function skipQuestion() {
+            if (answered) return;
+            answered = true;
+
+            const buttons = document.querySelectorAll('.choice-btn');
+            const correctIndex = choices.indexOf(currentQuestion.correct);
+
+            buttons.forEach(btn => btn.disabled = true);
+            buttons[correctIndex].classList.add('correct');
+
+            document.getElementById('resultMessage').textContent = '正確答案是「' + currentQuestion.correct.desc + '」';
+            speak('正確答案是，' + currentQuestion.sentence);
+
+            setTimeout(nextRound, 4000);
         }
 
         function endGame() {
