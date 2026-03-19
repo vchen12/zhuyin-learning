@@ -5,7 +5,7 @@
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '4.0.0',
+    version: '4.0.1',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -236,6 +236,51 @@ function getRandomItems(array, n) {
 // ============================================
 
 /**
+ * 使用者模式：aphasia（失語症復健）或 child（一般兒童學習）
+ */
+function getUserMode() {
+    return localStorage.getItem('userMode') || 'aphasia';
+}
+
+function setUserMode(mode) {
+    localStorage.setItem('userMode', mode);
+}
+
+/**
+ * 門檻預設等級定義
+ *
+ * 失語症模式：著重鼓勵發聲，門檻較低，辨識更寬鬆
+ *   - 鼓勵 (0%)：有發聲即通過，適合初期連發聲都困難的患者
+ *   - 起步 (20%)：輕微辨識，只要聲音大致接近就通過
+ *   - 進步 (40%)：中度辨識，可辨認出大致正確的發音
+ *   - 挑戰 (60%)：進階辨識，需要較清楚的發音
+ *
+ * 一般兒童模式：著重正確發音，門檻較高
+ *   - 入門 (40%)：寬鬆辨識，適合初學者
+ *   - 正常 (60%)：標準辨識，適合有基礎的兒童
+ *   - 進階 (80%)：嚴格辨識，需要清楚正確的發音
+ *   - 精準 (90%)：高標準，接近完全正確
+ */
+const THRESHOLD_PRESETS = {
+    aphasia: [
+        { label: '😊 鼓勵', value: 0, desc: '有發聲就通過' },
+        { label: '🌱 起步', value: 20, desc: '聲音大致接近' },
+        { label: '📈 進步', value: 40, desc: '發音大致正確' },
+        { label: '🎯 挑戰', value: 60, desc: '發音較為清楚' }
+    ],
+    child: [
+        { label: '📖 入門', value: 40, desc: '寬鬆辨識' },
+        { label: '🎯 正常', value: 60, desc: '標準辨識' },
+        { label: '⭐ 進階', value: 80, desc: '清楚正確' },
+        { label: '🏆 精準', value: 90, desc: '接近完美' }
+    ]
+};
+
+function getThresholdPresets() {
+    return THRESHOLD_PRESETS[getUserMode()] || THRESHOLD_PRESETS.aphasia;
+}
+
+/**
  * 取得語音相似度過關門檻
  * @returns {number} 0-100 的數值，0 表示只要有發聲就過關
  */
@@ -249,6 +294,20 @@ function getSimilarityThreshold() {
  */
 function setSimilarityThreshold(threshold) {
     localStorage.setItem('similarityThreshold', Math.max(0, Math.min(100, threshold)).toString());
+}
+
+/**
+ * 取得失語症模式下的額外寬鬆度
+ * 失語症患者發音較慢、較含糊，辨識時給予額外的寬鬆空間
+ * @returns {number} 額外扣減的百分比（0-20）
+ */
+function getAphasiaBonus() {
+    if (getUserMode() !== 'aphasia') return 0;
+    const threshold = getSimilarityThreshold();
+    // 門檻越低，額外寬鬆越多
+    if (threshold <= 20) return 15;
+    if (threshold <= 40) return 10;
+    return 5;
 }
 
 /**
@@ -614,7 +673,9 @@ function passesSimilarityThreshold(similarity) {
     const threshold = getSimilarityThreshold();
     // 門檻為 0 時，只要有發聲就通過
     if (threshold === 0) return true;
-    return similarity >= threshold;
+    // 失語症模式：額外降低門檻（患者發音較慢、較含糊）
+    const effectiveThreshold = Math.max(0, threshold - getAphasiaBonus());
+    return similarity >= effectiveThreshold;
 }
 
 /**
@@ -643,6 +704,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getUserName, getCustomWords, speak, playZhuyinSound, createFireworks,
         shuffle, getRandomItems,
         // 語音相似度追蹤系統
+        getUserMode, setUserMode, getThresholdPresets, getAphasiaBonus,
         getSimilarityThreshold, setSimilarityThreshold, calculateSimilarity,
         getPronunciationRecords, recordPronunciation, getPronunciationRecord,
         getPronunciationReport, clearPronunciationRecords, exportPronunciationRecords,

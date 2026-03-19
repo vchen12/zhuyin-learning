@@ -660,15 +660,27 @@
             </div>
         </div>
 
-        <!-- 語音辨識設定 -->
+        <!-- 使用者模式與語音辨識設定 -->
         <div class="settings-section">
-            <div class="section-title">📊 語音辨識門檻設定</div>
-            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
-                調整語音辨識的過關門檻。預設為 0（只要有發聲就過關），<br>
-                可提高標準讓使用者練習更精確的發音。
-            </p>
+            <div class="section-title">📊 語音辨識設定</div>
 
-            <!-- 相似度門檻滑桿 -->
+            <!-- 使用者模式切換 -->
+            <div style="background: #f0f4ff; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 2px solid #667eea;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <label style="color: #667eea; font-weight: bold; font-size: 1.1rem;">使用者類型</label>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="modeAphasia" onclick="switchUserMode('aphasia')" class="threshold-preset" style="flex: 1; min-width: 140px; padding: 15px; font-size: 1rem;">
+                        🧑‍⚕️ 失語症復健
+                    </button>
+                    <button id="modeChild" onclick="switchUserMode('child')" class="threshold-preset" style="flex: 1; min-width: 140px; padding: 15px; font-size: 1rem;">
+                        👶 一般兒童學習
+                    </button>
+                </div>
+                <div id="modeDescription" style="margin-top: 12px; padding: 12px; background: white; border-radius: 10px; font-size: 0.9rem; color: #555;"></div>
+            </div>
+
+            <!-- 門檻設定 -->
             <div style="background: #f9f9f9; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <label style="color: #667eea; font-weight: bold; font-size: 1.1rem;">過關門檻</label>
@@ -684,29 +696,11 @@
                     <span>100% (完全正確)</span>
                 </div>
 
-                <!-- 預設等級快捷按鈕 -->
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
-                    <button onclick="setThreshold(0)" class="threshold-preset" data-value="0">
-                        😊 鼓勵模式 (0%)
-                    </button>
-                    <button onclick="setThreshold(50)" class="threshold-preset" data-value="50">
-                        📖 練習模式 (50%)
-                    </button>
-                    <button onclick="setThreshold(80)" class="threshold-preset" data-value="80">
-                        🎯 挑戰模式 (80%)
-                    </button>
-                    <button onclick="setThreshold(90)" class="threshold-preset" data-value="90">
-                        ⭐ 精準模式 (90%)
-                    </button>
-                </div>
+                <!-- 動態預設等級按鈕 -->
+                <div id="thresholdPresets" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;"></div>
             </div>
 
-            <div style="background: #e8f5e9; padding: 15px; border-radius: 12px; border-left: 4px solid #4caf50;">
-                <p style="color: #2e7d32; font-size: 0.9rem; margin: 0;">
-                    <strong>💡 建議：</strong>失語症復健初期建議使用「鼓勵模式」(0%)，<br>
-                    鼓勵患者多發聲；隨著進步可逐步提高門檻。
-                </p>
-            </div>
+            <div id="modeHint" style="background: #e8f5e9; padding: 15px; border-radius: 12px; border-left: 4px solid #4caf50;"></div>
         </div>
 
         <!-- 發音紀錄 -->
@@ -1889,6 +1883,10 @@
 
             slider.value = threshold;
             display.textContent = threshold + '%';
+
+            // 初始化模式與預設按鈕
+            renderThresholdPresets();
+            updateModeDescription();
             updateThresholdPresets(threshold);
 
             // 滑桿事件
@@ -1917,10 +1915,81 @@
         }
 
         function updateThresholdPresets(value) {
-            document.querySelectorAll('.threshold-preset').forEach(btn => {
+            const presetContainer = document.getElementById('thresholdPresets');
+            if (!presetContainer) return;
+            presetContainer.querySelectorAll('.threshold-preset').forEach(btn => {
                 const btnValue = parseInt(btn.dataset.value);
                 btn.classList.toggle('active', btnValue === value);
             });
+            // 也更新模式按鈕
+            const mode = getUserMode();
+            const modeA = document.getElementById('modeAphasia');
+            const modeC = document.getElementById('modeChild');
+            if (modeA) modeA.classList.toggle('active', mode === 'aphasia');
+            if (modeC) modeC.classList.toggle('active', mode === 'child');
+        }
+
+        function switchUserMode(mode) {
+            setUserMode(mode);
+            renderThresholdPresets();
+            // 切換模式時，自動設定為該模式的第一個預設值
+            const presets = getThresholdPresets();
+            if (presets && presets.length > 0) {
+                setThreshold(presets[0].value);
+            }
+            updateModeDescription();
+        }
+
+        function renderThresholdPresets() {
+            const container = document.getElementById('thresholdPresets');
+            if (!container) return;
+            const presets = getThresholdPresets();
+            const currentValue = getSimilarityThreshold();
+
+            container.innerHTML = '';
+            presets.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'threshold-preset' + (p.value === currentValue ? ' active' : '');
+                btn.dataset.value = p.value;
+                btn.onclick = () => setThreshold(p.value);
+                btn.innerHTML = `${p.label} (${p.value}%)<br><span style="font-size:0.75rem;color:#888;">${p.desc}</span>`;
+                btn.style.cssText = 'flex: 1; min-width: 120px; padding: 12px 8px; text-align: center;';
+                container.appendChild(btn);
+            });
+
+            // 更新模式按鈕狀態
+            const mode = getUserMode();
+            const modeA = document.getElementById('modeAphasia');
+            const modeC = document.getElementById('modeChild');
+            if (modeA) modeA.classList.toggle('active', mode === 'aphasia');
+            if (modeC) modeC.classList.toggle('active', mode === 'child');
+        }
+
+        function updateModeDescription() {
+            const mode = getUserMode();
+            const descEl = document.getElementById('modeDescription');
+            const hintEl = document.getElementById('modeHint');
+            if (descEl) {
+                if (mode === 'aphasia') {
+                    descEl.innerHTML = '<strong>🧑‍⚕️ 失語症復健模式</strong>：著重鼓勵發聲，辨識門檻較低，' +
+                        '額外給予寬鬆度。患者發音較慢、較含糊時也能獲得正面回饋。';
+                } else {
+                    descEl.innerHTML = '<strong>👶 一般兒童學習模式</strong>：著重正確發音練習，' +
+                        '辨識門檻較高，幫助孩子學習標準的注音發音。';
+                }
+            }
+            if (hintEl) {
+                if (mode === 'aphasia') {
+                    hintEl.innerHTML = '<p style="color: #2e7d32; font-size: 0.9rem; margin: 0;">' +
+                        '<strong>💡 建議：</strong>失語症復健初期請使用「鼓勵」(0%)，' +
+                        '鼓勵患者多發聲。隨著進步可逐步調高到「起步」→「進步」→「挑戰」。' +
+                        '系統會自動給予額外寬鬆度，不用擔心門檻太嚴格。</p>';
+                } else {
+                    hintEl.innerHTML = '<p style="color: #2e7d32; font-size: 0.9rem; margin: 0;">' +
+                        '<strong>💡 建議：</strong>剛開始學注音的孩子建議從「入門」(40%) 開始，' +
+                        '有基礎後調到「正常」(60%)，熟練後挑戰「進階」和「精準」模式。</p>';
+                }
+            }
         }
 
         // ==========================================

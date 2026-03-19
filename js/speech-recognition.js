@@ -807,9 +807,9 @@ window.SpeechModule = (function () {
      */
     function getPromptText(text) {
         const len = text ? text.length : 0;
-        if (len <= 1) return { display: '按麥克風，唸 2~3 次 🎤', speak: '請唸兩到三次' };
+        if (len <= 1) return { display: '按麥克風，大聲唸 🎤', speak: '請大聲唸' };
         if (len <= 3) return { display: '按麥克風，跟著唸 🎤', speak: '請跟著唸' };
-        return { display: '按麥克風，唸出來 🎤', speak: '請跟著唸' };
+        return { display: '按麥克風，唸出來 🎤', speak: '請唸出來' };
     }
 
     // ==========================================
