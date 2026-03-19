@@ -663,44 +663,62 @@
         <!-- 使用者模式與語音辨識設定 -->
         <div class="settings-section">
             <div class="section-title">📊 語音辨識設定</div>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                先選擇使用者類型，再選擇辨識難度等級。
+            </p>
 
-            <!-- 使用者模式切換 -->
-            <div style="background: #f0f4ff; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 2px solid #667eea;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <label style="color: #667eea; font-weight: bold; font-size: 1.1rem;">使用者類型</label>
-                </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button id="modeAphasia" onclick="switchUserMode('aphasia')" class="threshold-preset" style="flex: 1; min-width: 140px; padding: 15px; font-size: 1rem;">
+            <!-- 第一步：選擇使用者類型 -->
+            <div style="margin-bottom: 20px;">
+                <div style="color: #667eea; font-weight: bold; font-size: 1rem; margin-bottom: 12px;">第一步：誰在使用？</div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button id="modeAphasia" onclick="switchUserMode('aphasia')"
+                        style="flex: 1; min-width: 150px; padding: 18px 15px; font-size: 1.1rem; border-radius: 15px; border: 3px solid #e0e0e0; background: #f5f5f5; cursor: pointer; transition: all 0.3s; text-align: center; font-weight: bold;">
                         🧑‍⚕️ 失語症復健
+                        <div style="font-size: 0.75rem; font-weight: normal; margin-top: 5px; color: #888;">門檻較低，鼓勵發聲</div>
                     </button>
-                    <button id="modeChild" onclick="switchUserMode('child')" class="threshold-preset" style="flex: 1; min-width: 140px; padding: 15px; font-size: 1rem;">
+                    <button id="modeChild" onclick="switchUserMode('child')"
+                        style="flex: 1; min-width: 150px; padding: 18px 15px; font-size: 1.1rem; border-radius: 15px; border: 3px solid #e0e0e0; background: #f5f5f5; cursor: pointer; transition: all 0.3s; text-align: center; font-weight: bold;">
                         👶 一般兒童學習
+                        <div style="font-size: 0.75rem; font-weight: normal; margin-top: 5px; color: #888;">門檻較高，練習發音</div>
                     </button>
                 </div>
-                <div id="modeDescription" style="margin-top: 12px; padding: 12px; background: white; border-radius: 10px; font-size: 0.9rem; color: #555;"></div>
             </div>
 
-            <!-- 門檻設定 -->
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <label style="color: #667eea; font-weight: bold; font-size: 1.1rem;">過關門檻</label>
-                    <span id="thresholdValue" style="background: #667eea; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 1.1rem;">0%</span>
-                </div>
-
-                <input type="range" id="similarityThreshold" min="0" max="100" value="0"
-                    style="width: 100%; height: 20px; cursor: pointer; accent-color: #667eea;">
-
-                <div style="display: flex; justify-content: space-between; margin-top: 10px; color: #999; font-size: 0.85rem;">
-                    <span>0% (有發聲即可)</span>
-                    <span>50%</span>
-                    <span>100% (完全正確)</span>
-                </div>
-
-                <!-- 動態預設等級按鈕 -->
-                <div id="thresholdPresets" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;"></div>
+            <!-- 第二步：選擇難度等級 -->
+            <div style="margin-bottom: 20px;">
+                <div style="color: #667eea; font-weight: bold; font-size: 1rem; margin-bottom: 12px;">第二步：選擇難度等級</div>
+                <div id="thresholdPresets" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
             </div>
 
-            <div id="modeHint" style="background: #e8f5e9; padding: 15px; border-radius: 12px; border-left: 4px solid #4caf50;"></div>
+            <!-- 目前設定摘要 -->
+            <div id="currentSettingSummary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white; text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px;">目前設定</div>
+                <div id="summaryText" style="font-size: 1.3rem; font-weight: bold;"></div>
+                <div id="summaryDetail" style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;"></div>
+            </div>
+
+            <!-- 進階：手動滑桿 -->
+            <details style="background: #f9f9f9; border-radius: 15px; padding: 5px 15px;">
+                <summary style="cursor: pointer; padding: 12px 0; color: #667eea; font-weight: bold; font-size: 0.95rem;">
+                    🔧 進階：手動調整門檻數值
+                </summary>
+                <div style="padding: 15px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="color: #666; font-size: 0.9rem;">過關門檻</span>
+                        <span id="thresholdValue" style="background: #667eea; color: white; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.95rem;">0%</span>
+                    </div>
+                    <input type="range" id="similarityThreshold" min="0" max="100" value="0"
+                        style="width: 100%; height: 16px; cursor: pointer; accent-color: #667eea;">
+                    <div style="display: flex; justify-content: space-between; margin-top: 8px; color: #999; font-size: 0.8rem;">
+                        <span>0%</span>
+                        <span>50%</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+            </details>
+
+            <!-- 建議提示 -->
+            <div id="modeHint" style="background: #e8f5e9; padding: 15px; border-radius: 12px; border-left: 4px solid #4caf50; margin-top: 15px;"></div>
         </div>
 
         <!-- 發音紀錄 -->
@@ -1884,21 +1902,25 @@
             slider.value = threshold;
             display.textContent = threshold + '%';
 
-            // 初始化模式與預設按鈕
+            // 初始化模式按鈕外觀、預設按鈕、摘要卡片
+            updateModeButtons();
             renderThresholdPresets();
-            updateModeDescription();
-            updateThresholdPresets(threshold);
+            updateModeHint();
+            updateSettingSummary();
 
             // 滑桿事件
             slider.addEventListener('input', function() {
                 const value = parseInt(this.value);
                 display.textContent = value + '%';
-                updateThresholdPresets(value);
+                highlightMatchingPreset(value);
+                updateSettingSummary();
             });
 
             slider.addEventListener('change', function() {
                 const value = parseInt(this.value);
                 localStorage.setItem('similarityThreshold', value.toString());
+                highlightMatchingPreset(value);
+                updateSettingSummary();
                 showToast(`過關門檻已設定為 ${value}%`, 'success');
             });
         }
@@ -1910,34 +1932,72 @@
             slider.value = value;
             display.textContent = value + '%';
             localStorage.setItem('similarityThreshold', value.toString());
-            updateThresholdPresets(value);
+            highlightMatchingPreset(value);
+            updateSettingSummary();
             showToast(`過關門檻已設定為 ${value}%`, 'success');
         }
 
-        function updateThresholdPresets(value) {
-            const presetContainer = document.getElementById('thresholdPresets');
-            if (!presetContainer) return;
-            presetContainer.querySelectorAll('.threshold-preset').forEach(btn => {
+        // 高亮符合目前門檻值的預設按鈕
+        function highlightMatchingPreset(value) {
+            const container = document.getElementById('thresholdPresets');
+            if (!container) return;
+            container.querySelectorAll('button').forEach(btn => {
                 const btnValue = parseInt(btn.dataset.value);
-                btn.classList.toggle('active', btnValue === value);
+                if (btnValue === value) {
+                    btn.style.background = '#667eea';
+                    btn.style.color = 'white';
+                    btn.style.borderColor = '#667eea';
+                    btn.style.transform = 'scale(1.05)';
+                } else {
+                    btn.style.background = '#f5f5f5';
+                    btn.style.color = '#333';
+                    btn.style.borderColor = '#e0e0e0';
+                    btn.style.transform = 'scale(1)';
+                }
             });
-            // 也更新模式按鈕
+        }
+
+        // 更新模式選擇按鈕的外觀（選中高亮）
+        function updateModeButtons() {
             const mode = getUserMode();
             const modeA = document.getElementById('modeAphasia');
             const modeC = document.getElementById('modeChild');
-            if (modeA) modeA.classList.toggle('active', mode === 'aphasia');
-            if (modeC) modeC.classList.toggle('active', mode === 'child');
+
+            if (modeA) {
+                if (mode === 'aphasia') {
+                    modeA.style.background = '#e8eaf6';
+                    modeA.style.borderColor = '#667eea';
+                    modeA.style.boxShadow = '0 0 0 3px rgba(102,126,234,0.3)';
+                } else {
+                    modeA.style.background = '#f5f5f5';
+                    modeA.style.borderColor = '#e0e0e0';
+                    modeA.style.boxShadow = 'none';
+                }
+            }
+            if (modeC) {
+                if (mode === 'child') {
+                    modeC.style.background = '#fff3e0';
+                    modeC.style.borderColor = '#ff9800';
+                    modeC.style.boxShadow = '0 0 0 3px rgba(255,152,0,0.3)';
+                } else {
+                    modeC.style.background = '#f5f5f5';
+                    modeC.style.borderColor = '#e0e0e0';
+                    modeC.style.boxShadow = 'none';
+                }
+            }
         }
 
         function switchUserMode(mode) {
             setUserMode(mode);
+            updateModeButtons();
             renderThresholdPresets();
             // 切換模式時，自動設定為該模式的第一個預設值
             const presets = getThresholdPresets();
             if (presets && presets.length > 0) {
                 setThreshold(presets[0].value);
             }
-            updateModeDescription();
+            updateModeHint();
+            updateSettingSummary();
         }
 
         function renderThresholdPresets() {
@@ -1949,46 +2009,62 @@
             container.innerHTML = '';
             presets.forEach(p => {
                 const btn = document.createElement('button');
-                btn.className = 'threshold-preset' + (p.value === currentValue ? ' active' : '');
                 btn.dataset.value = p.value;
                 btn.onclick = () => setThreshold(p.value);
-                btn.innerHTML = `${p.label} (${p.value}%)<br><span style="font-size:0.75rem;color:#888;">${p.desc}</span>`;
-                btn.style.cssText = 'flex: 1; min-width: 120px; padding: 12px 8px; text-align: center;';
+
+                const isActive = (p.value === currentValue);
+                btn.style.cssText = `
+                    flex: 1; min-width: 100px; padding: 16px 10px;
+                    text-align: center; border-radius: 12px;
+                    border: 3px solid ${isActive ? '#667eea' : '#e0e0e0'};
+                    background: ${isActive ? '#667eea' : '#f5f5f5'};
+                    color: ${isActive ? 'white' : '#333'};
+                    cursor: pointer; transition: all 0.3s;
+                    font-size: 1rem; font-weight: bold;
+                    transform: ${isActive ? 'scale(1.05)' : 'scale(1)'};
+                `;
+                btn.innerHTML = `${p.label}<br><span style="font-size:0.75rem;font-weight:normal;opacity:0.8;">${p.value}% · ${p.desc}</span>`;
                 container.appendChild(btn);
             });
-
-            // 更新模式按鈕狀態
-            const mode = getUserMode();
-            const modeA = document.getElementById('modeAphasia');
-            const modeC = document.getElementById('modeChild');
-            if (modeA) modeA.classList.toggle('active', mode === 'aphasia');
-            if (modeC) modeC.classList.toggle('active', mode === 'child');
         }
 
-        function updateModeDescription() {
+        // 更新紫色摘要卡片
+        function updateSettingSummary() {
+            const summaryText = document.getElementById('summaryText');
+            const summaryDetail = document.getElementById('summaryDetail');
+            if (!summaryText || !summaryDetail) return;
+
             const mode = getUserMode();
-            const descEl = document.getElementById('modeDescription');
-            const hintEl = document.getElementById('modeHint');
-            if (descEl) {
-                if (mode === 'aphasia') {
-                    descEl.innerHTML = '<strong>🧑‍⚕️ 失語症復健模式</strong>：著重鼓勵發聲，辨識門檻較低，' +
-                        '額外給予寬鬆度。患者發音較慢、較含糊時也能獲得正面回饋。';
-                } else {
-                    descEl.innerHTML = '<strong>👶 一般兒童學習模式</strong>：著重正確發音練習，' +
-                        '辨識門檻較高，幫助孩子學習標準的注音發音。';
-                }
+            const threshold = getSimilarityThreshold();
+            const presets = THRESHOLD_PRESETS[mode] || [];
+
+            // 找到匹配的預設名稱
+            const matched = presets.find(p => p.value === threshold);
+            const modeName = mode === 'aphasia' ? '🧑‍⚕️ 失語症復健' : '👶 一般兒童';
+
+            if (matched) {
+                summaryText.textContent = `${modeName} · ${matched.label}`;
+                summaryDetail.textContent = `過關門檻 ${threshold}%（${matched.desc}）`;
+            } else {
+                summaryText.textContent = `${modeName} · 自訂`;
+                summaryDetail.textContent = `過關門檻 ${threshold}%`;
             }
-            if (hintEl) {
-                if (mode === 'aphasia') {
-                    hintEl.innerHTML = '<p style="color: #2e7d32; font-size: 0.9rem; margin: 0;">' +
-                        '<strong>💡 建議：</strong>失語症復健初期請使用「鼓勵」(0%)，' +
-                        '鼓勵患者多發聲。隨著進步可逐步調高到「起步」→「進步」→「挑戰」。' +
-                        '系統會自動給予額外寬鬆度，不用擔心門檻太嚴格。</p>';
-                } else {
-                    hintEl.innerHTML = '<p style="color: #2e7d32; font-size: 0.9rem; margin: 0;">' +
-                        '<strong>💡 建議：</strong>剛開始學注音的孩子建議從「入門」(40%) 開始，' +
-                        '有基礎後調到「正常」(60%)，熟練後挑戰「進階」和「精準」模式。</p>';
-                }
+        }
+
+        // 模式提示訊息
+        function updateModeHint() {
+            const hintEl = document.getElementById('modeHint');
+            if (!hintEl) return;
+            const mode = getUserMode();
+            if (mode === 'aphasia') {
+                hintEl.innerHTML = '<p style="color: #2e7d32; font-size: 0.9rem; margin: 0;">' +
+                    '<strong>💡 建議：</strong>失語症復健初期請使用「鼓勵」(0%)，' +
+                    '鼓勵患者多發聲。隨著進步可逐步調高到「起步」→「進步」→「挑戰」。' +
+                    '系統會自動給予額外寬鬆度，不用擔心門檻太嚴格。</p>';
+            } else {
+                hintEl.innerHTML = '<p style="color: #2e7d32; font-size: 0.9rem; margin: 0;">' +
+                    '<strong>💡 建議：</strong>剛開始學注音的孩子建議從「入門」(40%) 開始，' +
+                    '有基礎後調到「正常」(60%)，熟練後挑戰「進階」和「精準」模式。</p>';
             }
         }
 
@@ -2958,7 +3034,10 @@
             document.getElementById('userNamePreview').style.display = 'none';
             document.getElementById('similarityThreshold').value = 0;
             document.getElementById('thresholdValue').textContent = '0%';
-            updateThresholdPresets(0);
+            updateModeButtons();
+            renderThresholdPresets();
+            updateSettingSummary();
+            updateModeHint();
 
             renderFamilyGrid();
             renderCustomWords();
