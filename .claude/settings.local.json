@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git push:*)",
+      "Bash(done)",
+      "Bash(grep:*)",
+      "Bash(for file in \"/Users/macintosh/Downloads/zhuyin-learning 3/level2/games\"/*.html)",
+      "Bash(do)",
+      "Bash(if ! grep -q \"VOCABULARY\" \"$file\")",
+      "Bash(then)",
+      "Bash(fi)",
+      "Bash(for file in \"/Users/macintosh/Downloads/zhuyin-learning 3/level3/games\"/*.html)",
+      "Bash(git commit:*)",
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(brew:*)",
+      "Bash(wc:*)",
+      "Bash(pip3 install:*)",
+      "Bash(python3 -m venv:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(ls:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

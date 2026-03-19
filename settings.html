@@ -616,28 +616,6 @@
 
         <!-- 家人角色設定已整合到「字詞庫管理」的「家人」類別中 -->
 
-        <!-- 圖片上傳 -->
-        <div class="settings-section">
-            <div class="section-title">📷 自訂圖片</div>
-            <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
-                上傳真實照片來替換預設的 emoji 圖示。<br>
-                系統會自動裁切並處理圖片。
-            </p>
-
-            <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
-                <div class="upload-icon">📤</div>
-                <div class="upload-text">點擊或拖曳圖片到這裡上傳</div>
-                <div class="upload-hint">支援 JPG、PNG 格式，建議正方形圖片</div>
-            </div>
-            <input type="file" id="imageInput" class="hidden-input" accept="image/*" multiple>
-
-            <div class="uploaded-images" id="uploadedImages"></div>
-
-            <div class="upload-section">
-                <p style="color: #666; margin-bottom: 10px; font-size: 0.9rem;">圖片對應設定：上傳後選擇要替換的角色</p>
-            </div>
-        </div>
-
         <!-- 麥克風測試 -->
         <div class="settings-section">
             <div class="section-title">🎤 麥克風測試</div>
@@ -930,6 +908,42 @@
         </div>
     </div>
 
+    <!-- 圖片裁切 Modal -->
+    <div class="modal" id="cropModal">
+        <div class="modal-content" style="max-width: 500px; padding: 20px;">
+            <div class="modal-title">✂️ 裁切圖片</div>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                拖曳移動、滾輪/手指縮放，調整圖片位置
+            </p>
+            <div id="cropContainer" style="position: relative; width: 300px; height: 300px; margin: 0 auto; overflow: hidden; border-radius: 15px; border: 3px solid #667eea; background: #f0f0f0; touch-action: none;">
+                <canvas id="cropCanvas" width="300" height="300"></canvas>
+            </div>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button class="modal-btn cancel" onclick="cancelCrop()" style="padding: 15px 30px; font-size: 1rem; min-height: 50px;">取消</button>
+                <button class="modal-btn confirm" onclick="confirmCrop()" style="padding: 15px 30px; font-size: 1rem; min-height: 50px;">✅ 確認裁切</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 字詞詳情 Modal -->
+    <div class="modal" id="wordDetailModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-title" id="wordDetailTitle">字詞詳情</div>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div id="wordDetailImage" style="font-size: 5rem; margin-bottom: 10px;"></div>
+                <div id="wordDetailText" style="font-size: 1.5rem; font-weight: bold; color: #333;"></div>
+                <div id="wordDetailZhuyin" style="font-size: 1rem; color: #667eea; margin-top: 5px;"></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="save-btn" onclick="replaceWordImage()" style="width: 100%; padding: 15px; margin: 0;">📷 替換圖片</button>
+                <button class="save-btn" onclick="restoreWordImage()" id="restoreImageBtn" style="width: 100%; background: linear-gradient(135deg, #ff9800, #ffc107); padding: 15px; margin: 0; display: none;">🔄 恢復預設圖示</button>
+                <button class="reset-btn" onclick="deleteWordFromDetail()" id="deleteWordBtn" style="width: 100%; padding: 15px; margin: 0; display: none;">🗑️ 刪除此字詞</button>
+                <button class="modal-btn cancel" onclick="closeWordDetail()" style="width: 100%; padding: 15px; margin: 0;">關閉</button>
+            </div>
+            <input type="file" id="wordImageInput" class="hidden-input" accept="image/*">
+        </div>
+    </div>
+
     <!-- 重命名 Modal -->
     <div class="modal" id="renameModal">
         <div class="modal-content">
@@ -938,17 +952,6 @@
             <div class="modal-buttons">
                 <button class="modal-btn cancel" onclick="closeModal()">取消</button>
                 <button class="modal-btn confirm" onclick="confirmRename()">確認</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 圖片選擇 Modal -->
-    <div class="modal" id="assignModal">
-        <div class="modal-content">
-            <div class="modal-title">🎯 選擇要替換的角色</div>
-            <div class="character-grid" id="assignGrid" style="max-height: 300px; overflow-y: auto;"></div>
-            <div class="modal-buttons" style="margin-top: 20px;">
-                <button class="modal-btn cancel" onclick="closeAssignModal()">取消</button>
             </div>
         </div>
     </div>
@@ -1060,9 +1063,7 @@
         ];
 
         let familySettings = [];
-        let uploadedImages = [];
         let currentEditingId = null;
-        let currentAssigningImage = null;
 
         // ==========================================
         // 自訂字詞功能
@@ -1151,7 +1152,7 @@
             };
 
             container.innerHTML = customWords.map(w => `
-                <div style="
+                <div class="word-card" onclick="openWordDetail({id: ${w.id}, word: '${w.word}', text: '${w.word}', zhuyin: '${w.zhuyin}', emoji: '📝', image: ${w.image ? `'${w.image}'` : 'null'}}, 'custom')" style="
                     background: white;
                     border: 2px solid ${categoryColors[w.category] || '#ccc'};
                     border-radius: 12px;
@@ -1160,6 +1161,8 @@
                     align-items: center;
                     gap: 10px;
                     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                    cursor: pointer;
+                    position: relative;
                 ">
                     <span style="
                         background: ${categoryColors[w.category] || '#ccc'};
@@ -1170,7 +1173,7 @@
                     ">${categoryLabels[w.category] || '其他'}</span>
                     <span style="font-size: 1.1rem; font-weight: bold; color: #333;">${w.word}</span>
                     ${w.zhuyin ? `<span style="font-size: 0.85rem; color: #667eea;">${w.zhuyin}</span>` : ''}
-                    <button onclick="removeCustomWord(${w.id})" style="
+                    <button onclick="event.stopPropagation(); removeCustomWord(${w.id})" style="
                         background: #f44336;
                         color: white;
                         border: none;
@@ -1302,8 +1305,8 @@
                     </button>
                 </div>
                 ${words.map(word => `
-                    <div class="word-card" style="position: relative; flex-wrap: wrap;">
-                        <span class="emoji">${word.emoji}</span>
+                    <div class="word-card" onclick="openWordDetail({text: '${word.text.replace(/'/g, "\\'")}', zhuyin: '${(word.zhuyin || '').replace(/'/g, "\\'")}', emoji: '${word.emoji}', customImage: ${word.customImage ? `'${word.customImage}'` : 'null'}}, '${category}')" style="position: relative; flex-wrap: wrap; cursor: pointer;">
+                        <span class="emoji">${word.customImage ? '<img src="' + word.customImage + '" style="width:35px;height:35px;border-radius:50%;object-fit:cover;">' : word.emoji}</span>
                         <div style="flex: 1; min-width: 80px;">
                             <span class="text">${word.text}</span>
                             <span class="zhuyin">${word.zhuyin}</span>
@@ -2460,6 +2463,281 @@
         }
 
         // ==========================================
+        // 圖片裁切功能
+        // ==========================================
+        let cropImage = null;
+        let cropX = 0, cropY = 0, cropScale = 1;
+        let isDragging = false;
+        let lastX, lastY;
+        let lastPinchDist = null;
+        let cropResolve = null;
+        let currentCroppingWord = null;
+
+        function openCropModal(imageDataUrl, wordObj) {
+            return new Promise((resolve) => {
+                cropResolve = resolve;
+                currentCroppingWord = wordObj;
+                cropImage = new Image();
+                cropImage.onload = () => {
+                    const canvas = document.getElementById('cropCanvas');
+                    const minScale = Math.max(300 / cropImage.width, 300 / cropImage.height);
+                    cropScale = minScale;
+                    cropX = (300 - cropImage.width * cropScale) / 2;
+                    cropY = (300 - cropImage.height * cropScale) / 2;
+                    drawCrop();
+                    document.getElementById('cropModal').classList.add('show');
+                    setupCropEvents();
+                };
+                cropImage.src = imageDataUrl;
+            });
+        }
+
+        function drawCrop() {
+            const canvas = document.getElementById('cropCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 300, 300);
+            ctx.drawImage(cropImage, cropX, cropY, cropImage.width * cropScale, cropImage.height * cropScale);
+        }
+
+        function setupCropEvents() {
+            const canvas = document.getElementById('cropCanvas');
+
+            canvas.onmousedown = (e) => {
+                isDragging = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            };
+
+            canvas.onmousemove = (e) => {
+                if (!isDragging) return;
+                cropX += e.clientX - lastX;
+                cropY += e.clientY - lastY;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                drawCrop();
+            };
+
+            canvas.onmouseup = () => isDragging = false;
+            canvas.onmouseleave = () => isDragging = false;
+
+            canvas.onwheel = (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+
+                cropX = mx - (mx - cropX) * delta;
+                cropY = my - (my - cropY) * delta;
+                cropScale *= delta;
+
+                const minScale = Math.max(300 / cropImage.width, 300 / cropImage.height) * 0.5;
+                cropScale = Math.max(minScale, Math.min(cropScale, 5));
+
+                drawCrop();
+            };
+
+            canvas.ontouchstart = (e) => {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    lastX = e.touches[0].clientX;
+                    lastY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    lastPinchDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                }
+            };
+
+            canvas.ontouchmove = (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1 && isDragging) {
+                    cropX += e.touches[0].clientX - lastX;
+                    cropY += e.touches[0].clientY - lastY;
+                    lastX = e.touches[0].clientX;
+                    lastY = e.touches[0].clientY;
+                    drawCrop();
+                } else if (e.touches.length === 2 && lastPinchDist) {
+                    const dist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const delta = dist / lastPinchDist;
+                    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    const rect = canvas.getBoundingClientRect();
+                    const mx = cx - rect.left;
+                    const my = cy - rect.top;
+
+                    cropX = mx - (mx - cropX) * delta;
+                    cropY = my - (my - cropY) * delta;
+                    cropScale *= delta;
+                    lastPinchDist = dist;
+                    drawCrop();
+                }
+            };
+
+            canvas.ontouchend = (e) => {
+                isDragging = false;
+                if (e.touches.length < 2) lastPinchDist = null;
+            };
+        }
+
+        function confirmCrop() {
+            const canvas = document.getElementById('cropCanvas');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            document.getElementById('cropModal').classList.remove('show');
+            if (cropResolve) {
+                cropResolve(dataUrl);
+                cropResolve = null;
+            }
+        }
+
+        function cancelCrop() {
+            document.getElementById('cropModal').classList.remove('show');
+            if (cropResolve) {
+                cropResolve(null);
+                cropResolve = null;
+            }
+        }
+
+        // ==========================================
+        // 字詞詳情與圖片替換功能
+        // ==========================================
+        let currentWordDetail = null;
+        let currentWordCategory = null;
+
+        function openWordDetail(word, category) {
+            currentWordDetail = word;
+            currentWordCategory = category;
+
+            const titleEl = document.getElementById('wordDetailTitle');
+            const imageEl = document.getElementById('wordDetailImage');
+            const textEl = document.getElementById('wordDetailText');
+            const zhuyinEl = document.getElementById('wordDetailZhuyin');
+            const restoreBtn = document.getElementById('restoreImageBtn');
+            const deleteBtn = document.getElementById('deleteWordBtn');
+
+            titleEl.textContent = category === 'custom' ? '自訂字詞詳情' : '字詞詳情';
+            textEl.textContent = word.text || word.word;
+            zhuyinEl.textContent = word.zhuyin || '';
+
+            // 判斷是否有自訂圖片
+            const hasCustomImage = word.customImage || (word.image && word.image.startsWith('data:'));
+
+            if (hasCustomImage) {
+                imageEl.innerHTML = '<img src="' + (word.customImage || word.image) + '" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">';
+                restoreBtn.style.display = 'inline-block';
+            } else {
+                imageEl.textContent = word.emoji || '📝';
+                restoreBtn.style.display = 'none';
+            }
+
+            // 只有自訂字詞才能刪除
+            deleteBtn.style.display = category === 'custom' ? 'inline-block' : 'none';
+
+            document.getElementById('wordDetailModal').classList.add('show');
+        }
+
+        function closeWordDetail() {
+            document.getElementById('wordDetailModal').classList.remove('show');
+            currentWordDetail = null;
+            currentWordCategory = null;
+        }
+
+        function replaceWordImage() {
+            const input = document.getElementById('wordImageInput');
+            input.onclick = null;
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const croppedImage = await openCropModal(event.target.result, currentWordDetail);
+                    if (croppedImage) {
+                        await saveWordImage(croppedImage);
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        function restoreWordImage() {
+            if (!currentWordDetail || !currentWordCategory) return;
+
+            if (currentWordCategory === 'custom') {
+                const customWords = JSON.parse(localStorage.getItem('customWords') || '[]');
+                const word = customWords.find(w => w.id === currentWordDetail.id);
+                if (word) {
+                    delete word.image;
+                    localStorage.setItem('customWords', JSON.stringify(customWords));
+                    renderCustomWords();
+                }
+            } else {
+                // 系統字詞恢復預設
+                loadVocabularyModifications();
+                if (!vocabularyModifications.edited[currentWordCategory]) {
+                    vocabularyModifications.edited[currentWordCategory] = {};
+                }
+                const original = VOCABULARY[currentWordCategory].words.find(w => w.text === currentWordDetail.text);
+                if (original) {
+                    vocabularyModifications.edited[currentWordCategory][currentWordDetail.text] = {
+                        text: original.text,
+                        zhuyin: original.zhuyin,
+                        emoji: original.emoji
+                    };
+                    delete vocabularyModifications.edited[currentWordCategory][currentWordDetail.text].customImage;
+                    saveVocabularyModifications();
+                }
+                renderSystemWords(currentWordCategory);
+            }
+
+            closeWordDetail();
+            showToast('已恢復預設圖示', 'success');
+        }
+
+        function deleteWordFromDetail() {
+            if (currentWordCategory === 'custom' && currentWordDetail) {
+                removeCustomWord(currentWordDetail.id);
+                closeWordDetail();
+            }
+        }
+
+        async function saveWordImage(imageData) {
+            if (!currentWordDetail || !currentWordCategory) return;
+
+            if (currentWordCategory === 'custom') {
+                const customWords = JSON.parse(localStorage.getItem('customWords') || '[]');
+                const word = customWords.find(w => w.id === currentWordDetail.id);
+                if (word) {
+                    word.image = imageData;
+                    localStorage.setItem('customWords', JSON.stringify(customWords));
+                    renderCustomWords();
+                }
+            } else {
+                // 系統字詞
+                loadVocabularyModifications();
+                if (!vocabularyModifications.edited[currentWordCategory]) {
+                    vocabularyModifications.edited[currentWordCategory] = {};
+                }
+                const existing = vocabularyModifications.edited[currentWordCategory][currentWordDetail.text] || currentWordDetail;
+                vocabularyModifications.edited[currentWordCategory][currentWordDetail.text] = {
+                    ...existing,
+                    customImage: imageData
+                };
+                saveVocabularyModifications();
+                renderSystemWords(currentWordCategory);
+            }
+
+            closeWordDetail();
+            showToast('圖片已更新', 'success');
+        }
+
+        // ==========================================
         // 初始化
         // ==========================================
         function init() {
@@ -2470,8 +2748,6 @@
             loadSimilarityThreshold();
             loadPronunciationRecords();
             // renderFamilyGrid(); // 家人設定已整合到字詞庫管理
-            renderUploadedImages();
-            setupUploadEvents();
             // 預設顯示自訂字詞區
             switchVocabCategory('custom');
         }
@@ -2489,11 +2765,6 @@
                 });
             } else {
                 familySettings = JSON.parse(JSON.stringify(DEFAULT_FAMILY));
-            }
-
-            const savedImages = localStorage.getItem('uploadedImages');
-            if (savedImages) {
-                uploadedImages = JSON.parse(savedImages);
             }
         }
 
@@ -2560,133 +2831,10 @@
             closeModal();
         }
 
-        // 設定上傳事件
-        function setupUploadEvents() {
-            const uploadArea = document.getElementById('uploadArea');
-            const imageInput = document.getElementById('imageInput');
-
-            // 拖曳事件
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                handleFiles(e.dataTransfer.files);
-            });
-
-            // 文件選擇
-            imageInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
-            });
-        }
-
-        // 處理上傳的文件
-        function handleFiles(files) {
-            Array.from(files).forEach(file => {
-                if (!file.type.startsWith('image/')) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const imageData = e.target.result;
-                    // 打開分配 Modal
-                    currentAssigningImage = imageData;
-                    openAssignModal();
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // 打開分配 Modal
-        function openAssignModal() {
-            const grid = document.getElementById('assignGrid');
-            grid.innerHTML = '';
-
-            familySettings.forEach((member) => {
-                const item = document.createElement('div');
-                item.className = 'character-item';
-                item.innerHTML = `
-                    <span class="emoji">${member.emoji}</span>
-                    <span class="name">${member.name}</span>
-                `;
-                item.onclick = () => assignImageToMember(member.id);
-                grid.appendChild(item);
-            });
-
-            document.getElementById('assignModal').classList.add('show');
-        }
-
-        // 關閉分配 Modal
-        function closeAssignModal() {
-            document.getElementById('assignModal').classList.remove('show');
-            currentAssigningImage = null;
-        }
-
-        // 將圖片分配給成員
-        function assignImageToMember(id) {
-            const member = familySettings.find(m => m.id === id);
-            if (member && currentAssigningImage) {
-                member.customImage = currentAssigningImage;
-
-                // 儲存到已上傳圖片列表
-                uploadedImages.push({
-                    id: Date.now(),
-                    image: currentAssigningImage,
-                    assignedTo: id,
-                    memberName: member.name
-                });
-
-                renderFamilyGrid();
-                renderUploadedImages();
-                showToast(`已設定「${member.name}」的圖片`, 'success');
-            }
-            closeAssignModal();
-        }
-
-        // 渲染已上傳圖片
-        function renderUploadedImages() {
-            const container = document.getElementById('uploadedImages');
-            container.innerHTML = '';
-
-            uploadedImages.forEach((img) => {
-                const item = document.createElement('div');
-                item.className = 'uploaded-image';
-                item.innerHTML = `
-                    <img src="${img.image}" alt="${img.memberName}">
-                    <button class="delete-btn" onclick="removeUploadedImage(${img.id})">✕</button>
-                    <div class="label">${img.memberName}</div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        // 移除已上傳圖片
-        function removeUploadedImage(id) {
-            const img = uploadedImages.find(i => i.id === id);
-            if (img) {
-                // 移除成員的自訂圖片
-                const member = familySettings.find(m => m.id === img.assignedTo);
-                if (member) {
-                    member.customImage = null;
-                }
-            }
-
-            uploadedImages = uploadedImages.filter(i => i.id !== id);
-            renderFamilyGrid();
-            renderUploadedImages();
-            showToast('已移除圖片');
-        }
 
         // 儲存設定
         function saveSettings() {
             localStorage.setItem('familySettings', JSON.stringify(familySettings));
-            localStorage.setItem('uploadedImages', JSON.stringify(uploadedImages));
             showToast('設定已儲存！', 'success');
         }
 
@@ -2728,12 +2876,10 @@
 
             // 執行還原
             familySettings = JSON.parse(JSON.stringify(DEFAULT_FAMILY));
-            uploadedImages = [];
             customWords = [];
             userName = '';
 
             localStorage.removeItem('familySettings');
-            localStorage.removeItem('uploadedImages');
             localStorage.removeItem('customWords');
             localStorage.removeItem('userName');
             localStorage.removeItem('similarityThreshold');
@@ -2746,7 +2892,6 @@
             updateThresholdPresets(0);
 
             renderFamilyGrid();
-            renderUploadedImages();
             renderCustomWords();
 
             showToast('✅ 已還原預設值', 'success');

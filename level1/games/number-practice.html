@@ -43,349 +43,387 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .back-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-        }
-        .back-btn:active {
-            transform: scale(0.95);
-        }
+        .back-btn:hover { transform: scale(1.05); }
         .score-display {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #667eea;
             font-weight: bold;
         }
+        .score-label { font-size: 0.8rem; color: #888; }
 
-        .game-area {
+        .main-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            padding: 12px;
-            gap: 10px;
+            justify-content: space-between;
+            padding: 20px;
             overflow: hidden;
         }
 
-        .mode-section {
+        .mode-selector {
             display: flex;
-            justify-content: center;
-            gap: 12px;
+            gap: 15px;
+            margin-bottom: 20px;
             flex-wrap: wrap;
+            justify-content: center;
         }
+
         .mode-btn {
-            background: rgba(255,255,255,0.2);
-            border: 3px solid rgba(255,255,255,0.5);
-            padding: 14px 24px;
-            border-radius: 25px;
-            font-size: 1.1rem;
-            font-weight: bold;
+            background: rgba(255,255,255,0.3);
             color: white;
+            border: 2px solid white;
+            padding: 14px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
             cursor: pointer;
-            transition: all 0.2s;
-            min-width: 100px;
+            font-weight: bold;
+            transition: all 0.3s;
         }
         .mode-btn.active {
             background: white;
             color: #667eea;
-            border-color: white;
+            transform: scale(1.1);
+        }
+
+        .display-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        #numberDisplay {
+            font-size: 5rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            min-height: 100px;
+        }
+
+        #zhuyinDisplay {
+            font-size: 2rem;
+            color: rgba(255,255,255,0.9);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            min-height: 50px;
         }
 
         .progress-section {
+            display: none;
             width: 100%;
-            max-width: 400px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 12px;
-            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+            color: white;
         }
+
+        .progress-text { margin-bottom: 8px; font-weight: bold; }
+
         .progress-bar {
-            background: rgba(255,255,255,0.3);
-            height: 8px;
-            border-radius: 4px;
+            width: 100%;
+            height: 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
             overflow: hidden;
         }
+
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            width: 0%;
             transition: width 0.3s;
         }
-        .progress-text {
-            color: white;
-            text-align: center;
-            margin-top: 5px;
-            font-size: 0.85rem;
-        }
 
-        /* 數字顯示區 */
-        .number-display {
-            background: white;
-            border-radius: 20px;
-            padding: 20px 40px;
-            text-align: center;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }
-        .number {
-            font-size: 5rem;
-            color: #667eea;
-            font-weight: bold;
-            line-height: 1;
-        }
-        .number-zhuyin {
-            font-size: 1.3rem;
-            color: #764ba2;
-            margin-top: 5px;
-        }
-
-        /* 選項區 */
-        .options-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            width: 100%;
-            max-width: 280px;
-        }
-        .option-btn {
-            background: white;
-            border: none;
-            padding: 15px;
-            border-radius: 15px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            transition: all 0.2s;
-        }
-        .option-btn:hover {
-            transform: scale(1.05);
-        }
-        .option-btn.correct {
-            background: #4caf50;
-            color: white;
-        }
-        .option-btn.wrong {
-            background: #f44336;
-            color: white;
-        }
-
-        /* 動作按鈕 - 加大尺寸方便兒童操作 */
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            padding: 15px;
-        }
-        .action-btn {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            border: none;
-            padding: 20px 36px;
-            border-radius: 30px;
-            font-size: 1.4rem;
-            color: white;
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-            font-weight: bold;
-            min-width: 150px;
-            min-height: 70px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-        .action-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        }
-        .action-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* 麥克風按鈕閃爍提示 */
-        .action-btn.mic-highlight {
-            animation: mic-glow 1.5s ease-in-out infinite;
-        }
-        @keyframes mic-glow {
-            0%, 100% {
-                box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-            }
-            50% {
-                box-shadow: 0 0 30px 10px rgba(240, 147, 251, 0.8), 0 0 60px 20px rgba(245, 87, 108, 0.5);
-            }
-        }
-
-        .result-message {
-            text-align: center;
-            font-size: 1.2rem;
-            color: white;
-            min-height: 30px;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-
-        /* 數字網格（學習模式） */
-        .number-grid {
+        #numberGrid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
+            gap: 10px;
             width: 100%;
-            max-width: 450px;
-        }
-        .number-card {
-            background: rgba(255,255,255,0.25);
-            padding: 15px 10px;
-            border-radius: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            min-height: 70px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        .number-card:hover {
-            background: rgba(255,255,255,0.45);
-            transform: scale(1.08);
-        }
-        .number-card.mastered {
-            background: rgba(76, 175, 80, 0.6);
-            border: 3px solid #4caf50;
-        }
-        .number-card .num {
-            font-size: 1.8rem;
-            color: white;
-            font-weight: bold;
-        }
-        .number-card .zhuyin {
-            font-size: 0.85rem;
-            color: rgba(255,255,255,0.9);
+            max-width: 500px;
+            margin-bottom: 20px;
         }
 
-        .fireworks {
+        .number-card {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            gap: 5px;
+        }
+
+        .number-card:hover {
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.05);
+        }
+
+        .number-card.mastered {
+            background: rgba(76,175,80,0.5);
+            border-color: #4caf50;
+        }
+
+        .number-card .num {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .number-card .zhuyin {
+            font-size: 0.85rem;
+        }
+
+        #optionsGrid {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+
+        .option-btn {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            border: 2px solid white;
+            padding: 25px;
+            border-radius: 15px;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .option-btn:hover {
+            background: rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+
+        .option-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .option-btn.correct {
+            background: #4caf50;
+            border-color: #4caf50;
+            animation: pulse 0.5s;
+        }
+
+        .option-btn.wrong {
+            background: #ff5252;
+            border-color: #ff5252;
+            animation: shake 0.5s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .action-buttons {
+            display: none;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 16px 28px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #speakBtn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        #manualSpeakBtn {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #333;
+        }
+
+        #skipBtn {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #333;
+        }
+
+        button:hover { transform: scale(1.05); }
+        button:active { transform: scale(0.95); }
+
+        #resultMessage {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .listening {
+            animation: listening-pulse 0.6s infinite;
+        }
+
+        @keyframes listening-pulse {
+            0%, 100% { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+            50% { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        }
+
+        #fireworks {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
             z-index: 1000;
         }
+
         .firework {
             position: absolute;
-            animation: firework-explode 1s ease-out forwards;
-        }
-        @keyframes firework-explode {
-            0% { transform: scale(0); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
+            animation: firework-fall 2s ease-in forwards;
         }
 
-        /* 完成畫面 */
+        @keyframes firework-fall {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(500px) scale(0); }
+        }
+
         .complete-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
             display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
             align-items: center;
             justify-content: center;
-            z-index: 999;
         }
-        .complete-overlay.show { display: flex; }
-        .complete-content {
+
+        .complete-overlay.show {
+            display: flex;
+        }
+
+        .complete-card {
             background: white;
-            padding: 30px;
-            border-radius: 25px;
+            padding: 40px;
+            border-radius: 20px;
             text-align: center;
-            max-width: 320px;
-            margin: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
-        .complete-icon { font-size: 3.5rem; margin-bottom: 15px; }
-        .complete-title { font-size: 1.6rem; color: #667eea; margin-bottom: 10px; }
-        .complete-score { font-size: 1.2rem; color: #666; margin-bottom: 20px; }
+
+        .complete-card h2 { color: #667eea; font-size: 2rem; margin-bottom: 15px; }
+        .complete-card p { color: #333; font-size: 1.5rem; margin-bottom: 30px; }
         .complete-btn {
-            background: linear-gradient(135deg, #4caf50, #8bc34a);
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 1.1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 16px 40px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 25px;
             cursor: pointer;
-            margin: 5px;
         }
 
-        @media (max-width: 400px) {
-            .number { font-size: 4rem; }
-            .number-zhuyin { font-size: 1.1rem; }
-            .number-display { padding: 15px 30px; }
-            .option-btn { font-size: 1.3rem; padding: 12px; }
-            .mode-btn { padding: 6px 12px; font-size: 0.8rem; }
-            .action-btn { padding: 8px 16px; font-size: 0.9rem; }
+        .complete-btn:hover { transform: scale(1.05); }
+
+        @media (max-width: 768px) {
+            #numberGrid { grid-template-columns: repeat(5, 1fr); }
+            #numberDisplay { font-size: 3.5rem; }
+            #zhuyinDisplay { font-size: 1.5rem; }
         }
 
-        @media (max-height: 600px) {
-            .game-area { gap: 6px; padding: 8px; }
-            .number { font-size: 3.5rem; }
-            .number-display { padding: 12px 25px; }
-            .number-zhuyin { font-size: 1rem; }
-            .number-grid { gap: 5px; }
-            .number-card { padding: 5px 3px; }
-            .number-card .num { font-size: 1.2rem; }
-            .number-card .zhuyin { font-size: 0.6rem; }
-            .progress-section { padding: 6px; }
-            .result-message { font-size: 1rem; min-height: 24px; }
+        @media (max-width: 480px) {
+            #numberGrid { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+            .number-card .num { font-size: 1.5rem; }
+            .number-card .zhuyin { font-size: 0.7rem; }
         }
     </style>
 </head>
 <body>
-    <nav class="nav-bar">
+    <div class="nav-bar">
         <a href="../index.html" class="back-btn">← 返回</a>
-        <div class="score-display">得分：<span id="score">0</span></div>
-    </nav>
+        <div class="score-display">
+            <div class="score-label">得分</div>
+            <div id="score">0</div>
+        </div>
+    </div>
 
-    <div class="game-area">
-        <div class="mode-section">
-            <button class="mode-btn active" onclick="setMode('learn')">📖 學習</button>
+    <div class="main-container">
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="setMode('learn')">📚 學習</button>
             <button class="mode-btn" onclick="setMode('listen')">👂 聽音選數</button>
             <button class="mode-btn" onclick="setMode('speak')">🎤 看數唸出</button>
         </div>
 
-        <div class="progress-section" id="progressSection" style="display: none;">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        <div class="display-area">
+            <div class="progress-section" id="progressSection">
+                <div class="progress-text">第 <span id="currentRound">0</span> / <span id="totalRounds">10</span> 題</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
             </div>
-            <div class="progress-text">第 <span id="currentRound">1</span> / <span id="totalRounds">10</span> 題</div>
+
+            <div id="numberDisplay">0</div>
+            <div id="zhuyinDisplay">ㄌㄧㄥˊ</div>
+
+            <div id="optionsGrid"></div>
+
+            <div class="action-buttons" id="actionButtons">
+                <button id="playBtn" onclick="playSound()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">🔊 再聽一次</button>
+            </div>
+
+            <div id="numberGrid"></div>
+
+            <div id="resultMessage"></div>
+
+            <div class="action-buttons" id="speakActionButtons" style="display: none;">
+                <button id="speakBtn" onclick="startListening()">🎤 我來唸</button>
+                <button id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none;">✅ 我會唸</button>
+                <button id="skipBtn" onclick="skipCurrentNumber()" style="display: none;">⏭️ 跳過</button>
+            </div>
         </div>
-
-        <div class="number-display">
-            <div class="number" id="numberDisplay">0</div>
-            <div class="number-zhuyin" id="zhuyinDisplay">ㄌㄧㄥˊ</div>
-        </div>
-
-        <div class="options-grid" id="optionsGrid" style="display: none;"></div>
-
-        <div class="action-buttons" id="actionButtons">
-            <button class="action-btn" onclick="playSound()">🔊 聽發音</button>
-            <button class="action-btn" onclick="nextNumber()">⚡ 換一個</button>
-            <button class="action-btn mic-highlight" id="speakBtn" onclick="startSpeaking()" style="display: none;">🎤 我來唸</button>
-            <button class="action-btn" id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
-            <button class="action-btn" id="skipBtn" onclick="skipCurrentNumber()" style="display: none; background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%); color: white;">⏭️ 跳過</button>
-        </div>
-
-        <div class="result-message" id="resultMessage"></div>
-
-        <div class="number-grid" id="numberGrid"></div>
     </div>
-
-    <div class="fireworks" id="fireworks"></div>
 
     <div class="complete-overlay" id="completeOverlay">
-        <div class="complete-content">
-            <div class="complete-icon">🎉</div>
-            <div class="complete-title">太棒了！</div>
-            <div class="complete-score" id="completeScore">得分：100 分</div>
+        <div class="complete-card">
+            <h2>🎉 遊戲結束！</h2>
+            <p id="completeScore">得分：0 分</p>
             <button class="complete-btn" onclick="restartGame()">🔄 再玩一次</button>
-            <button class="complete-btn" onclick="location.href='../index.html'" style="background: linear-gradient(135deg, #667eea, #764ba2);">🏠 返回選單</button>
         </div>
     </div>
 
+    <div id="fireworks"></div>
+
+    <script src="../../js/speech-recognition.js"></script>
     <script>
         // 數字資料 (0-9)
         const NUMBERS = [
@@ -421,8 +459,7 @@
         let totalRounds = 10;
         let score = 0;
         let questionQueue = [];
-        let recognition = null;
-        let isListening = false;
+        let isProcessing = false;
         let masteredNumbers = new Set(JSON.parse(localStorage.getItem('masteredNumbers_0_9') || '[]'));
 
         // 語音合成
@@ -444,15 +481,12 @@
 
         function speak(text, callback) {
             if ('speechSynthesis' in window) {
-                // 確保語音引擎沒有卡住
                 window.speechSynthesis.cancel();
-
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
                 utterance.rate = 0.85;
                 utterance.pitch = 1.1;
 
-                // 嘗試選擇中文語音
                 const voices = window.speechSynthesis.getVoices();
                 const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('TW'));
                 if (zhVoice) {
@@ -461,13 +495,11 @@
 
                 if (callback) {
                     utterance.onend = callback;
-                    // 備用：如果 onend 沒有觸發，5秒後強制執行 callback
                     setTimeout(() => {
                         if (callback) callback();
                     }, 5000);
                 }
 
-                // 防止某些瀏覽器的語音合成卡住
                 utterance.onerror = (e) => {
                     console.error('語音合成錯誤:', e);
                     if (callback) callback();
@@ -476,18 +508,6 @@
                 window.speechSynthesis.speak(utterance);
             } else if (callback) {
                 callback();
-            }
-        }
-
-        // 快速短語音提示（不中斷辨識）
-        function speakShort(text) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.1;
-                utterance.volume = 0.7;
-                window.speechSynthesis.speak(utterance);
             }
         }
 
@@ -502,12 +522,11 @@
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
-            // 重設UI
             document.getElementById('optionsGrid').style.display = 'none';
             document.getElementById('progressSection').style.display = 'none';
             document.getElementById('numberGrid').style.display = mode === 'learn' ? 'grid' : 'none';
-            document.getElementById('speakBtn').style.display = 'none';
-            document.getElementById('skipBtn').style.display = 'none';
+            document.getElementById('actionButtons').style.display = 'none';
+            document.getElementById('speakActionButtons').style.display = 'none';
             document.getElementById('resultMessage').textContent = '';
 
             if (mode === 'learn') {
@@ -556,7 +575,6 @@
 
         // 聽音選數模式
         function startListenMode() {
-            // 先說明玩法，等用戶準備好再開始
             speak('聽音選數模式！', () => {
                 setTimeout(() => {
                     speak('聽到數字發音後，選出正確的數字！準備好請點「確定」', () => {
@@ -578,6 +596,7 @@
             document.getElementById('progressSection').style.display = 'block';
             document.getElementById('optionsGrid').style.display = 'grid';
             document.getElementById('actionButtons').style.display = 'none';
+            document.getElementById('speakActionButtons').style.display = 'none';
 
             updateScore();
             speak('開始！', () => {
@@ -600,10 +619,8 @@
             document.getElementById('zhuyinDisplay').textContent = '聽發音選擇';
             document.getElementById('resultMessage').textContent = '';
 
-            // 生成選項
             generateOptions();
 
-            // 播放發音
             setTimeout(() => {
                 speak(currentNumber.text);
             }, 500);
@@ -647,7 +664,6 @@
                 document.getElementById('numberDisplay').textContent = currentNumber.num;
                 document.getElementById('zhuyinDisplay').textContent = currentNumber.zhuyin;
 
-                // 加強正確回饋：震動（如果支援）+ 視覺效果 + 語音
                 if (navigator.vibrate) {
                     navigator.vibrate([100, 50, 100]);
                 }
@@ -674,7 +690,6 @@
 
         // 看數唸出模式
         function startSpeakMode() {
-            // 先說明玩法，等用戶準備好再開始
             speak('看數唸出模式！', () => {
                 setTimeout(() => {
                     speak('看到數字後，點麥克風大聲唸出來！準備好請點「確定」', () => {
@@ -695,12 +710,11 @@
 
             document.getElementById('progressSection').style.display = 'block';
             document.getElementById('optionsGrid').style.display = 'none';
-            document.getElementById('actionButtons').style.display = 'flex';
-            document.getElementById('speakBtn').style.display = 'inline-block';
-            document.getElementById('manualSpeakBtn').style.display = 'inline-block'; // 總是顯示「我會唸」按鈕
-            document.getElementById('skipBtn').style.display = 'inline-block'; // 顯示跳過按鈕
+            document.getElementById('actionButtons').style.display = 'none';
+            document.getElementById('speakActionButtons').style.display = 'flex';
+            document.getElementById('manualSpeakBtn').style.display = 'inline-block';
+            document.getElementById('skipBtn').style.display = 'inline-block';
 
-            initSpeechRecognition();
             updateScore();
             speak('開始！', () => {
                 nextSpeakQuestion();
@@ -722,288 +736,50 @@
             document.getElementById('resultMessage').textContent = '看到這個數字了嗎？點擊麥克風唸出來！';
         }
 
-        let recognitionFailed = false;
-        let recognitionTimeout = null;
-        let hasReceivedResult = false;
-        let lastTranscript = '';
+        // 使用 SpeechModule 開始聆聽
+        async function startListening() {
+            if (SpeechModule.isListening() || isProcessing) return;
 
-        // VAD（語音活動偵測）相關變數
-        let audioContext = null;
-        let analyser = null;
-        let vadStream = null;
-        let vadInterval = null;
-        let hasDetectedVoice = false;
-        const VAD_THRESHOLD = 50;
-        const MIN_VOICE_DURATION = 300;
-        let voiceStartTime = null;
-        let totalVoiceDuration = 0;
+            await SpeechModule.init();
 
-        // 錄音相關變數
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let lastRecordedAudioUrl = null;
+            const speakBtn = document.getElementById('speakBtn');
+            speakBtn.disabled = true;
+            speakBtn.classList.add('listening');
 
-        // 初始化 VAD 和錄音
-        async function initVAD() {
-            if (audioContext) return;
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                vadStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const microphone = audioContext.createMediaStreamSource(vadStream);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                analyser.smoothingTimeConstant = 0.5;
-                microphone.connect(analyser);
-
-                // 初始化錄音器
-                initRecorder(vadStream);
-
-                console.log('✅ VAD 和錄音功能初始化成功');
-            } catch (error) {
-                console.error('VAD 初始化失敗:', error);
-            }
-        }
-
-        // 初始化錄音器
-        function initRecorder(stream) {
-            try {
-                const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' :
-                                MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
-                mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) audioChunks.push(event.data);
-                };
-
-                mediaRecorder.onstop = () => {
-                    if (audioChunks.length > 0) {
-                        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-                        if (lastRecordedAudioUrl) URL.revokeObjectURL(lastRecordedAudioUrl);
-                        lastRecordedAudioUrl = URL.createObjectURL(audioBlob);
+            SpeechModule.startListening(currentNumber.text, {
+                onVoiceDetected: () => {
+                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                },
+                onInterim: (text) => {
+                    document.getElementById('resultMessage').textContent = '🎤 聽到：' + text;
+                },
+                onResult: (result) => {
+                    speakBtn.disabled = false;
+                    speakBtn.classList.remove('listening');
+                    if (result.passed) {
+                        handleSpeakCorrect(result.similarity);
+                    } else {
+                        handleRecognitionFailed(currentNumber.text, result.transcript, result.similarity);
                     }
-                };
-            } catch (error) {
-                console.error('錄音器初始化失敗:', error);
-            }
-        }
-
-        // 開始錄音
-        function startRecording() {
-            if (!mediaRecorder) return;
-            audioChunks = [];
-            if (mediaRecorder.state === 'inactive') {
-                try { mediaRecorder.start(); } catch (e) {}
-            }
-        }
-
-        // 停止錄音
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                try { mediaRecorder.stop(); } catch (e) {}
-            }
-        }
-
-        // 回放錄音
-        function playbackRecording() {
-            return new Promise((resolve) => {
-                if (!lastRecordedAudioUrl) { resolve(); return; }
-                const audio = new Audio(lastRecordedAudioUrl);
-                audio.onended = () => resolve();
-                audio.onerror = () => resolve();
-                audio.play().catch(() => resolve());
-            });
-        }
-
-        // 播放語音（返回 Promise）
-        function speakAsync(text) {
-            return new Promise((resolve) => {
-                if (!('speechSynthesis' in window)) { resolve(); return; }
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.85;
-                utterance.pitch = 1.1;
-                utterance.onend = () => resolve();
-                utterance.onerror = () => resolve();
-                window.speechSynthesis.speak(utterance);
-            });
-        }
-
-        // 計算最小需要的聲音長度
-        function getMinVoiceDuration(text) {
-            if (!text) return 500;
-            return Math.max(400, text.length * 400);
-        }
-
-        // 根據文字長度決定聆聽時間
-        function getListenDuration(text) {
-            const len = text ? text.length : 1;
-            if (len === 1) return 10000;     // 單字：10秒（唸2-3次）
-            if (len <= 3) return 8000;       // 2-3字：8秒
-            if (len <= 6) return 10000;      // 4-6字：10秒
-            if (len <= 10) return 12000;     // 7-10字：12秒
-            return 15000;                     // 更長：15秒
-        }
-
-        // 開始 VAD 偵測
-        function startVAD() {
-            if (!analyser) return;
-            hasDetectedVoice = false;
-            voiceStartTime = null;
-            totalVoiceDuration = 0;
-
-            // 開始錄音
-            startRecording();
-
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            let lastVoiceTime = null;
-
-            vadInterval = setInterval(() => {
-                analyser.getByteFrequencyData(dataArray);
-                let sum = 0;
-                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                const average = sum / dataArray.length;
-
-                if (average > VAD_THRESHOLD) {
-                    const now = Date.now();
-                    if (!voiceStartTime) {
-                        voiceStartTime = now;
+                },
+                onTimeout: (info) => {
+                    speakBtn.disabled = false;
+                    speakBtn.classList.remove('listening');
+                    if (info.hadVoice) {
+                        document.getElementById('resultMessage').textContent = '🎤 聲音有點短，請再唸一次！';
+                    } else {
+                        document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
                     }
-                    // 累計聲音長度
-                    if (lastVoiceTime) {
-                        totalVoiceDuration += (now - lastVoiceTime);
-                    }
-                    lastVoiceTime = now;
-
-                    if (now - voiceStartTime > MIN_VOICE_DURATION && !hasDetectedVoice) {
-                        hasDetectedVoice = true;
-                        document.getElementById('resultMessage').textContent = '🎤 聽到你的聲音了！正在辨識...';
-                        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-                    }
-                } else {
-                    lastVoiceTime = null;
-                }
-            }, 50);
-        }
-
-        function stopVAD() {
-            if (vadInterval) {
-                clearInterval(vadInterval);
-                vadInterval = null;
-            }
-            // 停止錄音
-            stopRecording();
-        }
-
-        function initSpeechRecognition() {
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.lang = 'zh-TW';
-                recognition.continuous = true;
-                recognition.interimResults = true;
-                recognition.maxAlternatives = 5;
-
-                recognition.onstart = () => {
-                    isListening = true;
-                    hasReceivedResult = false;
-                    lastTranscript = '';
-                    document.getElementById('speakBtn').textContent = '🎙️ 正在聽...';
-                    document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-                    document.getElementById('resultMessage').textContent = '🎙️ 請大聲唸 2~3 次！';
-                    if (navigator.vibrate) navigator.vibrate(100);
-
-                    // 短提示音
-                    speakShort('請唸兩到三次');
-
-                    // 根據文字長度決定聆聽時間
-                    const listenTime = getListenDuration(currentNumber.text);
-                    recognitionTimeout = setTimeout(() => {
-                        if (isListening) {
-                            try { recognition.stop(); } catch(e) {}
-                        }
-                    }, listenTime);
-                };
-
-                recognition.onaudiostart = () => {
-                    console.log('onaudiostart');
-                };
-
-                recognition.onspeechstart = () => {
-                    console.log('onspeechstart');
-                };
-
-                recognition.onspeechend = () => {
-                    console.log('onspeechend');
-                };
-
-                recognition.onresult = (event) => {
-                    const lastResult = event.results[event.results.length - 1];
-                    const transcript = lastResult[0].transcript.trim();
-                    const isFinal = lastResult.isFinal;
-
-                    if (hasReceivedResult) return;
-
-                    // 過濾系統語音
-                    if (transcript.includes('請唸') || transcript.includes('兩到三次')) return;
-
-                    if (transcript) {
-                        lastTranscript = transcript;
-                        document.getElementById('resultMessage').textContent = '🎤 聽到：' + transcript;
-
-                        // 立即處理
-                        hasReceivedResult = true;
-                        clearTimeout(recognitionTimeout);
-                        stopVAD();
-                        try { recognition.stop(); } catch(e) {}
-                        isListening = false;
-                        document.getElementById('speakBtn').textContent = '🎤 我來唸';
-                        document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-                        checkSpeakResult(transcript);
-                    }
-                };
-
-                recognition.onerror = (event) => {
-                    clearTimeout(recognitionTimeout);
-                    stopVAD();
-                    console.error('語音辨識錯誤:', event.error);
-
-                    if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
-                        recognitionFailed = true;
-                        isListening = false;
-                        document.getElementById('speakBtn').textContent = '🎤 我來唸';
-                        document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+                },
+                onError: (err) => {
+                    speakBtn.disabled = false;
+                    speakBtn.classList.remove('listening');
+                    console.error('語音辨識錯誤:', err);
+                    if (err === 'not-allowed' || err === 'audio-capture') {
                         document.getElementById('resultMessage').textContent = '❌ 麥克風無法使用，請點「✅我會唸」按鈕';
-                        document.getElementById('speakBtn').style.display = 'none';
-                        document.getElementById('manualSpeakBtn').style.display = 'inline-block';
-                        return;
                     }
-                };
-
-                recognition.onend = () => {
-                    clearTimeout(recognitionTimeout);
-                    stopVAD();
-                    const wasListening = isListening;
-                    isListening = false;
-                    document.getElementById('speakBtn').textContent = '🎤 我來唸';
-                    document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-
-                    if (!hasReceivedResult && lastTranscript && wasListening) {
-                        hasReceivedResult = true;
-                        document.getElementById('resultMessage').textContent = '聽到：' + lastTranscript;
-                        checkSpeakResult(lastTranscript);
-                    } else if (!hasReceivedResult && wasListening) {
-                        if (hasDetectedVoice) {
-                            document.getElementById('resultMessage').textContent = '聽到聲音了，但辨識不清楚，請再試一次！';
-                        } else {
-                            document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
-                        }
-                    }
-                };
-            }
-
-            // 初始化 VAD
-            initVAD();
+                }
+            });
         }
 
         function manualSpeakConfirm() {
@@ -1017,119 +793,40 @@
             });
         }
 
-        // 跳過當前數字（speak 模式專用）
+        // 跳過當前數字
         function skipCurrentNumber() {
-            // 停止正在進行的語音辨識
-            if (recognition) {
-                try { recognition.abort(); } catch(e) {}
-            }
-            isListening = false;
-            stopVAD();
-            clearTimeout(recognitionTimeout);
+            SpeechModule.stopListening();
+            isProcessing = false;
 
-            // 重設麥克風按鈕狀態
-            document.getElementById('speakBtn').textContent = '🎤 我來唸';
-            document.getElementById('speakBtn').style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+            document.getElementById('speakBtn').disabled = false;
+            document.getElementById('speakBtn').classList.remove('listening');
 
-            // 顯示正確答案
             var correctText = currentNumber.text;
             document.getElementById('resultMessage').textContent = '正確答案：' + correctText;
             document.getElementById('resultMessage').style.color = '#ff9800';
 
-            // 播放正確發音
             speak(correctText);
 
-            // 延遲後自動進入下一題
             setTimeout(function() {
                 document.getElementById('resultMessage').style.color = 'white';
                 nextSpeakQuestion();
             }, 2500);
         }
 
-        function startSpeaking() {
-            if (!recognition) {
-                if (confirm(`你說的是「${currentNumber.text}」嗎？`)) {
-                    handleSpeakCorrect();
-                }
-                return;
-            }
-
-            if (isListening) return;
-
-            // 啟動 VAD
-            startVAD();
-
-            try {
-                recognition.start();
-            } catch (error) {
-                console.error('啟動辨識失敗:', error);
-                stopVAD();
-            }
-        }
-
-        function checkSpeakResult(transcript) {
-            const hasSound = transcript && transcript.trim().length > 0;
-            const threshold = getSimilarityThreshold();
-
-            // 計算相似度（使用 config.js 的函數）
-            const similarity = hasSound ? calculateSimilarity(transcript, currentNumber.text) : 0;
-
-            // 記錄發音（用於追蹤進度）
-            if (hasSound) {
-                recordPronunciation('number', currentNumber.text, transcript, similarity);
-            }
-
-            // 檢查聲音長度是否足夠
-            const minDuration = getMinVoiceDuration(currentNumber.text);
-            const durationSufficient = totalVoiceDuration >= minDuration;
-
-            // 門檻為 0 時的處理（失語症友善模式）
-            if (threshold === 0) {
-                if ((hasSound || hasDetectedVoice) && durationSufficient) {
-                    handleSpeakCorrect(similarity);
-                } else if (!durationSufficient && (hasSound || hasDetectedVoice)) {
-                    // 聲音太短
-                    document.getElementById('resultMessage').textContent = '🎤 聲音有點短，請再唸一次！';
-                } else {
-                    document.getElementById('resultMessage').textContent = '沒聽清楚，點🎤再試，或點「✅我會唸」';
-                }
-                return;
-            }
-
-            // 門檻 > 0 時的處理
-            const passes = hasSound && passesSimilarityThreshold(similarity) && durationSufficient;
-
-            // 顯示相似度資訊
-            if (hasSound) {
-                const level = getSimilarityLevel(similarity);
-                document.getElementById('resultMessage').textContent = `${level.emoji} ${Math.round(similarity)}% - ${level.label}`;
-            }
-
-            if (passes) {
-                handleSpeakCorrect(similarity);
-            } else {
-                // 辨識失敗，執行回放流程
-                handleRecognitionFailed(currentNumber.text, transcript, similarity);
-            }
-        }
-
         // 辨識失敗後的回放流程
         async function handleRecognitionFailed(target, transcript, similarity) {
-            // 如果有錄音，回放給使用者聽
-            if (lastRecordedAudioUrl) {
+            if (SpeechModule.hasRecording()) {
                 document.getElementById('resultMessage').textContent = '🔊 讓我們聽聽你的發音...';
                 await new Promise(r => setTimeout(r, 500));
-                await playbackRecording();
+                await SpeechModule.playRecording();
                 await new Promise(r => setTimeout(r, 300));
             }
 
-            // 播放正確發音
             document.getElementById('resultMessage').textContent = '🔊 正確的發音是...';
             await new Promise(r => setTimeout(r, 300));
-            await speakAsync(target);
+            await SpeechModule.speak(target);
             await new Promise(r => setTimeout(r, 500));
 
-            // 提示重試
             document.getElementById('resultMessage').textContent = '再試一次！點🎤或點「✅我會唸」';
         }
 
@@ -1138,7 +835,6 @@
             updateScore();
             saveMastered(currentNumber.num);
 
-            // 震動回饋
             if (navigator.vibrate) {
                 navigator.vibrate([100, 50, 100]);
             }
@@ -1146,11 +842,9 @@
             const encouragement = getEncouragement();
             document.getElementById('resultMessage').textContent = '🎉 ' + encouragement + ' 🎉';
 
-            // 立即播放鼓勵語，不要延遲
             speak(encouragement);
             createFireworks(20);
 
-            // 縮短等待時間
             setTimeout(nextSpeakQuestion, 2000);
         }
 

@@ -340,6 +340,7 @@
     <div class="mic-indicator" id="micIndicator">🎤</div>
     <div class="hint-message" id="hintMessage">準備中...</div>
 
+    <script src="../../js/speech-recognition.js"></script>
     <script>
         // 注音符號
         const ALL_SYMBOLS = [
@@ -363,18 +364,7 @@
         let giftCount = 0;
         let currentSymbol = '';
         let currentEagle = null;
-        let isListening = false;
         let gameActive = false;
-        let eagleTimeout = null;
-        let recognition = null;
-        let recognitionTimeout = null;
-
-        // VAD 相關
-        let audioContext = null;
-        let analyser = null;
-        let vadInterval = null;
-        let hasDetectedVoice = false;
-        const VAD_THRESHOLD = 50;
 
         // 初始化雲朵
         function initClouds() {
@@ -392,168 +382,22 @@
 
         // 開始遊戲
         function startGame() {
+            if (!SpeechModule.isSupported()) {
+                alert('很抱歉，您的瀏覽器不支援語音辨識功能。\n\n建議使用 Google Chrome 瀏覽器。');
+                return;
+            }
+
             document.getElementById('startOverlay').classList.add('hidden');
             gameActive = true;
             score = 0;
             giftCount = 0;
             updateUI();
 
-            initRecognition();
-            initVAD();
-
             const userName = getUserName();
             const greeting = userName ? `${userName}，` : '';
             speak(`${greeting}射擊挑戰開始！大聲唸出注音符號，打下禮物吧！`, () => {
                 setTimeout(spawnEagle, 1000);
             });
-        }
-
-        // 初始化 VAD
-        async function initVAD() {
-            if (audioContext) return;
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const microphone = audioContext.createMediaStreamSource(stream);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                microphone.connect(analyser);
-            } catch (e) {
-                console.error('VAD 初始化失敗:', e);
-            }
-        }
-
-        // 開始 VAD
-        function startVAD() {
-            if (!analyser) return;
-            hasDetectedVoice = false;
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-            vadInterval = setInterval(() => {
-                analyser.getByteFrequencyData(dataArray);
-                const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-                if (average > VAD_THRESHOLD && !hasDetectedVoice) {
-                    hasDetectedVoice = true;
-                    showHint('🎤 聽到你的聲音了！正在辨識...');
-                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-                }
-            }, 50);
-        }
-
-        function stopVAD() {
-            if (vadInterval) {
-                clearInterval(vadInterval);
-                vadInterval = null;
-            }
-        }
-
-        // 初始化語音辨識
-        function initRecognition() {
-            if (recognition) return;
-
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert('您的瀏覽器不支援語音辨識，建議使用 Chrome。');
-                return;
-            }
-
-            recognition = new SpeechRecognition();
-            recognition.lang = 'zh-TW';
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.maxAlternatives = 5;
-
-            let lastTranscript = '';
-            let hasResult = false;
-
-            recognition.onstart = () => {
-                isListening = true;
-                hasResult = false;
-                lastTranscript = '';
-                document.getElementById('micIndicator').classList.add('listening');
-            };
-
-            recognition.onresult = (event) => {
-                if (hasResult) return;
-
-                const result = event.results[event.results.length - 1];
-                const transcript = result[0].transcript.trim();
-
-                // 過濾系統語音
-                if (transcript.includes('請唸') || transcript.includes('兩到三次')) return;
-
-                if (transcript) {
-                    lastTranscript = transcript;
-                    showHint('🎤 聽到：' + transcript);
-                    processResult(transcript);
-                    hasResult = true;
-                }
-            };
-
-            recognition.onend = () => {
-                isListening = false;
-                stopVAD();
-                document.getElementById('micIndicator').classList.remove('listening');
-
-                if (!hasResult && lastTranscript) {
-                    processResult(lastTranscript);
-                } else if (!hasResult && !lastTranscript) {
-                    if (hasDetectedVoice) {
-                        showHint('聽到聲音了，但辨識不清楚，請再試一次！');
-                    }
-                }
-
-                // 如果遊戲還在進行且有老鷹在飛，繼續聆聽
-                if (gameActive && currentEagle) {
-                    setTimeout(() => {
-                        if (gameActive && currentEagle) {
-                            startListening();
-                        }
-                    }, 300);
-                }
-            };
-
-            recognition.onerror = (event) => {
-                console.error('語音辨識錯誤:', event.error);
-                isListening = false;
-                document.getElementById('micIndicator').classList.remove('listening');
-            };
-        }
-
-        // 開始聆聽
-        function startListening() {
-            if (isListening || !recognition) return;
-
-            startVAD();
-            try {
-                recognition.start();
-            } catch (e) {
-                console.error('啟動辨識失敗:', e);
-            }
-
-            // 8 秒超時
-            clearTimeout(recognitionTimeout);
-            recognitionTimeout = setTimeout(() => {
-                if (isListening) {
-                    try { recognition.stop(); } catch (e) {}
-                }
-            }, 8000);
-        }
-
-        // 處理辨識結果
-        function processResult(transcript) {
-            if (!currentEagle || !currentSymbol) return;
-
-            // 計算相似度
-            const similarity = calculateSimilarity(transcript, currentSymbol);
-            const passes = passesSimilarityThreshold(similarity);
-
-            // 記錄發音
-            recordPronunciation('zhuyin', currentSymbol, transcript, similarity);
-
-            if (passes) {
-                hitEagle();
-            }
         }
 
         // 生成老鷹
@@ -573,7 +417,7 @@
             const topPosition = 10 + Math.random() * 40;
             eagle.style.top = topPosition + '%';
 
-            // 飛行時間（較慢讓玩家有時間反應）
+            // 飛行時間
             const flyDuration = 8 + Math.random() * 4;
             eagle.style.animationDuration = flyDuration + 's';
 
@@ -599,7 +443,7 @@
 
             setTimeout(() => {
                 speakShort('請唸兩到三次');
-                startListening();
+                startRecognition();
             }, 500);
 
             // 老鷹飛走時
@@ -610,19 +454,51 @@
             });
         }
 
+        // 開始語音辨識
+        async function startRecognition() {
+            if (SpeechModule.isListening() || !gameActive) return;
+
+            await SpeechModule.init();
+
+            SpeechModule.startListening(currentSymbol, {
+                onVoiceDetected: () => {
+                    showHint('🎤 聽到你的聲音了！');
+                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                },
+                onInterim: (text) => {
+                    showHint('🎤 聽到：' + text);
+                },
+                onResult: (result) => {
+                    if (result.passed) {
+                        hitEagle();
+                    }
+                },
+                onTimeout: (info) => {
+                    if (!gameActive || !currentEagle) return;
+                    if (info.hasVoice) {
+                        showHint('聽到聲音了，但辨識不清楚！');
+                    }
+                    // 自動重試
+                    setTimeout(() => {
+                        if (gameActive && currentEagle) {
+                            startRecognition();
+                        }
+                    }, 1500);
+                },
+                onError: (err) => {
+                    console.error('語音辨識錯誤:', err);
+                }
+            });
+        }
+
         // 擊中老鷹
         function hitEagle() {
             if (!currentEagle) return;
 
+            SpeechModule.stopListening();
+
             const eagle = currentEagle;
             const rect = eagle.getBoundingClientRect();
-
-            // 停止聆聽
-            clearTimeout(recognitionTimeout);
-            if (isListening) {
-                try { recognition.stop(); } catch (e) {}
-            }
-            stopVAD();
 
             // 移除老鷹
             eagle.remove();
@@ -665,21 +541,17 @@
         function eagleMissed() {
             if (!currentEagle) return;
 
+            SpeechModule.stopListening();
+
             currentEagle.remove();
             currentEagle = null;
-
-            clearTimeout(recognitionTimeout);
-            if (isListening) {
-                try { recognition.stop(); } catch (e) {}
-            }
-            stopVAD();
 
             showHint('老鷹飛走了，再試一次！');
 
             // 生成下一隻老鷹
             setTimeout(spawnEagle, 1500);
 
-            // 檢查是否結束（收集 10 個禮物或玩了一段時間）
+            // 檢查是否結束
             if (giftCount >= 10) {
                 setTimeout(endGame, 1000);
             }
@@ -746,11 +618,7 @@
         function endGame() {
             gameActive = false;
 
-            clearTimeout(recognitionTimeout);
-            if (isListening) {
-                try { recognition.stop(); } catch (e) {}
-            }
-            stopVAD();
+            SpeechModule.stopListening();
 
             if (currentEagle) {
                 currentEagle.remove();

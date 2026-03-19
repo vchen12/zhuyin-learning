@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v3.12.0
+- **版本**: v4.0.0
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -82,10 +82,11 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 常見開發任務
 
-### 語音辨識調整
-- VAD 門檻: `js/speech-recognition.js` 的 `VAD_THRESHOLD`
-- 聆聽時間: 各遊戲 HTML 中的 `CONFIG.listenDuration`
-- 相似度門檻: 各遊戲的 `CONFIG.similarityThreshold`
+### 語音辨識調整（v4.0 統一模組）
+- 所有語音遊戲統一使用 `js/speech-recognition.js` 的 `SpeechModule`
+- 動態噪音底線: 自動校準環境噪音，不需手動調整
+- 聆聽時間: 由 `SpeechModule` 根據目標文字長度自動決定
+- 相似度門檻: 設定頁的全域設定，由 `config.js` 的 `getSimilarityThreshold()` 讀取
 
 ### 詞彙修改
 - 資料來源: `js/vocabulary.js`
@@ -99,6 +100,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v4.0.0**: 語音辨識系統全面重構（統一核心模組 SpeechModule、動態噪音底線、多候選比對、單音節強化、門檻=0 智慧模式、設定頁字詞庫與圖片裁切整合）
 - **v3.12.0**: 失語症深度優化（錄音回放修復、我會唸按鈕、跳過按鈕、自動TTS讀題、單人練習模式、按鈕放大、延長換題時間）
 - **v3.11.0**: 字詞庫與所有遊戲連動（sentence-generator.js、8 個遊戲動態化、customImage 支援）
 - **v3.10.0**: 失語症可用性全面修復（SW快取補齊、競賽減速、按鈕放大、跳過按鈕、設定頁 Modal 化）
