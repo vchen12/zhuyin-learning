@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>郵輪出航 — 說話旅行</title>
+    <script src="../js/prevent-zoom.js" defer></script>
+    <style>
+        /*
+         * 郵輪出航（原型）
+         * 原則：聲音就是搖桿。他一出聲船就動；說滿一個詞就抵達一個港口，港口出現家人合照。
+         * 螢幕觸碰不推進任何進度（只有水面小漣漪），家長功能以長按開啟。
+         */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            height: 100vh; height: 100dvh;
+            font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+            background: linear-gradient(180deg, #8fd3ff 0%, #d6f0ff 48%, #2f7fc4 48%, #1b5f9e 100%);
+            color: #fff; position: relative; -webkit-user-select: none; user-select: none;
+        }
+
+        /* 場景 */
+        #scene { position: absolute; inset: 0; }
+        .sun { position: absolute; top: 6%; right: 8%; width: 14vmin; height: 14vmin; border-radius: 50%;
+               background: radial-gradient(circle, #fff7c2 0%, #ffd86b 60%, rgba(255,216,107,0) 72%); }
+        .cloud { position: absolute; top: 12%; width: 22vmin; height: 7vmin; background: #fff; border-radius: 99px; opacity: .9;
+                 animation: drift 60s linear infinite; }
+        .cloud::before { content: ""; position: absolute; left: 25%; top: -55%; width: 45%; height: 130%; background: #fff; border-radius: 50%; }
+        .cloud.c2 { top: 22%; width: 16vmin; height: 5vmin; animation-duration: 80s; animation-delay: -30s; }
+        @keyframes drift { from { left: -30vmin; } to { left: 110vw; } }
+
+        .waves { position: absolute; left: 0; right: 0; top: 48%; height: 52%; overflow: hidden; }
+        .wave { position: absolute; left: -50%; width: 200%; height: 14vmin; top: 0;
+                background: radial-gradient(ellipse at 50% 100%, rgba(255,255,255,.35) 0 40%, transparent 41%) 0 0/12vmin 14vmin repeat-x;
+                animation: wave 6s linear infinite; opacity: .7; }
+        .wave.w2 { top: 8vmin; animation-duration: 9s; animation-direction: reverse; opacity: .45; }
+        .wave.w3 { top: 18vmin; animation-duration: 12s; opacity: .3; }
+        @keyframes wave { from { transform: translateX(0); } to { transform: translateX(12vmin); } }
+        .waves.engine .wave { animation-duration: 2.2s; }
+        .waves.engine .wave.w2 { animation-duration: 3s; }
+        .waves.engine .wave.w3 { animation-duration: 4s; }
+
+        /* 航線與港口 */
+        #route { position: absolute; left: 6%; right: 6%; top: 44%; height: 4px; background: rgba(255,255,255,.55); border-radius: 2px; }
+        .port { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 5.2vmin; height: 5.2vmin; border-radius: 50%;
+                background: #fff; border: 3px solid #1b5f9e; box-shadow: 0 2px 8px rgba(0,0,0,.25); transition: transform .3s, background .3s; }
+        .port .label { position: absolute; top: -3.6vmin; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 2.6vmin;
+                       color: #10456f; font-weight: 700; text-shadow: 0 1px 0 #fff; }
+        .port.done { background: #ffd86b; transform: translate(-50%, -50%) scale(1.15); }
+        .port.next { animation: pulse 1.2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,216,107,.8); } 50% { box-shadow: 0 0 0 2vmin rgba(255,216,107,0); } }
+
+        /* 船 */
+        #ship { position: absolute; top: 44%; left: 6%; width: 26vmin; height: 20vmin; transform: translate(-50%, -78%);
+                transition: left .12s linear; will-change: left; }
+        #ship .body { position: absolute; inset: 0; animation: bob 3s ease-in-out infinite; }
+        .engine #ship .body { animation: bob 1s ease-in-out infinite; }
+        @keyframes bob { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-1.2vmin) rotate(1.2deg); } }
+        #shipPhoto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 18% 18% 10% 10%;
+                     border: .6vmin solid #fff; box-shadow: 0 6px 20px rgba(0,0,0,.35); display: none; background: #fff; }
+        #shipSvg { width: 100%; height: 100%; filter: drop-shadow(0 6px 10px rgba(0,0,0,.3)); }
+        .smoke { position: absolute; left: 62%; top: -8%; width: 3vmin; height: 3vmin; border-radius: 50%; background: rgba(255,255,255,.85);
+                 opacity: 0; }
+        .engine .smoke { animation: puff 1.4s ease-out infinite; }
+        .smoke.s2 { animation-delay: .45s; } .smoke.s3 { animation-delay: .9s; }
+        @keyframes puff { 0% { opacity: .9; transform: translate(0,0) scale(.6); } 100% { opacity: 0; transform: translate(-4vmin,-9vmin) scale(1.8); } }
+
+        /* 聲音能量條（在船下方） */
+        #voiceBar { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); width: 46vmin; height: 2.6vmin; border-radius: 99px;
+                    background: rgba(255,255,255,.25); overflow: hidden; }
+        #voiceFill { height: 100%; width: 0; background: linear-gradient(90deg, #ffd86b, #ff9f43); border-radius: 99px; transition: width .08s; }
+        #voiceBar.voiced #voiceFill { background: linear-gradient(90deg, #7bed9f, #2ed573); }
+        #voiceHint { position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: 4vmin; font-weight: 700;
+                     text-shadow: 0 2px 6px rgba(0,0,0,.4); white-space: nowrap; }
+
+        /* 港口卡片（照片揭示） */
+        #portCard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.6); opacity: 0; pointer-events: none;
+                    width: min(70vmin, 90vw); background: #fff; border-radius: 3vmin; padding: 2vmin; box-shadow: 0 20px 60px rgba(0,0,0,.45);
+                    transition: transform .35s cubic-bezier(.2,.9,.3,1.3), opacity .3s; }
+        #portCard.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        #portCard img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 2vmin; background: #eee; display: block; }
+        #portCard .empty { width: 100%; aspect-ratio: 4/3; border-radius: 2vmin; background: #eef4fa; display: flex; align-items: center;
+                           justify-content: center; font-size: 12vmin; }
+        #portCard .name { text-align: center; color: #10456f; font-size: 6vmin; font-weight: 800; padding: 1.5vmin 0 .5vmin; }
+
+        /* 終點慶祝 */
+        #finale { position: absolute; inset: 0; background: rgba(16,69,111,.92); display: none; flex-direction: column; align-items: center;
+                  justify-content: center; gap: 3vmin; padding: 4vmin; text-align: center; }
+        #finale.show { display: flex; }
+        #finale h2 { font-size: 9vmin; }
+        #finaleStrip { display: flex; gap: 2vmin; flex-wrap: wrap; justify-content: center; }
+        #finaleStrip img { width: 22vmin; height: 16.5vmin; object-fit: cover; border-radius: 2vmin; border: .5vmin solid #fff; }
+
+        /* 開始畫面（iOS 需要一次手勢才能開麥克風） */
+        #startOverlay { position: absolute; inset: 0; background: rgba(16,69,111,.88); display: flex; flex-direction: column; align-items: center;
+                        justify-content: center; gap: 3vmin; z-index: 20; padding: 5vmin; text-align: center; }
+        #startBtn { font-size: 8vmin; padding: 4vmin 9vmin; border: none; border-radius: 99px; background: #ffd86b; color: #10456f; font-weight: 900;
+                    box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+        #startBtn:active { transform: scale(.96); }
+        #startOverlay p { font-size: 3.6vmin; opacity: .9; line-height: 1.5; }
+        #startOverlay .err { color: #ffb4b4; font-size: 3vmin; }
+
+        /* 家長列（長按左上角錨點開啟） */
+        #anchor { position: absolute; left: 1.5vmin; top: 1.5vmin; width: 9vmin; height: 9vmin; border-radius: 50%; background: rgba(255,255,255,.18);
+                  display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; z-index: 15; }
+        #parentPanel { position: absolute; inset: 0; background: #f4f7fb; color: #223; display: none; z-index: 30; overflow-y: auto;
+                       -webkit-overflow-scrolling: touch; padding: 3vmin; }
+        #parentPanel.show { display: block; }
+        #parentPanel h2 { font-size: 3.6vmin; color: #10456f; margin: 2vmin 0 1vmin; }
+        #parentPanel p.note { color: #556; font-size: 2.4vmin; line-height: 1.5; }
+        .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(26vmin, 1fr)); gap: 2vmin; }
+        .slot { background: #fff; border-radius: 2vmin; padding: 1.5vmin; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .slot .thumb { width: 100%; aspect-ratio: 4/3; border-radius: 1.5vmin; background: #e6edf5; object-fit: cover; display: block; }
+        .slot input[type=text] { width: 100%; margin-top: 1vmin; font-size: 2.6vmin; padding: 1vmin; border: 1px solid #cdd; border-radius: 1vmin; }
+        .slot label.pick { display: block; margin-top: 1vmin; text-align: center; background: #667eea; color: #fff; border-radius: 1vmin;
+                           padding: 1.2vmin; font-size: 2.6vmin; cursor: pointer; }
+        .slot input[type=file] { display: none; }
+        .row { display: flex; gap: 2vmin; flex-wrap: wrap; align-items: center; margin: 1.5vmin 0; }
+        .btn { font-size: 3vmin; padding: 1.6vmin 3vmin; border: none; border-radius: 99px; background: #667eea; color: #fff; font-weight: 700; }
+        .btn.gray { background: #8a94a6; } .btn.red { background: #e05c5c; }
+        .stat { background: #fff; border-radius: 2vmin; padding: 2vmin; font-size: 2.8vmin; line-height: 1.7; }
+        .stat b { color: #10456f; font-size: 3.6vmin; }
+        .ripple { position: absolute; width: 4vmin; height: 4vmin; border-radius: 50%; border: 2px solid rgba(255,255,255,.7);
+                  transform: translate(-50%,-50%); animation: ripple .7s ease-out forwards; pointer-events: none; }
+        @keyframes ripple { to { transform: translate(-50%,-50%) scale(3); opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div id="scene">
+        <div class="sun"></div>
+        <div class="cloud"></div><div class="cloud c2"></div>
+        <div class="waves" id="waves"><div class="wave"></div><div class="wave w2"></div><div class="wave w3"></div></div>
+        <div id="route"></div>
+        <div id="ship">
+            <div class="body">
+                <div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div>
+                <img id="shipPhoto" alt="">
+                <svg id="shipSvg" viewBox="0 0 260 200" aria-hidden="true">
+                    <rect x="70" y="40" width="120" height="50" rx="8" fill="#fff"/>
+                    <rect x="90" y="18" width="80" height="30" rx="6" fill="#fff"/>
+                    <rect x="120" y="0" width="22" height="26" rx="4" fill="#e05c5c"/>
+                    <g fill="#8fd3ff"><circle cx="85" cy="65" r="6"/><circle cx="105" cy="65" r="6"/><circle cx="125" cy="65" r="6"/><circle cx="145" cy="65" r="6"/><circle cx="165" cy="65" r="6"/></g>
+                    <path d="M20 95 H240 L215 150 H45 Z" fill="#1b5f9e"/>
+                    <path d="M20 95 H240 L232 112 H28 Z" fill="#ffd86b"/>
+                </svg>
+            </div>
+        </div>
+        <div id="voiceHint">說話，船就會開 🚢</div>
+        <div id="voiceBar"><div id="voiceFill"></div></div>
+        <div id="portCard"><div id="portMedia"></div><div class="name" id="portName"></div></div>
+        <div id="finale"><h2>🎉 到了！</h2><div id="finaleStrip"></div><p style="font-size:3.6vmin;opacity:.85">等一下會再出航一次</p></div>
+    </div>
+
+    <div id="anchor" title="家長：長按開啟">⚓</div>
+
+    <div id="startOverlay">
+        <h1 style="font-size:8vmin">🚢 郵輪出航</h1>
+        <p>按下開始後，<b>說話</b>船就會往前開。<br>說完一個詞，就會到一個港口。</p>
+        <button id="startBtn">出航</button>
+        <p class="err" id="startErr"></p>
+    </div>
+
+    <div id="parentPanel">
+        <div class="row" style="justify-content:space-between">
+            <h2 style="margin:0">⚓ 家長設定</h2>
+            <button class="btn gray" id="closePanel">關閉</button>
+        </div>
+        <p class="note">照片存在這台 iPad 的瀏覽器裡（不上傳）。船的照片建議用他喜歡的郵輪；港口照片用那次旅行的家人合照。港口名稱可改成真實地名。</p>
+
+        <h2>船</h2>
+        <div class="slots"><div class="slot" id="shipSlot"></div></div>
+
+        <h2>港口（依序抵達）</h2>
+        <div class="slots" id="portSlots"></div>
+
+        <h2>今天的紀錄</h2>
+        <div class="stat" id="stats"></div>
+        <div class="row">
+            <button class="btn" id="exportLog">匯出紀錄 (JSON)</button>
+            <button class="btn red" id="clearLog">清除紀錄</button>
+        </div>
+
+        <h2>偵測</h2>
+        <div class="stat" id="detectStat">—</div>
+        <p class="note">綠色＝人聲；橘色＝有聲響但不是說話（敲打）。靈敏度在「設定」頁的「人聲偵測」調整。</p>
+        <div class="row">
+            <button class="btn gray" id="restart">↺ 重新出航</button>
+            <a class="btn gray" href="../index.html" style="text-decoration:none">← 回主選單</a>
+        </div>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/speech-recognition.js"></script>
+    <script>
+        'use strict';
+        // ==========================================
+        // 參數
+        // ==========================================
+        const PORT_COUNT = 5;
+        const FRAME_MS = 25;
+        const CONFIRM_FRAMES = 4;        // 連續 4 幀人聲 → 引擎啟動（≈100ms）
+        const ENGINE_OFF_MS = 320;       // 靜音多久引擎停
+        const UTTER_MIN_MS = 250;        // 一個「詞」至少發聲多久
+        const UTTER_END_MS = 450;        // 發聲後靜音多久算說完
+        const LEG_FULL_MS = 1400;        // 持續發聲多久走完一段航程
+        const CARD_MS = 3200;            // 港口照片顯示時間
+        const FINALE_MS = 9000;          // 終點畫面停留時間，之後自動再出航
+        const SPEAKER_TAIL_MS = 350;     // 喇叭播音（汽笛/TTS）結束後再忽略多久
+
+        // ==========================================
+        // 狀態
+        // ==========================================
+        const $ = id => document.getElementById(id);
+        let data = loadData();
+        let leg = 0, legProgress = 0;    // 目前航段 / 進度 0~1
+        let engineOn = false, voicedRun = 0, lastVoicedAt = 0;
+        let utterMs = 0, utterPeak = 0, utterStart = 0, utterOpen = false, utterConfirmed = false;
+        let speakerUntil = 0;            // 此時間之前忽略麥克風（喇叭在響）
+        let gate = 0.006, gateFrozenUntil = 0;
+        let loop = null, busy = false, finished = false;
+        let audioCtx = null;
+
+        // ==========================================
+        // 資料（localStorage）
+        // ==========================================
+        function loadData() {
+            let d = null;
+            try { d = JSON.parse(localStorage.getItem('voyage.data') || 'null'); } catch (e) { /* ignore */ }
+            if (!d) d = { ship: null, ports: [] };
+            const defaults = ['基隆', '沖繩', '石垣島', '花蓮', '回家'];
+            for (let i = 0; i < PORT_COUNT; i++) {
+                if (!d.ports[i]) d.ports[i] = { name: defaults[i] || ('港口 ' + (i + 1)), img: null };
+            }
+            return d;
+        }
+        function saveData() {
+            try { localStorage.setItem('voyage.data', JSON.stringify(data)); return true; }
+            catch (e) { alert('儲存空間不足，請把照片張數減少，或清除紀錄。'); return false; }
+        }
+        function loadLog() { try { return JSON.parse(localStorage.getItem('voyage.log') || '[]'); } catch (e) { return []; } }
+        function appendLog(entry) {
+            const log = loadLog(); log.push(entry);
+            while (log.length > 3000) log.shift();
+            try { localStorage.setItem('voyage.log', JSON.stringify(log)); } catch (e) { /* ignore */ }
+        }
+
+        // ==========================================
+        // 場景
+        // ==========================================
+        function portX(i) { return (i + 1) / PORT_COUNT * 100; }   // 航線上的百分比位置
+        function buildRoute() {
+            const route = $('route'); route.innerHTML = '';
+            for (let i = 0; i < PORT_COUNT; i++) {
+                const p = document.createElement('div');
+                p.className = 'port'; p.id = 'port' + i; p.style.left = portX(i) + '%';
+                p.innerHTML = '<div class="label">' + escapeHtml(data.ports[i].name) + '</div>';
+                route.appendChild(p);
+            }
+            renderShip(); updatePorts(); placeShip();
+        }
+        function renderShip() {
+            const img = $('shipPhoto'), svg = $('shipSvg');
+            if (data.ship) { img.src = data.ship; img.style.display = 'block'; svg.style.display = 'none'; }
+            else { img.style.display = 'none'; svg.style.display = 'block'; }
+        }
+        function updatePorts() {
+            for (let i = 0; i < PORT_COUNT; i++) {
+                const p = $('port' + i);
+                p.classList.toggle('done', i < leg);
+                p.classList.toggle('next', i === leg && !finished);
+            }
+        }
+        function placeShip() {
+            // 船在航線上的位置：航線佔 6%~94% 寬；起點在 0%，各港口在 portX(i)
+            const from = leg === 0 ? 0 : portX(leg - 1);
+            const to = leg >= PORT_COUNT ? 100 : portX(leg);
+            const pct = from + (to - from) * Math.min(1, legProgress);
+            $('ship').style.left = (6 + pct * 0.88) + '%';
+        }
+        function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+        function setEngine(on) {
+            if (engineOn === on) return;
+            engineOn = on;
+            document.body.classList.toggle('engine', on);
+            $('waves').classList.toggle('engine', on);
+            $('voiceHint').textContent = on ? '船在開了！🚢💨' : (finished ? '' : '說話，船就會開 🚢');
+        }
+
+        // ==========================================
+        // 聲音效果（合成，不需音檔；播放期間關閉麥克風判定）
+        // ==========================================
+        function ensureAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+        function horn(times) {
+            ensureAudio();
+            const t0 = audioCtx.currentTime;
+            const dur = 0.7, gap = 0.25;
+            for (let k = 0; k < (times || 1); k++) {
+                const start = t0 + k * (dur + gap);
+                [92, 138, 184].forEach((f, i) => {
+                    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), lp = audioCtx.createBiquadFilter();
+                    o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 600;
+                    g.gain.setValueAtTime(0, start);
+                    g.gain.linearRampToValueAtTime(0.28 / (i + 1), start + 0.08);
+                    g.gain.setValueAtTime(0.28 / (i + 1), start + dur - 0.15);
+                    g.gain.linearRampToValueAtTime(0, start + dur);
+                    o.connect(lp); lp.connect(g); g.connect(audioCtx.destination);
+                    o.start(start); o.stop(start + dur + 0.05);
+                });
+            }
+            const total = (times || 1) * (dur + gap) * 1000;
+            speakerUntil = Math.max(speakerUntil, Date.now() + total + SPEAKER_TAIL_MS);
+        }
+        async function say(text) {
+            speakerUntil = Math.max(speakerUntil, Date.now() + 4000);
+            await SpeechModule.speak(text, 0.9);
+            speakerUntil = Date.now() + SPEAKER_TAIL_MS;
+        }
+
+        // ==========================================
+        // 主迴圈：聲音 → 船
+        // ==========================================
+        function tick() {
+            const now = Date.now();
+            const v = SpeechModule.getVoiceState();
+
+            // 喇叭在響（汽笛/TTS）或正在換場：忽略麥克風
+            const muted = now < speakerUntil || busy || finished;
+            if (!muted && (window.speechSynthesis && window.speechSynthesis.speaking)) speakerUntil = now + SPEAKER_TAIL_MS;
+
+            // 門檻：他在說話時不更新（避免背景校準被自己的聲音拉高）
+            if (now > gateFrozenUntil) gate = v.gate;
+
+            const loud = v.rms > gate;
+            const voiced = !muted && loud && v.voiced;
+            const level = Math.min(1, v.rms / Math.max(gate * 6, 0.02));
+            $('voiceFill').style.width = (muted ? 0 : level * 100) + '%';
+            $('voiceBar').classList.toggle('voiced', voiced);
+            $('detectStat').textContent = `音量 ${v.rms.toFixed(4)} / 門檻 ${gate.toFixed(4)} / 清晰度 ${v.clarity.toFixed(2)} / 基頻 ${v.f0 ? v.f0.toFixed(0) : '—'} Hz`;
+
+            if (voiced) {
+                voicedRun++; lastVoicedAt = now; gateFrozenUntil = now + 800;
+                if (!utterOpen) { utterOpen = true; utterStart = now; utterMs = 0; utterPeak = 0; utterConfirmed = false; }
+                utterMs += FRAME_MS; utterPeak = Math.max(utterPeak, v.rms);
+                if (voicedRun >= CONFIRM_FRAMES) {
+                    utterConfirmed = true;
+                    setEngine(true);
+                    legProgress += FRAME_MS / LEG_FULL_MS;
+                    if (legProgress >= 1) {
+                        // 持續發聲把本段走完：結算這次發聲（避免「說完」規則再抵港一次），直接抵港
+                        utterOpen = false;
+                        appendLog({ t: utterStart, ms: utterMs, peak: +utterPeak.toFixed(4), leg: leg });
+                        arrive(); return;
+                    }
+                    placeShip();
+                }
+            } else {
+                voicedRun = 0;
+                if (engineOn && now - lastVoicedAt > ENGINE_OFF_MS) setEngine(false);
+                // 說完一個詞：發聲夠長且靜音夠久
+                if (utterOpen && now - lastVoicedAt > UTTER_END_MS) {
+                    utterOpen = false;
+                    // 核心承諾：說完一個詞（發聲 ≥ UTTER_MIN_MS）就抵達下一個港口；進度只影響途中的視覺移動
+                    if (utterMs >= UTTER_MIN_MS && utterConfirmed) {
+                        appendLog({ t: utterStart, ms: utterMs, peak: +utterPeak.toFixed(4), leg: leg });
+                        arrive(); return;
+                    }
+                }
+            }
+        }
+
+        function arrive() {
+            if (busy || finished || leg >= PORT_COUNT) return;   // 防重入
+            busy = true;
+            const i = leg;
+            legProgress = 1; placeShip(); setEngine(false);
+            leg++;
+            updatePorts();
+            horn(1);
+            showPortCard(i);
+            appendLog({ t: Date.now(), arrive: i, name: data.ports[i].name });
+            setTimeout(() => {
+                hidePortCard();
+                legProgress = 0;
+                if (leg >= PORT_COUNT) { finale(); return; }
+                placeShip(); busy = false;
+            }, CARD_MS);
+        }
+        function showPortCard(i) {
+            const p = data.ports[i];
+            $('portMedia').innerHTML = p.img ? '<img src="' + p.img + '" alt="">' : '<div class="empty">📷</div>';
+            $('portName').textContent = '到 ' + p.name + ' 了！';
+            $('portCard').classList.add('show');
+            if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+        }
+        function hidePortCard() { $('portCard').classList.remove('show'); }
+        function finale() {
+            finished = true; busy = false;
+            const strip = $('finaleStrip'); strip.innerHTML = '';
+            data.ports.forEach(p => { if (p.img) { const im = document.createElement('img'); im.src = p.img; strip.appendChild(im); } });
+            $('finale').classList.add('show');
+            horn(2);
+            setTimeout(() => { $('finale').classList.remove('show'); resetVoyage(); }, FINALE_MS);
+        }
+        function resetVoyage() {
+            leg = 0; legProgress = 0; finished = false; busy = false; utterOpen = false; voicedRun = 0;
+            setEngine(false); updatePorts(); placeShip(); hidePortCard(); $('finale').classList.remove('show');
+            $('voiceHint').textContent = '說話，船就會開 🚢';
+        }
+
+        // ==========================================
+        // 開始（iOS 需手勢）
+        // ==========================================
+        $('startBtn').addEventListener('click', async () => {
+            $('startErr').textContent = '';
+            ensureAudio();
+            const ok = await SpeechModule.init();
+            if (!ok) { $('startErr').textContent = '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風；若從主畫面圖示開啟，請改用 Safari。'; return; }
+            SpeechModule.setHud(false);
+            $('startOverlay').style.display = 'none';
+            await new Promise(r => setTimeout(r, 500)); // 讓背景噪音校準累積幾個樣本
+            gate = SpeechModule.getVoiceState().gate;
+            if (loop) clearInterval(loop);
+            loop = setInterval(tick, FRAME_MS);
+        });
+
+        // 觸碰畫面：只有水面小漣漪，不推進任何進度
+        $('scene').addEventListener('pointerdown', e => {
+            if (busy) return;
+            const r = document.createElement('div'); r.className = 'ripple';
+            r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
+            document.body.appendChild(r); setTimeout(() => r.remove(), 700);
+        });
+
+        // ==========================================
+        // 家長面板（長按錨點 1.2 秒）
+        // ==========================================
+        let pressTimer = null;
+        const anchor = $('anchor');
+        const startPress = e => { e.preventDefault(); pressTimer = setTimeout(openPanel, 1200); };
+        const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
+        anchor.addEventListener('pointerdown', startPress);
+        anchor.addEventListener('pointerup', cancelPress);
+        anchor.addEventListener('pointercancel', cancelPress);
+        anchor.addEventListener('pointerleave', cancelPress);
+        anchor.addEventListener('contextmenu', e => e.preventDefault());
+
+        function openPanel() { renderPanel(); $('parentPanel').classList.add('show'); busy = true; }
+        $('closePanel').addEventListener('click', () => { $('parentPanel').classList.remove('show'); buildRoute(); busy = false; });
+        $('restart').addEventListener('click', () => { resetVoyage(); $('parentPanel').classList.remove('show'); });
+
+        function renderPanel() {
+            $('shipSlot').innerHTML = slotHtml('ship', data.ship, null);
+            const ps = $('portSlots'); ps.innerHTML = '';
+            data.ports.forEach((p, i) => { const d = document.createElement('div'); d.className = 'slot'; d.innerHTML = slotHtml('port' + i, p.img, p.name); ps.appendChild(d); });
+            document.querySelectorAll('#parentPanel input[type=file]').forEach(inp => inp.addEventListener('change', onPick));
+            document.querySelectorAll('#parentPanel input[type=text]').forEach(inp => inp.addEventListener('change', e => {
+                const i = parseInt(e.target.dataset.port, 10); data.ports[i].name = e.target.value.trim() || ('港口 ' + (i + 1)); saveData();
+            }));
+            renderStats();
+        }
+        function slotHtml(key, img, name) {
+            return (img ? '<img class="thumb" src="' + img + '">' : '<div class="thumb"></div>') +
+                (name !== null ? '<input type="text" value="' + escapeHtml(name) + '" data-port="' + key.slice(4) + '" placeholder="港口名稱">' : '') +
+                '<label class="pick">📷 選照片<input type="file" accept="image/*" data-key="' + key + '"></label>';
+        }
+        function onPick(e) {
+            const file = e.target.files && e.target.files[0]; if (!file) return;
+            const key = e.target.dataset.key;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const im = new Image();
+                im.onload = () => {
+                    // 縮到最長邊 900px，JPEG 0.8，避免 localStorage 爆量
+                    const max = 900, s = Math.min(1, max / Math.max(im.width, im.height));
+                    const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+                    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+                    const url = c.toDataURL('image/jpeg', 0.8);
+                    if (key === 'ship') data.ship = url; else data.ports[parseInt(key.slice(4), 10)].img = url;
+                    if (saveData()) renderPanel();
+                };
+                im.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        function renderStats() {
+            const log = loadLog();
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const t = log.filter(x => x.t >= today.getTime());
+            const utter = t.filter(x => x.ms), arrivals = t.filter(x => x.arrive !== undefined);
+            const secs = utter.reduce((a, x) => a + x.ms, 0) / 1000;
+            const longest = utter.reduce((a, x) => Math.max(a, x.ms), 0);
+            $('stats').innerHTML = `今天發聲 <b>${utter.length}</b> 次，共 <b>${secs.toFixed(1)}</b> 秒，最長一次 <b>${(longest / 1000).toFixed(2)}</b> 秒；抵達港口 <b>${arrivals.length}</b> 次。<br>` +
+                `<span style="color:#667">歷史紀錄共 ${log.length} 筆</span>`;
+        }
+        $('exportLog').addEventListener('click', () => {
+            const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), ports: data.ports.map(p => p.name), log: loadLog() }, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'voyage-log.json'; a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        });
+        $('clearLog').addEventListener('click', () => { if (confirm('確定清除所有發聲紀錄？')) { localStorage.removeItem('voyage.log'); renderStats(); } });
+
+        buildRoute();
+    </script>
+</body>
+</html>
