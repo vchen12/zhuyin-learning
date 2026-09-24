@@ -576,7 +576,7 @@ function recordPronunciation(type, target, transcript, similarity) {
  */
 function getPronunciationRecord(type, target) {
     const records = getPronunciationRecords();
-    return records[type]?.[target] || null;
+    return (records[type] && records[type][target]) || null;
 }
 
 /**
@@ -624,7 +624,7 @@ function getPronunciationReport() {
                 target,
                 bestScore: data.bestScore,
                 attempts: data.attempts,
-                lastAttempt: data.history[0]?.timestamp || null
+                lastAttempt: (data.history[0] && data.history[0].timestamp) || null
             };
 
             report.byType[type].items.push(itemInfo);

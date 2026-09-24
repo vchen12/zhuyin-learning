@@ -1415,7 +1415,7 @@
 
             // 渲染系統家人卡片（帶啟用/停用和改名功能）
             const systemFamilyHtml = familySettings.map((member, index) => {
-                const vocabWord = vocab.words.find(w => w.text === DEFAULT_FAMILY[index]?.name);
+                const vocabWord = vocab.words.find(w => DEFAULT_FAMILY[index] && w.text === DEFAULT_FAMILY[index].name);
                 const zhuyin = vocabWord ? vocabWord.zhuyin : '';
 
                 return `
