@@ -717,6 +717,29 @@
                 </div>
             </details>
 
+            <!-- 人聲偵測（v5.0） -->
+            <div style="background: #f0f4ff; border-radius: 15px; padding: 15px; margin-top: 15px;">
+                <div style="color: #667eea; font-weight: bold; font-size: 1rem; margin-bottom: 6px;">🎙️ 人聲偵測（v5.0）</div>
+                <p style="color: #666; font-size: 0.9rem; margin: 0 0 12px;">
+                    遊戲現在會分辨「說話」與「敲打／雜音」：只有真的發出聲音（有聲帶振動）才算，敲螢幕不會過關。
+                    小聲說話沒反應 → 調高靈敏度；環境吵雜常誤判 → 調低。可到「麥克風測試」第 4 項實地驗證。
+                </p>
+                <div style="color: #555; font-size: 0.9rem; margin-bottom: 8px;">靈敏度</div>
+                <div id="voiceSensitivityBtns" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
+                    <button data-value="high" onclick="setVoiceSensitivityUI('high')" style="flex:1; min-width:100px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">🔊 高<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">小聲也算</div></button>
+                    <button data-value="normal" onclick="setVoiceSensitivityUI('normal')" style="flex:1; min-width:100px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">🎚️ 中<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">預設</div></button>
+                    <button data-value="low" onclick="setVoiceSensitivityUI('low')" style="flex:1; min-width:100px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">🔉 低<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">環境吵雜用</div></button>
+                </div>
+                <label style="display:flex; align-items:center; gap:10px; padding:8px 0; cursor:pointer; color:#444;">
+                    <input type="checkbox" id="showVoiceHud" onchange="setShowVoiceHudUI(this.checked)" style="width:22px;height:22px;">
+                    聆聽時顯示「聲音燈」（畫面下方的即時音量／人聲指示）
+                </label>
+                <label style="display:flex; align-items:center; gap:10px; padding:8px 0; cursor:pointer; color:#444;">
+                    <input type="checkbox" id="singleSyllableStrict" onchange="setSingleSyllableModeUI(this.checked)" style="width:22px;height:22px;">
+                    <span>單音節（ㄅㄆㄇ、單字）在門檻 &gt; 0 時<b>只認辨識結果</b>（嚴格；不建議，語音引擎對孤立音節常辨識不到）</span>
+                </label>
+            </div>
+
             <!-- 建議提示 -->
             <div id="modeHint" style="background: #e8f5e9; padding: 15px; border-radius: 12px; border-left: 4px solid #4caf50; margin-top: 15px;"></div>
         </div>
@@ -1392,7 +1415,7 @@
 
             // 渲染系統家人卡片（帶啟用/停用和改名功能）
             const systemFamilyHtml = familySettings.map((member, index) => {
-                const vocabWord = vocab.words.find(w => w.text === DEFAULT_FAMILY[index]?.name);
+                const vocabWord = vocab.words.find(w => DEFAULT_FAMILY[index] && w.text === DEFAULT_FAMILY[index].name);
                 const zhuyin = vocabWord ? vocabWord.zhuyin : '';
 
                 return `
@@ -1908,6 +1931,7 @@
             renderThresholdPresets();
             updateModeHint();
             updateSettingSummary();
+            renderVoiceSettings();
 
             // 滑桿事件
             slider.addEventListener('input', function() {
@@ -1924,6 +1948,37 @@
                 updateSettingSummary();
                 showToast(`過關門檻已設定為 ${value}%`, 'success');
             });
+        }
+
+        // ==========================================
+        // 人聲偵測設定（v5.0）
+        // ==========================================
+        function renderVoiceSettings() {
+            const sens = getVoiceSensitivity();
+            document.querySelectorAll('#voiceSensitivityBtns button').forEach(btn => {
+                const on = btn.dataset.value === sens;
+                btn.style.background = on ? '#667eea' : '#fff';
+                btn.style.color = on ? 'white' : '';
+                btn.style.borderColor = on ? '#667eea' : '#e0e0e0';
+                btn.querySelector('div').style.color = on ? 'rgba(255,255,255,0.85)' : '#888';
+            });
+            const hud = document.getElementById('showVoiceHud');
+            if (hud) hud.checked = getShowVoiceHud();
+            const strict = document.getElementById('singleSyllableStrict');
+            if (strict) strict.checked = getSingleSyllableMode() === 'strict';
+        }
+        function setVoiceSensitivityUI(v) {
+            setVoiceSensitivity(v);
+            renderVoiceSettings();
+            showToast({ high: '靈敏度：高（小聲也算）', normal: '靈敏度：中', low: '靈敏度：低（環境吵雜用）' }[v], 'success');
+        }
+        function setShowVoiceHudUI(on) {
+            setShowVoiceHud(on);
+            showToast(on ? '聆聽時會顯示聲音燈' : '已隱藏聲音燈', 'success');
+        }
+        function setSingleSyllableModeUI(strict) {
+            setSingleSyllableMode(strict ? 'strict' : 'voice');
+            showToast(strict ? '單音節改為嚴格模式（只認辨識結果）' : '單音節：確認有發聲即可過關', 'success');
         }
 
         function setThreshold(value) {
@@ -3029,6 +3084,9 @@
             localStorage.removeItem('customWords');
             localStorage.removeItem('userName');
             localStorage.removeItem('similarityThreshold');
+            localStorage.removeItem('voiceSensitivity');
+            localStorage.removeItem('singleSyllableMode');
+            localStorage.removeItem('showVoiceHud');
 
             // 更新 UI
             document.getElementById('userName').value = '';
