@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v4.0.0
+- **版本**: v5.0.0
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -43,21 +43,44 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 └── images/private/       # 私人家人照片
 ```
 
-## 語音辨識系統（v3.8.0 架構）
+## 語音辨識系統（v5.0 架構：人聲偵測優先）
 
-### VAD (Voice Activity Detection)
-- 門檻值: 50（可在設定頁調整）
-- 聲音長度檢查: 每字 ≥ 0.4 秒
-- 自適應聆聽時間: 單字 10 秒、短句 8 秒、長句 12-15 秒
+### 設計原則
+- **判「有沒有人在發聲」不靠能量，靠基頻**：`js/speech-recognition.js` 以時域自相關（NSDF）
+  偵測聲帶振動的週期性（F0 70–600Hz）。敲擊、拍打是非週期脈衝，抓不到穩定基頻 → 不算發聲。
+  單幀判定另有：McLeod 零交越規則（排除低頻悶響）、包絡衰減比 ≤ 3.5（排除敲擊餘響）、
+  連續 N 幀且基頻不亂跳才確認人聲。
+- **零死區**：噪音底線在背景持續校準（取 30 百分位），按下麥克風立刻開始聽。
+- **即時回應**：確認人聲約 125ms；鼓勵模式在發聲 ≥220ms 時立即過關，不等辨識引擎。
+- **說完即判**：靜音 700ms → 呼叫 `recognition.stop()` 強制收尾，最多再等 1.5 秒，不再空等 7 秒。
+- **Web Speech API 對孤立單音節不可靠**：單字／注音拼寫目標採 `hybrid` 模式（辨識命中即過；
+  辨識無結果但確認人聲且夠長也過）。詞／句在門檻 > 0 時採 `speech` 模式，完全由相似度決定。
+- **任何模式下「沒有人聲」一律不過關**（電視聲被辨識到也不過）。
 
-### 錄音回放功能
-- 使用 MediaRecorder API 錄製用戶發音
-- 辨識失敗時：先回放用戶錄音 → 再播放正確答案
-- 支援所有語音練習遊戲
+### 判定模式
+| 模式 | 條件 | 過關依據 |
+|---|---|---|
+| voice | 門檻 = 0 | 確認人聲且發聲 ≥ 最低時長 |
+| hybrid | 單音節目標且門檻 > 0 | 辨識命中，或確認人聲且夠長 |
+| speech | 詞／句且門檻 > 0 | `passesSimilarityThreshold()` |
 
-### 相似度比對
-- 使用 Levenshtein 距離演算法
-- 位於 `js/config.js` 的 `calculateSimilarity()` 函數
+### 內建 HUD（聲音燈）
+聆聽時模組自行在畫面下方顯示音量環與狀態文字（灰＝安靜、橘＝有聲響非人聲、綠＝人聲），
+12 個語音遊戲不需修改即可獲得即時回饋。設定頁可關閉。
+
+### 設定（localStorage）
+- `similarityThreshold`：過關門檻（0 = 鼓勵模式）
+- `voiceSensitivity`：`high` / `normal` / `low`（清晰度門檻、確認幀數、最低音量）
+- `singleSyllableMode`：`voice`（預設）/ `strict`
+- `showVoiceHud`：`1` / `0`
+
+### 錄音回放
+- MediaRecorder 錄下每次嘗試；辨識失敗時遊戲可先回放用戶錄音再播正確答案。
+
+### 測試
+- 純 DSP（`SpeechModule.__dsp.analyzeFrame / classifyFrame`）可在 Node 中以合成訊號測試；
+  模組頂層不觸碰瀏覽器 API，`require()` 即可載入。
+- `mic-test.html` 第 4 項「人聲偵測測試」供實機驗證：說「ㄚ」亮綠燈、敲螢幕不亮。
 
 ## 開發慣例
 
@@ -82,10 +105,10 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 常見開發任務
 
-### 語音辨識調整（v4.0 統一模組）
-- 所有語音遊戲統一使用 `js/speech-recognition.js` 的 `SpeechModule`
-- 動態噪音底線: 自動校準環境噪音，不需手動調整
-- 聆聽時間: 由 `SpeechModule` 根據目標文字長度自動決定
+### 語音辨識調整（v5.0 統一模組）
+- 所有語音遊戲統一使用 `js/speech-recognition.js` 的 `SpeechModule`，callback 契約：
+  `onVoiceDetected / onInterim / onResult / onTimeout / onError`（另有選用 `onVoiceLevel / onSpeechEnd`）
+- 人聲偵測參數集中在模組常數區與 `SENSITIVITY` 表；改動後務必重跑合成訊號測試
 - 相似度門檻: 設定頁的全域設定，由 `config.js` 的 `getSimilarityThreshold()` 讀取
 
 ### 詞彙修改
@@ -100,6 +123,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.0.0**: 人聲偵測架構（NSDF 基頻偵測取代能量 VAD，解決「單音節無即時回應」與「敲螢幕過關」；零死區啟動、說完即判、內建聲音燈 HUD、設定頁靈敏度／單音節模式；mic-test 第 4 項）
 - **v4.0.0**: 語音辨識系統全面重構（統一核心模組 SpeechModule、動態噪音底線、多候選比對、單音節強化、門檻=0 智慧模式、設定頁字詞庫與圖片裁切整合）
 - **v3.12.0**: 失語症深度優化（錄音回放修復、我會唸按鈕、跳過按鈕、自動TTS讀題、單人練習模式、按鈕放大、延長換題時間）
 - **v3.11.0**: 字詞庫與所有遊戲連動（sentence-generator.js、8 個遊戲動態化、customImage 支援）
