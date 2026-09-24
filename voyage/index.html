@@ -229,7 +229,7 @@
             let d = null;
             try { d = JSON.parse(localStorage.getItem('voyage.data') || 'null'); } catch (e) { /* ignore */ }
             if (!d) d = { ship: null, ports: [] };
-            const defaults = ['基隆', '沖繩', '石垣島', '花蓮', '回家'];
+            const defaults = ['基隆', '日本福岡', '韓國釜山', '基隆', '回家'];
             for (let i = 0; i < PORT_COUNT; i++) {
                 if (!d.ports[i]) d.ports[i] = { name: defaults[i] || ('港口 ' + (i + 1)), img: null };
             }
