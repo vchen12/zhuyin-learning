@@ -18,15 +18,19 @@ const path = require('path');
   const t0 = Date.now();
   const t0abs = await page.evaluate(() => Date.now());
   const samples = [];
+  let cardShot = 0;
   while (Date.now() - t0 < 29000) {
     const s = await page.evaluate(() => ({
       left: parseFloat(document.getElementById('ship').style.left) || 0,
       engine: document.body.classList.contains('engine'),
       done: document.querySelectorAll('.port.done').length,
       finale: document.getElementById('finale').classList.contains('show'),
+      card: document.getElementById('portCard').classList.contains('show'),
       overlay: document.getElementById('startOverlay').style.display
     }));
     samples.push(Object.assign({ t: ((Date.now() - t0) / 1000).toFixed(2) }, s));
+    // 第 1 與第 3 港的卡片各截一張（驗證照片呈現與輪播）
+    if (s.card && (s.done === 1 || s.done === 3) && cardShot < s.done) { cardShot = s.done; await page.screenshot({ path: path.resolve(__dirname, 'voyage-card' + s.done + '.png') }); }
     await page.waitForTimeout(250);
   }
   await page.screenshot({ path: path.resolve(__dirname, 'voyage-end.png') });

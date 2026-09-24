@@ -117,6 +117,11 @@
         .slot label.pick { display: block; margin-top: 1vmin; text-align: center; background: #667eea; color: #fff; border-radius: 1vmin;
                            padding: 1.2vmin; font-size: 2.6vmin; cursor: pointer; }
         .slot input[type=file] { display: none; }
+        .slot .thumbs { display: flex; gap: 1vmin; flex-wrap: wrap; }
+        .slot .thumbs .t { position: relative; width: 11vmin; height: 8.25vmin; }
+        .slot .thumbs img { width: 100%; height: 100%; object-fit: cover; border-radius: 1vmin; display: block; }
+        .slot .thumbs .del { position: absolute; top: -.6vmin; right: -.6vmin; width: 3vmin; height: 3vmin; border-radius: 50%; border: none;
+                             background: #e05c5c; color: #fff; font-size: 1.8vmin; line-height: 3vmin; padding: 0; }
         .row { display: flex; gap: 2vmin; flex-wrap: wrap; align-items: center; margin: 1.5vmin 0; }
         .btn { font-size: 3vmin; padding: 1.6vmin 3vmin; border: none; border-radius: 99px; background: #667eea; color: #fff; font-weight: 700; }
         .btn.gray { background: #8a94a6; } .btn.red { background: #e05c5c; }
@@ -208,6 +213,8 @@
         const CARD_MS = 3200;            // 港口照片顯示時間
         const FINALE_MS = 9000;          // 終點畫面停留時間，之後自動再出航
         const SPEAKER_TAIL_MS = 350;     // 喇叭播音（汽笛/TTS）結束後再忽略多久
+        const DEFAULT_PORTS = ['基隆', '日本福岡', '韓國釜山', '基隆', '回家'];
+        const MANIFEST_URL = '../images/private/voyage/manifest.json'; // 本機／私人主機可放預設照片；不存在則略過
 
         // ==========================================
         // 狀態
@@ -229,11 +236,36 @@
             let d = null;
             try { d = JSON.parse(localStorage.getItem('voyage.data') || 'null'); } catch (e) { /* ignore */ }
             if (!d) d = { ship: null, ports: [] };
-            const defaults = ['基隆', '日本福岡', '韓國釜山', '基隆', '回家'];
             for (let i = 0; i < PORT_COUNT; i++) {
-                if (!d.ports[i]) d.ports[i] = { name: defaults[i] || ('港口 ' + (i + 1)), img: null };
+                if (!d.ports[i]) d.ports[i] = { name: DEFAULT_PORTS[i] || ('港口 ' + (i + 1)), imgs: [] };
+                const p = d.ports[i];
+                if (!Array.isArray(p.imgs)) p.imgs = p.img ? [p.img] : [];   // 舊格式遷移
+                delete p.img;
+                p.next = 0;
             }
             return d;
+        }
+
+        // 預設照片 manifest：{ ship: 'file.jpg', ports: [{ name, imgs: ['a.jpg', ...] }, ...] }
+        // 只填補使用者尚未自選的欄位；路徑相對於 manifest 所在資料夾。
+        async function loadManifest() {
+            try {
+                const res = await fetch(MANIFEST_URL, { cache: 'no-store' });
+                if (!res.ok) return false;
+                const m = await res.json();
+                const base = MANIFEST_URL.slice(0, MANIFEST_URL.lastIndexOf('/') + 1);
+                const abs = f => (/^(https?:|data:|\/)/.test(f) ? f : base + f);
+                let changed = false;
+                if (m.ship && !data.ship) { data.ship = abs(m.ship); changed = true; }
+                (m.ports || []).forEach((mp, i) => {
+                    if (i >= PORT_COUNT || !mp) return;
+                    const p = data.ports[i];
+                    if (mp.name && p.name === DEFAULT_PORTS[i]) p.name = mp.name;
+                    if (p.imgs.length === 0 && Array.isArray(mp.imgs) && mp.imgs.length) { p.imgs = mp.imgs.map(abs); changed = true; }
+                });
+                if (changed) console.log('📷 已載入預設照片 manifest');
+                return changed;
+            } catch (e) { return false; }
         }
         function saveData() {
             try { localStorage.setItem('voyage.data', JSON.stringify(data)); return true; }
@@ -392,7 +424,9 @@
         }
         function showPortCard(i) {
             const p = data.ports[i];
-            $('portMedia').innerHTML = p.img ? '<img src="' + p.img + '" alt="">' : '<div class="empty">📷</div>';
+            let img = null;
+            if (p.imgs.length) { img = p.imgs[p.next % p.imgs.length]; p.next++; }   // 每次抵達換下一張
+            $('portMedia').innerHTML = img ? '<img src="' + img + '" alt="">' : '<div class="empty">📷</div>';
             $('portName').textContent = '到 ' + p.name + ' 了！';
             $('portCard').classList.add('show');
             if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
@@ -401,7 +435,7 @@
         function finale() {
             finished = true; busy = false;
             const strip = $('finaleStrip'); strip.innerHTML = '';
-            data.ports.forEach(p => { if (p.img) { const im = document.createElement('img'); im.src = p.img; strip.appendChild(im); } });
+            data.ports.forEach(p => { if (p.imgs.length) { const im = document.createElement('img'); im.src = p.imgs[0]; strip.appendChild(im); } });
             $('finale').classList.add('show');
             horn(2);
             setTimeout(() => { $('finale').classList.remove('show'); resetVoyage(); }, FINALE_MS);
@@ -456,8 +490,12 @@
         function renderPanel() {
             $('shipSlot').innerHTML = slotHtml('ship', data.ship, null);
             const ps = $('portSlots'); ps.innerHTML = '';
-            data.ports.forEach((p, i) => { const d = document.createElement('div'); d.className = 'slot'; d.innerHTML = slotHtml('port' + i, p.img, p.name); ps.appendChild(d); });
+            data.ports.forEach((p, i) => { const d = document.createElement('div'); d.className = 'slot'; d.innerHTML = portSlotHtml(i, p); ps.appendChild(d); });
             document.querySelectorAll('#parentPanel input[type=file]').forEach(inp => inp.addEventListener('change', onPick));
+            document.querySelectorAll('#parentPanel .del').forEach(btn => btn.addEventListener('click', e => {
+                const i = parseInt(e.target.dataset.port, 10), k = parseInt(e.target.dataset.idx, 10);
+                data.ports[i].imgs.splice(k, 1); saveData(); renderPanel();
+            }));
             document.querySelectorAll('#parentPanel input[type=text]').forEach(inp => inp.addEventListener('change', e => {
                 const i = parseInt(e.target.dataset.port, 10); data.ports[i].name = e.target.value.trim() || ('港口 ' + (i + 1)); saveData();
             }));
@@ -465,27 +503,37 @@
         }
         function slotHtml(key, img, name) {
             return (img ? '<img class="thumb" src="' + img + '">' : '<div class="thumb"></div>') +
-                (name !== null ? '<input type="text" value="' + escapeHtml(name) + '" data-port="' + key.slice(4) + '" placeholder="港口名稱">' : '') +
                 '<label class="pick">📷 選照片<input type="file" accept="image/*" data-key="' + key + '"></label>';
         }
+        function portSlotHtml(i, p) {
+            const thumbs = p.imgs.length
+                ? '<div class="thumbs">' + p.imgs.map((im, k) => '<div class="t"><img src="' + im + '"><button class="del" data-port="' + i + '" data-idx="' + k + '">✕</button></div>').join('') + '</div>'
+                : '<div class="thumb"></div>';
+            return thumbs +
+                '<input type="text" value="' + escapeHtml(p.name) + '" data-port="' + i + '" placeholder="港口名稱">' +
+                '<label class="pick">📷 加照片（可多張，抵達時輪播）<input type="file" accept="image/*" multiple data-key="port' + i + '"></label>';
+        }
         function onPick(e) {
-            const file = e.target.files && e.target.files[0]; if (!file) return;
+            const files = Array.from(e.target.files || []); if (!files.length) return;
             const key = e.target.dataset.key;
-            const reader = new FileReader();
-            reader.onload = () => {
-                const im = new Image();
-                im.onload = () => {
-                    // 縮到最長邊 900px，JPEG 0.8，避免 localStorage 爆量
-                    const max = 900, s = Math.min(1, max / Math.max(im.width, im.height));
-                    const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
-                    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-                    const url = c.toDataURL('image/jpeg', 0.8);
-                    if (key === 'ship') data.ship = url; else data.ports[parseInt(key.slice(4), 10)].img = url;
-                    if (saveData()) renderPanel();
+            let pending = files.length;
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const im = new Image();
+                    im.onload = () => {
+                        // 縮到最長邊 900px，JPEG 0.8，避免 localStorage 爆量
+                        const max = 900, s = Math.min(1, max / Math.max(im.width, im.height));
+                        const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+                        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+                        const url = c.toDataURL('image/jpeg', 0.8);
+                        if (key === 'ship') data.ship = url; else data.ports[parseInt(key.slice(4), 10)].imgs.push(url);
+                        if (--pending === 0) { if (saveData()) renderPanel(); }
+                    };
+                    im.src = reader.result;
                 };
-                im.src = reader.result;
-            };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            });
         }
         function renderStats() {
             const log = loadLog();
@@ -498,13 +546,14 @@
                 `<span style="color:#667">歷史紀錄共 ${log.length} 筆</span>`;
         }
         $('exportLog').addEventListener('click', () => {
-            const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), ports: data.ports.map(p => p.name), log: loadLog() }, null, 2)], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), ports: data.ports.map(p => ({ name: p.name, photos: p.imgs.length })), log: loadLog() }, null, 2)], { type: 'application/json' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'voyage-log.json'; a.click();
             setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         });
         $('clearLog').addEventListener('click', () => { if (confirm('確定清除所有發聲紀錄？')) { localStorage.removeItem('voyage.log'); renderStats(); } });
 
         buildRoute();
+        loadManifest().then(changed => { if (changed) buildRoute(); });
     </script>
 </body>
 </html>

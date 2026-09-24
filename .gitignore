@@ -1,0 +1,6 @@
+# 家人私人照片：絕不進版控（repo 為公開）
+images/private/
+# 測試產物
+tests/browser/voyage-test.wav
+tests/browser/voyage-end.png
+.DS_Store
