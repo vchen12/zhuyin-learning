@@ -285,6 +285,10 @@
     }
 
     function _initRecorder(stream) {
+        if (typeof MediaRecorder === 'undefined') {
+            console.warn('⚠️ 此瀏覽器沒有 MediaRecorder，無法錄音回放（iOS 14.5 以下）');
+            return;
+        }
         try {
             const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
                        : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
@@ -306,8 +310,16 @@
     // ==========================================
     // 背景噪音追蹤（不聆聽時持續進行 → 按下即聽，零死區）
     // ==========================================
+    let byteTimeBuf = null;
     function _readFrame() {
-        analyser.getFloatTimeDomainData(timeBuf);
+        if (typeof analyser.getFloatTimeDomainData === 'function') {
+            analyser.getFloatTimeDomainData(timeBuf);
+        } else {
+            // iOS 12 Safari 等舊瀏覽器沒有 getFloatTimeDomainData，用 8-bit 版本轉換
+            if (!byteTimeBuf) byteTimeBuf = new Uint8Array(timeBuf.length);
+            analyser.getByteTimeDomainData(byteTimeBuf);
+            for (let i = 0; i < byteTimeBuf.length; i++) timeBuf[i] = (byteTimeBuf[i] - 128) / 128;
+        }
         return analyzeFrame(timeBuf, sampleRate);
     }
 
