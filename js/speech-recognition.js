@@ -75,6 +75,8 @@
     const F0_MAX = 600;                  // 基頻上限 Hz（幼兒）
     const F0_JITTER_MAX = 0.35;          // 相鄰幀基頻相對變動上限（防敲擊共振）
     const DECAY_MAX = 3.5;               // 窗內前/後 1/4 能量比上限（≈11dB）；超過視為敲擊餘響
+    const ONSET_DECAY = 0.35;            // 前/後能量比低於此值 → 急升（起音）幀
+    const ONSET_CLARITY = 0.80;          // 起音幀需要的週期清晰度（敲擊起音約 0.6，人聲約 0.9+）
     const RMS_MARGIN = 2.2;              // 有效聲音需超過噪音底線倍數
     const SILENCE_END_MS = 700;          // 說完後靜音多久判定「說完了」
     const ASR_GRACE_MS = 1500;           // 說完後給辨識引擎收尾的時間
@@ -206,7 +208,10 @@
         if (a.rms <= gate) return false;
         if (a.f0 < F0_MIN || a.f0 > F0_MAX) return false;
         if (a.decay > DECAY_MAX) return false;       // 窗內急速衰減 → 敲擊餘響
-        return a.clarity >= (relaxed ? sens.clarityOff : sens.clarityOn);
+        let need = relaxed ? sens.clarityOff : sens.clarityOn;
+        // 急升幀（聲音剛出現在窗尾）：敲擊起音的清晰度約 0.6、人聲起音約 0.9 以上，用較高門檻分開
+        if (a.decay < ONSET_DECAY) need = Math.max(need, ONSET_CLARITY);
+        return a.clarity >= need;
     }
 
     /**
