@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v3.12.0
+ * v5.0.0
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '4.0.2',
+    version: '5.0.0',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -294,6 +294,43 @@ function getSimilarityThreshold() {
  */
 function setSimilarityThreshold(threshold) {
     localStorage.setItem('similarityThreshold', Math.max(0, Math.min(100, threshold)).toString());
+}
+
+/**
+ * 人聲偵測靈敏度（v5.0）
+ * 'high'：小聲也算（門檻低、需連續 4 幀）；'normal'：預設；'low'：吵雜環境用（門檻高、需連續 7 幀）
+ * @returns {'high'|'normal'|'low'}
+ */
+function getVoiceSensitivity() {
+    const v = localStorage.getItem('voiceSensitivity');
+    return ['high', 'normal', 'low'].includes(v) ? v : 'normal';
+}
+function setVoiceSensitivity(v) {
+    if (['high', 'normal', 'low'].includes(v)) localStorage.setItem('voiceSensitivity', v);
+}
+
+/**
+ * 單音節目標（單字／注音拼寫）在門檻 > 0 時的判定方式（v5.0）
+ * 'voice'：辨識命中即過；辨識無結果但確認有人聲且發聲夠長也過（預設，因 Web Speech API 對孤立音節不可靠）
+ * 'strict'：完全由辨識相似度決定（會有大量誤拒，僅供進階測試）
+ * @returns {'voice'|'strict'}
+ */
+function getSingleSyllableMode() {
+    return localStorage.getItem('singleSyllableMode') === 'strict' ? 'strict' : 'voice';
+}
+function setSingleSyllableMode(v) {
+    localStorage.setItem('singleSyllableMode', v === 'strict' ? 'strict' : 'voice');
+}
+
+/**
+ * 是否顯示聆聽中的「聲音燈」HUD（v5.0）
+ * @returns {boolean}
+ */
+function getShowVoiceHud() {
+    return localStorage.getItem('showVoiceHud') !== '0';
+}
+function setShowVoiceHud(on) {
+    localStorage.setItem('showVoiceHud', on ? '1' : '0');
 }
 
 /**
@@ -706,6 +743,8 @@ if (typeof module !== 'undefined' && module.exports) {
         // 語音相似度追蹤系統
         getUserMode, setUserMode, getThresholdPresets, getAphasiaBonus,
         getSimilarityThreshold, setSimilarityThreshold, calculateSimilarity,
+        getVoiceSensitivity, setVoiceSensitivity, getSingleSyllableMode, setSingleSyllableMode,
+        getShowVoiceHud, setShowVoiceHud,
         getPronunciationRecords, recordPronunciation, getPronunciationRecord,
         getPronunciationReport, clearPronunciationRecords, exportPronunciationRecords,
         passesSimilarityThreshold, getSimilarityLevel
