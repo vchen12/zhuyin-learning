@@ -55,6 +55,9 @@
     let noiseTimer = null;
     let noiseFloor = 30;       // 舊版相容：byte 頻譜平均
 
+    // 喇叭播放閘門：遊戲以 guardAudio() 登記的 <audio> 播放期間不算人聲
+    let playbackUntil = 0;
+
     // HUD
     let hudEnabled = true;
     let hudEl = null;
@@ -349,6 +352,34 @@
     }
 
     // ==========================================
+    // 喇叭播放閘門
+    // ==========================================
+
+    /**
+     * 登記一個 <audio>：播放期間（含結束後 TTS_TAIL_MS）麥克風判定一律視為「非人聲」。
+     * 注音示範音、家人錄音都是人聲、有基頻，不擋會被當成使用者發聲——
+     * 例如點老鷹重播示範音就會「過關」。所有遊戲播放音檔前都應呼叫。
+     * 用 timeupdate 持續續約（約每 250ms），播放中斷也不會永久卡住。
+     */
+    function guardAudio(el) {
+        if (!el || typeof el.addEventListener !== 'function') return el;
+        const extend = () => { playbackUntil = Math.max(playbackUntil, Date.now() + 1000); };
+        const close = () => { playbackUntil = Math.min(playbackUntil, Date.now() + TTS_TAIL_MS); };
+        el.addEventListener('play', extend);
+        el.addEventListener('playing', extend);
+        el.addEventListener('timeupdate', extend);
+        el.addEventListener('ended', close);
+        el.addEventListener('pause', close);
+        el.addEventListener('error', close);
+        return el;
+    }
+
+    /** 沒有 <audio> 元素可登記時（如 Web Audio 合成音），直接宣告接下來 ms 毫秒是喇叭在響 */
+    function notifyPlayback(ms) {
+        playbackUntil = Math.max(playbackUntil, Date.now() + (ms || 0) + TTS_TAIL_MS);
+    }
+
+    // ==========================================
     // 錄音控制
     // ==========================================
     function _startRecording() {
@@ -367,7 +398,7 @@
     function playRecording() {
         return new Promise((resolve) => {
             if (!lastRecordedUrl) { resolve(); return; }
-            const audio = new Audio(lastRecordedUrl);
+            const audio = guardAudio(new Audio(lastRecordedUrl));
             audio.onended = () => resolve();
             audio.onerror = () => resolve();
             audio.play().catch(() => resolve());
@@ -634,7 +665,7 @@
 
         // 系統正在播 TTS（如「請大聲唸」）：喇叭放出的合成人聲也有基頻，必須排除
         if (global.speechSynthesis && global.speechSynthesis.speaking) session.ttsUntil = now + TTS_TAIL_MS;
-        if (now < session.ttsUntil) {
+        if (now < session.ttsUntil || now < playbackUntil) {
             hudLevel = 0; hudVoiced = false;
             session.voicedRun = 0; session.lastF0 = 0;
             return;
@@ -896,7 +927,9 @@
         const a = _readFrame();
         const s = _sensitivity();
         const voiced = classifyFrame(a, _gate(), s, false);
-        return { rms: a.rms, clarity: a.clarity, f0: a.f0, decay: a.decay, gate: _gate(), noiseRms: noiseRms, voiced: voiced };
+        const speaker = Date.now() < playbackUntil || !!(global.speechSynthesis && global.speechSynthesis.speaking);
+        return { rms: a.rms, clarity: a.clarity, f0: a.f0, decay: a.decay, gate: _gate(), noiseRms: noiseRms,
+                 voiced: voiced && !speaker, speakerActive: speaker };
     }
 
     function getThresholdLabel() {
@@ -943,6 +976,8 @@
         getNoiseFloor: function () { return noiseFloor; },
         getVoiceState: getVoiceState,
         setHud: setHud,
+        guardAudio: guardAudio,
+        notifyPlayback: notifyPlayback,
 
         // 純函數，供測試
         __dsp: { analyzeFrame: analyzeFrame, classifyFrame: classifyFrame, minVoicedMs: minVoicedMs,

@@ -507,7 +507,7 @@
 
             SpeechModule.startListening(currentTarget, {
                 onVoiceDetected: () => {
-                    document.getElementById('statusMessage').textContent = '🎤 聽到你的聲音了！正在辨識...';
+                    document.getElementById('statusMessage').textContent = '👂 聽到了！';
                     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                 },
                 onInterim: (text) => {
@@ -529,17 +529,11 @@
                     micBtn.disabled = false;
                     micBtn.classList.remove('listening');
 
-                    if (info.hasDetectedVoice) {
-                        if (getSimilarityThreshold() === 0) {
-                            handleCorrect(0, '');
-                        } else {
-                            document.getElementById('statusMessage').textContent = '🎤 聽到聲音了，但辨識不清楚，請再試一次！';
-                            isProcessing = false;
-                        }
-                    } else {
-                        document.getElementById('statusMessage').textContent = '沒有聽到聲音，請大聲一點再試！';
-                        isProcessing = false;
-                    }
+                    // v5：有人聲但不過關會走 onResult(passed:false)；到這裡表示完全沒聽到人聲
+                    document.getElementById('statusMessage').textContent = info.noiseOnly
+                        ? '🔊 那不是說話聲喔，用嘴巴唸出來'
+                        : '沒有聽到聲音，再按麥克風試一次';
+                    isProcessing = false;
                 },
                 onError: (err) => {
                     // 錯誤處理
@@ -547,11 +541,7 @@
                     micBtn.classList.remove('listening');
                     console.error('語音辨識錯誤:', err);
 
-                    if (err.error === 'no-speech') {
-                        document.getElementById('statusMessage').textContent = '沒有聽到聲音，請大聲一點再試！';
-                    } else {
-                        document.getElementById('statusMessage').textContent = '語音辨識失敗，請再試一次！';
-                    }
+                    document.getElementById('statusMessage').textContent = '❌ 麥克風無法使用';
                     isProcessing = false;
                 }
             });
