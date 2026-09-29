@@ -550,7 +550,7 @@
             // 播放語音引導
             const userName = getUserName();
             const greeting = userName ? `${userName}，` : '';
-            speak(`${greeting}發音練習開始！聽發音後，請大聲唸兩到三次。`, () => {
+            speak(`${greeting}發音練習開始！聽發音後，跟著唸出來。`, () => {
                 setTimeout(nextSymbol, 500);
             });
         }
@@ -587,9 +587,8 @@
             // 先播放發音
             showHint('聽發音 🔊', false);
             playSoundWithCallback(currentSymbol, () => {
-                // 發音播放完成後，立即啟動辨識
-                showHint('大聲唸出來！🎤', true);
-                speakShort('請大聲唸');
+                // 示範音播完立即開聽；不再用 TTS 提示（TTS 播放期間會延後聆聽）
+                showHint('唸出來！🎤', true);
                 startRecognition();
             });
         }
@@ -608,6 +607,7 @@
             }
 
             currentAudio = new Audio(`../../sounds/${fileNum}.mp3`);
+            SpeechModule.guardAudio(currentAudio);   // 示範音播放期間不算人聲
             currentAudio.onended = () => {
                 if (callback) callback();
             };
@@ -641,6 +641,7 @@
             }
 
             currentAudio = new Audio(`../../sounds/${fileNum}.mp3`);
+            SpeechModule.guardAudio(currentAudio);   // 示範音播放期間不算人聲
             currentAudio.play().catch(err => console.error('播放失敗:', err));
         }
 
@@ -662,7 +663,7 @@
 
             SpeechModule.startListening(currentSymbol, {
                 onVoiceDetected: () => {
-                    showHint('🎤 聽到你的聲音了！正在辨識...', true);
+                    showHint('👂 聽到了！', true);
                     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                 },
                 onInterim: (text) => {
@@ -676,11 +677,7 @@
                     }
                 },
                 onTimeout: (info) => {
-                    if (info.hasVoice) {
-                        showHint('聽到聲音了，但辨識不清楚，請再試一次！', false);
-                    } else {
-                        showHint('再聽一次 🔊', false);
-                    }
+                    showHint(info.noiseOnly ? '🔊 那不是說話聲喔，用嘴巴唸' : '沒聽到聲音，再聽一次 🔊', false);
                     setTimeout(() => {
                         if (!isProcessing) playAndListen();
                     }, 1500);
@@ -865,6 +862,7 @@
                 }
 
                 currentAudio = new Audio(`../../sounds/${fileNum}.mp3`);
+            SpeechModule.guardAudio(currentAudio);   // 示範音播放期間不算人聲
                 currentAudio.onended = () => resolve();
                 currentAudio.onerror = () => resolve();
                 currentAudio.play().catch(() => resolve());
