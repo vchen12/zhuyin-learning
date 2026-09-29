@@ -111,7 +111,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 - 繁體中文註解
 - 每個 HTML 檔案是獨立完整的（包含所有 CSS 和 JS）
 - 共享功能放在 `js/` 目錄
-- 版本號更新在 `js/config.js` 和 `manifest.json`
+- 版本號更新在 `js/config.js`（`APP_CONFIG.version`）、`sw.js`（`CACHE_VERSION`，觸發快取更新）與 `index.html` 頁尾；`manifest.json` 無版本欄位
 
 ### UI 設計原則
 - 響應式設計（手機/平板/電腦）
