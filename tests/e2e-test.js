@@ -45,7 +45,7 @@ const SM = globalThis.SpeechModule;
 console.log = () => {}; console.warn = () => {}; // 靜音模組 log
 const out = (...a) => process.stdout.write(a.join(' ') + '\n');
 
-function run(name, { threshold, target, timeline, sr, expect, setup }) {
+function run(name, { threshold, target, timeline, sr, expect, setup, options }) {
     return new Promise(async (resolve) => {
         store.similarityThreshold = String(threshold);
         srScript = sr || null;
@@ -68,7 +68,7 @@ function run(name, { threshold, target, timeline, sr, expect, setup }) {
             onResult: r => finish('onResult', r),
             onTimeout: i => finish('onTimeout', Object.assign({ passed: false }, i)),
             onError: e => finish('onError', { error: e })
-        });
+        }, options);
     });
 }
 
@@ -127,6 +127,14 @@ function run(name, { threshold, target, timeline, sr, expect, setup }) {
         { threshold: 0, target: 'ㄅ', timeline: [[0, 900, () => voiceFrame(210, 0.12)], [1400, 1800, V]],
           setup: () => { fakeAudio.fire('play'); const tu = setInterval(() => fakeAudio.fire('timeupdate'), 250); setTimeout(() => { clearInterval(tu); fakeAudio.fire('ended'); }, 900); },
           expect: (k, p, el, vd) => k === 'onResult' && p.passed && p.basis === 'voice' && vd !== null && vd > 1400 }));
+
+    // L：說話板用法 —— 門檻 80（精準）但以 { passMode:'voice' } 覆寫；多字目標、辨識無結果、只確認發聲 → 過關
+    results.push(await run('L 門檻 80 + passMode 覆寫為 voice：說「我要尿尿」辨識無結果 → 只憑發聲過關',
+        { threshold: 80, target: '我要尿尿', timeline: [[300, 1100, V]], sr: null, options: { passMode: 'voice', hud: false },
+          expect: (k, p) => k === 'onResult' && p.passed && p.basis === 'voice' }));
+    results.push(await run('M 對照：門檻 80 無覆寫：同樣情況 → speech 模式不過（回報有說話）',
+        { threshold: 80, target: '我要尿尿', timeline: [[300, 1100, V]], sr: null,
+          expect: (k, p) => k === 'onResult' && p.passed === false && p.hadVoice === true }));
 
     const n = results.filter(Boolean).length;
     out(`\n${n}/${results.length} 情境通過`);

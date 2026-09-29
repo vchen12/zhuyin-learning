@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.1.1
+- **版本**: v5.2.0
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -96,6 +96,13 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 五港後終點。照片由家長在 iPad 上從「照片」選取，縮至 900px 存 localStorage（`voyage.data`）；
 每次發聲與抵港寫入 `voyage.log`，家長面板可看今日統計與匯出。喇叭播音（汽笛／TTS）期間關閉麥克風判定。
 
+`board/index.html`（說話板，`?set=iwant` / `?set=family`）：照片卡格 → 點卡進專注畫面 → 播示範（家人錄音，否則 TTS）
+→ `startListening(say, cb, { passMode: 'voice', hud: false })` 只確認真的發聲 → 報酬（照片放大、播家人錄的回應）
+→ 家長判定列（👍 說對了／🔁 再一次；發聲後才出現，只記錄不影響報酬）→ 回卡片格。
+家人組沿用設定頁 `familySettings` 的名字與 `customImage`。卡片文字存 localStorage `board.items.<set>`；
+照片／示範／回應錄音存 IndexedDB `zhuyin-board`（key `<set>/<id>/<photo|model|reply>`）；紀錄 `board.log`。
+觸碰照片＝重播示範（`guardAudio` 保護）。無 MediaRecorder 的裝置（iOS < 14.5）隱藏錄音鈕、改 TTS。
+
 裝置：主力 iPad 第五代（iPadOS 16.7，全功能）；iPhone 6 Plus（iOS 12.5）僅人聲偵測可用——
 **程式碼不得使用 `?.`、`??`**（iOS 13.1 起才支援），`100dvh` 前須有 `100vh` 後備。
 
@@ -146,6 +153,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.2.0**: 「說話板」（我要…板／叫家人）：家人錄音示範與回應、IndexedDB 媒體、家長判定紀錄；`startListening` 第三參數 `{ passMode, hud }`
 - **v5.1.1**: 清除「唸兩到三次」「大聲唸」TTS 補丁與死碼分支；`guardAudio()` 喇叭播放閘門（示範音、重播、錄音回放期間不算人聲）；老鷹射擊改為示範音播完才開聽
 - **v5.1.0**: 「郵輪出航」原型（聲音即搖桿）、iOS 12 相容性修正（移除 `?.`、時域資料後備）、起音幀清晰度規則、真瀏覽器測試（tests/browser）
 - **v5.0.0**: 人聲偵測架構（NSDF 基頻偵測取代能量 VAD，解決「單音節無即時回應」與「敲螢幕過關」；零死區啟動、說完即判、內建聲音燈 HUD、設定頁靈敏度／單音節模式；mic-test 第 4 項）
