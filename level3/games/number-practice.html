@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../../icons/icon-96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f5576c">
@@ -393,7 +394,7 @@
 
             <div class="action-buttons" id="speakActionButtons" style="display: none;">
                 <button id="speakBtn" onclick="startListening()">🎤 唸出</button>
-                <button id="manualSpeakBtn" onclick="manualSpeakConfirm()" style="display: none;">✅ 會唸</button>
+                <button id="manualSpeakBtn" data-parent-longpress="manualSpeakConfirm" style="display: none;">✅ 會唸（長按）</button>
                 <button id="skipBtn" onclick="skipCurrentNumber()" style="display: none;">⏭️ 跳過</button>
             </div>
         </div>

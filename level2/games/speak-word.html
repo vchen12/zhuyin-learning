@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../../icons/icon-96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#11998e">
@@ -371,13 +372,13 @@
 
         <div class="mic-section">
             <button class="mic-btn mic-highlight" id="micBtn" onclick="startListening()">🎤</button>
-            <button class="mic-btn" id="manualMicBtn" onclick="manualConfirm()" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅</button>
+            <button class="mic-btn" id="manualMicBtn" data-parent-longpress="manualConfirm" style="display: none; background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅</button>
             <div class="mic-hint" id="micHint">點擊麥克風，說出這是什麼！</div>
         </div>
 
         <div class="helper-buttons">
             <button class="helper-btn" onclick="playHint()">🔊 聽提示</button>
-            <button class="helper-btn" id="manualBtn" onclick="manualConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+            <button class="helper-btn" id="manualBtn" data-parent-longpress="manualConfirm" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸（家長長按）</button>
             <button class="helper-btn" onclick="skipWord()">⏭️ 跳過</button>
         </div>
 
@@ -529,7 +530,7 @@
                         micHint.textContent = '沒聽清楚，再試一次吧！';
                         handleWrong(0, '');
                     } else {
-                        micHint.textContent = '按麥克風，說出這是什麼！';
+                        micHint.textContent = info.noiseOnly ? '🔊 那不是說話聲喔，用嘴巴說' : '按麥克風，說出這是什麼！';
                         retryCount++;
                         if (retryCount >= 3) {
                             document.getElementById('manualBtn').classList.add('highlight-btn');

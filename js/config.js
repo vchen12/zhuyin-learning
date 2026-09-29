@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.2.0
+ * v5.2.1
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.2.0',
+    version: '5.2.1',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -40,11 +40,11 @@ const APP_CONFIG = {
             '太棒了！',
             '好厲害！',
             '答對了！',
-            '真聰明！',
+            '很好！',
             '很棒喔！',
             '繼續加油！',
-            '你好棒！',
-            '太聰明了！',
+            '說得好！',
+            '很清楚！',
             '完美！',
             '超級棒！'
         ],
@@ -734,6 +734,44 @@ function getSimilarityLevel(similarity) {
     }
 }
 
+/**
+ * 家長長按按鈕（v5.2.1）
+ * 標記 data-parent-longpress="函數名" 的按鈕要按住 1.2 秒才執行，短按無效。
+ * 用於「我會唸」這類不需發聲就計分的家長判定功能——使用者敲一下不會過關。
+ */
+function initParentLongPress(root) {
+    if (typeof document === 'undefined') return;
+    const HOLD_MS = 1200;
+    (root || document).querySelectorAll('[data-parent-longpress]').forEach(el => {
+        if (el.__lpWired) return;
+        el.__lpWired = true;
+        const fnName = el.getAttribute('data-parent-longpress');
+        let timer = null;
+        el.title = '家長按住 1.2 秒';
+        el.style.webkitTouchCallout = 'none';
+        el.style.webkitUserSelect = 'none';
+        const start = e => {
+            e.preventDefault();
+            el.style.opacity = '0.6';
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                timer = null; el.style.opacity = '';
+                const fn = window[fnName];
+                if (typeof fn === 'function') fn();
+            }, HOLD_MS);
+        };
+        const cancel = () => { el.style.opacity = ''; if (timer) { clearTimeout(timer); timer = null; } };
+        el.addEventListener('pointerdown', start);
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => el.addEventListener(ev, cancel));
+        el.addEventListener('click', e => e.preventDefault());
+        el.addEventListener('contextmenu', e => e.preventDefault());
+    });
+}
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => initParentLongPress());
+    else initParentLongPress();
+}
+
 // 匯出給其他模組使用
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -744,7 +782,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getUserMode, setUserMode, getThresholdPresets, getAphasiaBonus,
         getSimilarityThreshold, setSimilarityThreshold, calculateSimilarity,
         getVoiceSensitivity, setVoiceSensitivity, getSingleSyllableMode, setSingleSyllableMode,
-        getShowVoiceHud, setShowVoiceHud,
+        getShowVoiceHud, setShowVoiceHud, initParentLongPress,
         getPronunciationRecords, recordPronunciation, getPronunciationRecord,
         getPronunciationReport, clearPronunciationRecords, exportPronunciationRecords,
         passesSimilarityThreshold, getSimilarityLevel

@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../../icons/icon-96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#667eea">
@@ -426,7 +427,7 @@
     <div class="overlay" id="startOverlay">
         <div class="overlay-content">
             <h1>🎤 發音練習</h1>
-            <p>聽到注音符號的發音後<br>請<b>大聲唸出來</b>！</p>
+            <p>聽到注音符號的發音後<br>請<b>唸出來</b>！</p>
             <p class="warning">⚠️ 請確認已允許麥克風權限</p>
             <button class="start-btn highlight-btn" onclick="startGame()">🚀 開始遊戲</button>
         </div>
@@ -474,7 +475,7 @@
 
             <div class="buttons">
                 <button class="game-btn" onclick="replaySound()">🔊 再聽一次</button>
-                <button class="game-btn" id="manualBtn" onclick="manualConfirm()" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸</button>
+                <button class="game-btn" id="manualBtn" data-parent-longpress="manualConfirm" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);">✅ 我會唸（家長長按）</button>
                 <button class="game-btn skip" id="skipBtn" onclick="skipSymbol()" style="display: none;">⏭️ 跳過</button>
             </div>
         </div>
@@ -842,7 +843,11 @@
                 utterance.rate = 0.9;
                 utterance.pitch = 1.1;
                 if (callback) {
-                    utterance.onend = callback;
+                    let __done = false;
+                    const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
+                    utterance.onend = __finish;
+                    utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
+                    setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
                 }
                 window.speechSynthesis.speak(utterance);
             } else if (callback) {
@@ -879,7 +884,11 @@
                 utterance.pitch = 1.1;
                 utterance.volume = 0.8;
                 if (callback) {
-                    utterance.onend = callback;
+                    let __done = false;
+                    const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
+                    utterance.onend = __finish;
+                    utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
+                    setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
                 }
                 window.speechSynthesis.speak(utterance);
             } else if (callback) {

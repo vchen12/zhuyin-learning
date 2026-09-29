@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../icons/icon-96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -847,7 +848,11 @@
                 utterance.rate = 0.85;
                 utterance.pitch = 1.1;
                 if (callback) {
-                    utterance.onend = callback;
+                    let __done = false;
+                    const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
+                    utterance.onend = __finish;
+                    utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
+                    setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
                 }
                 window.speechSynthesis.speak(utterance);
             }
