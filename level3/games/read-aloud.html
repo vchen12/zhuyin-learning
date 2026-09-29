@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../../icons/icon-96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f5576c">
@@ -318,7 +319,7 @@
             <div class="buttons-section">
                 <button class="action-btn listen highlight-btn" onclick="playSentence()">🔊 聽示範</button>
                 <button class="action-btn speak mic-highlight" onclick="startListening()" id="speakBtn">🎤 我來讀</button>
-                <button class="action-btn highlight-btn" onclick="handleCorrect()" style="background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); color: white;">✅ 我會唸</button>
+                <button class="action-btn highlight-btn" data-parent-longpress="handleCorrect" style="background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); color: white;">✅ 我會唸（家長長按）</button>
                 <button class="action-btn next highlight-btn" onclick="skipSentence()">⏭️ 跳過</button>
             </div>
 
@@ -503,7 +504,7 @@
                         if (info.hadVoice) {
                             handleWrong(0, '');
                         } else {
-                            micHint.textContent = '按麥克風開始說話';
+                            micHint.textContent = info.noiseOnly ? '🔊 那不是說話聲喔，用嘴巴說' : '按麥克風開始說話';
                         }
                     },
                     onError: (err) => {

@@ -1,6 +1,6 @@
 // 注音符號學習樂園 Service Worker
 // 版本號 - 更新此值會觸發快取更新
-const CACHE_VERSION = 'v5.2.0';
+const CACHE_VERSION = 'v5.2.1';
 const CACHE_NAME = `zhuyin-learning-${CACHE_VERSION}`;
 
 // 需要快取的檔案清單
@@ -8,6 +8,8 @@ const CACHE_FILES = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icons/apple-touch-icon.png',
+  '/icons/icon-96.png',
   '/settings.html',
   '/mic-test.html',
   // 共享 JS

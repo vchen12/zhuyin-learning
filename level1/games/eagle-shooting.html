@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../../icons/icon-96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#87CEEB">
@@ -299,8 +300,8 @@
         <div class="overlay-content">
             <h1>🦅 射擊挑戰</h1>
             <p>老鷹抓著注音禮物袋飛過天空！</p>
-            <p>大聲唸出正確的注音符號，<br>就能打下禮物給小朋友！</p>
-            <p style="font-size: 0.95rem; color: #888;">提示：對著麥克風大聲唸出來</p>
+            <p>唸出正確的注音符號，<br>就能打下禮物！</p>
+            <p style="font-size: 0.95rem; color: #888;">提示：對著麥克風唸出來</p>
             <button class="start-btn" onclick="startGame()">🚀 開始遊戲</button>
         </div>
     </div>
@@ -395,7 +396,7 @@
 
             const userName = getUserName();
             const greeting = userName ? `${userName}，` : '';
-            speak(`${greeting}射擊挑戰開始！大聲唸出注音符號，打下禮物吧！`, () => {
+            speak(`${greeting}射擊挑戰開始！唸出注音符號，打下禮物吧！`, () => {
                 setTimeout(spawnEagle, 1000);
             });
         }
@@ -582,7 +583,11 @@
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-TW';
                 utterance.rate = 0.9;
-                if (callback) utterance.onend = callback;
+                let __done = false;
+                const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
+                utterance.onend = __finish;
+                utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
+                setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
                 window.speechSynthesis.speak(utterance);
             } else if (callback) {
                 callback();

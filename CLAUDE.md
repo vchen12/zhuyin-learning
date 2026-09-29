@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.2.0
+- **版本**: v5.2.1
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -39,8 +39,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 ├── level2/games/         # 7 個遊戲（圖片識字）
 ├── level3/games/         # 11 個遊戲（句子閱讀）
 ├── sounds/F1~F37.mp3     # 37 個注音發音
-├── images/public/        # 公開圖庫（8 分類）
-└── images/private/       # 私人家人照片
+└── images/private/       # 私人家人照片（.gitignore 排除；遊戲圖片實際使用 emoji，vocabulary.js 的 image 欄位未使用）
 ```
 
 ## 語音辨識系統（v5.0 架構：人聲偵測優先）
