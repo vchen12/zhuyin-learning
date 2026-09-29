@@ -150,6 +150,7 @@
                 }
                 .game-area {
                     overflow: hidden !important;
+                    max-height: calc(100vh - 60px) !important;
                     max-height: calc(100dvh - 60px) !important;
                 }
             `;

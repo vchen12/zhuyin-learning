@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.1.1
+- **版本**: v5.2.2
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -39,8 +39,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 ├── level2/games/         # 7 個遊戲（圖片識字）
 ├── level3/games/         # 11 個遊戲（句子閱讀）
 ├── sounds/F1~F37.mp3     # 37 個注音發音
-├── images/public/        # 公開圖庫（8 分類）
-└── images/private/       # 私人家人照片
+└── images/private/       # 私人家人照片（.gitignore 排除；遊戲圖片實際使用 emoji，vocabulary.js 的 image 欄位未使用）
 ```
 
 ## 語音辨識系統（v5.0 架構：人聲偵測優先）
@@ -96,6 +95,13 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 五港後終點。照片由家長在 iPad 上從「照片」選取，縮至 900px 存 localStorage（`voyage.data`）；
 每次發聲與抵港寫入 `voyage.log`，家長面板可看今日統計與匯出。喇叭播音（汽笛／TTS）期間關閉麥克風判定。
 
+`board/index.html`（說話板，`?set=iwant` / `?set=family`）：照片卡格 → 點卡進專注畫面 → 播示範（家人錄音，否則 TTS）
+→ `startListening(say, cb, { passMode: 'voice', hud: false })` 只確認真的發聲 → 報酬（照片放大、播家人錄的回應）
+→ 家長判定列（👍 說對了／🔁 再一次；發聲後才出現，只記錄不影響報酬）→ 回卡片格。
+家人組沿用設定頁 `familySettings` 的名字與 `customImage`。卡片文字存 localStorage `board.items.<set>`；
+照片／示範／回應錄音存 IndexedDB `zhuyin-board`（key `<set>/<id>/<photo|model|reply>`）；紀錄 `board.log`。
+觸碰照片＝重播示範（`guardAudio` 保護）。無 MediaRecorder 的裝置（iOS < 14.5）隱藏錄音鈕、改 TTS。
+
 裝置：主力 iPad 第五代（iPadOS 16.7，全功能）；iPhone 6 Plus（iOS 12.5）僅人聲偵測可用——
 **程式碼不得使用 `?.`、`??`**（iOS 13.1 起才支援），`100dvh` 前須有 `100vh` 後備。
 
@@ -105,7 +111,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 - 繁體中文註解
 - 每個 HTML 檔案是獨立完整的（包含所有 CSS 和 JS）
 - 共享功能放在 `js/` 目錄
-- 版本號更新在 `js/config.js` 和 `manifest.json`
+- 版本號更新在 `js/config.js`（`APP_CONFIG.version`）、`sw.js`（`CACHE_VERSION`，觸發快取更新）與 `index.html` 頁尾；`manifest.json` 無版本欄位
 
 ### UI 設計原則
 - 響應式設計（手機/平板/電腦）
@@ -146,6 +152,9 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.2.2**: QA round 2 修正——數字練習 speak() callback 重複觸發（題目自動換掉）、唸唸看「我會唸」誤把 callback 當語速、無辨識引擎裝置不再擋住發音練習／射擊
+- **v5.2.1**: QA round 1 修正（詞彙排序整頁失效、TTS 失敗卡死開場、重複載入、還原預設 UI、favicon、`initParentLongPress()` 家長長按「我會唸」）
+- **v5.2.0**: 「說話板」（我要…板／叫家人）：家人錄音示範與回應、IndexedDB 媒體、家長判定紀錄；`startListening` 第三參數 `{ passMode, hud }`
 - **v5.1.1**: 清除「唸兩到三次」「大聲唸」TTS 補丁與死碼分支；`guardAudio()` 喇叭播放閘門（示範音、重播、錄音回放期間不算人聲）；老鷹射擊改為示範音播完才開聽
 - **v5.1.0**: 「郵輪出航」原型（聲音即搖桿）、iOS 12 相容性修正（移除 `?.`、時域資料後備）、起音幀清晰度規則、真瀏覽器測試（tests/browser）
 - **v5.0.0**: 人聲偵測架構（NSDF 基頻偵測取代能量 VAD，解決「單音節無即時回應」與「敲螢幕過關」；零死區啟動、說完即判、內建聲音燈 HUD、設定頁靈敏度／單音節模式；mic-test 第 4 項）
@@ -175,6 +184,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 ## 對 Claude 的提醒
 
 1. 這是一個教育應用，目標用戶是失語症患者和學齡前兒童
+   - **鼓勵語與稱讚（「真聰明」「你好棒」「太棒了」）是刻意的，不要改成中性用語**（開發者 2026-09-29 指示）
 2. 語音功能是核心，任何修改都要考慮語音辨識的穩定性
 3. UI 要簡單直觀，按鈕要夠大
 4. 保持程式碼簡潔，避免過度工程化

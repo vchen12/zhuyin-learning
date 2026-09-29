@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../icons/icon-96.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>說話板 — 我要… / 叫家人</title>
+    <script src="../js/prevent-zoom.js" defer></script>
+    <style>
+        /*
+         * 說話板（我要…板 / 叫家人）
+         * 流程：點一張卡 → 聽示範（家人錄音，沒有就 TTS）→ 他說 → 系統確認真的發聲 → 立即報酬
+         *      （照片放大、播家人錄的回應）→ 家長一鍵判定（說對了／再一次／換一張）並記錄。
+         * 判定只用人聲偵測（passMode: 'voice'）；對不對由家長決定，系統不評分。
+         * 觸碰照片＝再聽一次示範（喇叭播放期間不算人聲）；家長設定以長按 ⚓ 開啟。
+         * 媒體（照片、示範錄音、回應錄音）存 IndexedDB；卡片文字存 localStorage。
+         */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; }
+        body {
+            min-height: 100vh; min-height: 100dvh;
+            font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+            background: #eef3f8; color: #1d2b3a; -webkit-user-select: none; user-select: none;
+        }
+        header { display: flex; align-items: center; gap: 2vmin; padding: 2vmin 2.5vmin; background: #1b5f9e; color: #fff; }
+        header h1 { font-size: 4vmin; flex: 1; text-align: center; }
+        #anchor { position: relative; z-index: 25; width: 9vmin; height: 9vmin; border-radius: 50%; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; } /* 在起始遮罩(20)之上，家長可先設定 */
+        .back { color: #fff; text-decoration: none; font-size: 3.2vmin; width: 9vmin; text-align: center; }
+
+        /* 卡片格 */
+        #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30vmin, 44vw), 1fr)); gap: 2.5vmin; padding: 2.5vmin; }
+        .card { background: #fff; border-radius: 3vmin; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.10); border: .6vmin solid transparent; transition: transform .12s; }
+        .card:active { transform: scale(.97); }
+        .card .pic { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: #dfe8f1; }
+        .card .ph { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 14vmin; background: #dfe8f1; }
+        .card .lbl { text-align: center; font-size: 4.6vmin; font-weight: 800; padding: 1.6vmin 1vmin; color: #10456f; }
+        .card .lbl small { display: block; font-size: 2.6vmin; color: #6b7c8d; font-weight: 600; }
+        .card.done { border-color: #ffd86b; }
+        .card .badge { position: absolute; }
+        #empty { padding: 8vmin 4vmin; text-align: center; color: #6b7c8d; font-size: 3.2vmin; line-height: 1.6; }
+
+        /* 專注畫面 */
+        #focus { position: fixed; inset: 0; background: #10456f; color: #fff; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin; padding: 3vmin; z-index: 10; }
+        #focus.show { display: flex; }
+        #focusPicWrap { position: relative; width: min(62vmin, 88vw); aspect-ratio: 4/3; }
+        #focusPic, #focusPh { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 3vmin; border: .8vmin solid #fff; box-shadow: 0 16px 50px rgba(0,0,0,.45); background: #fff; transition: transform .25s cubic-bezier(.2,.9,.3,1.3); }
+        #focusPh { display: flex; align-items: center; justify-content: center; font-size: 26vmin; background: #dfe8f1; }
+        #ring { position: absolute; inset: -2.2vmin; border-radius: 4.5vmin; border: 1.4vmin solid rgba(255,255,255,.25); pointer-events: none; transition: border-color .1s, box-shadow .1s; }
+        #focus.voiced #ring { border-color: #2ed573; box-shadow: 0 0 0 1.6vmin rgba(46,213,115,.35); }
+        #focus.loud #ring { border-color: #ffb74d; }
+        #focus.reward #focusPic, #focus.reward #focusPh { transform: scale(1.08); }
+        #focus.reward #ring { border-color: #ffd86b; box-shadow: 0 0 0 2.4vmin rgba(255,216,107,.45); }
+        #focusSay { font-size: 9vmin; font-weight: 900; text-shadow: 0 2px 8px rgba(0,0,0,.35); }
+        #focusStatus { font-size: 3.6vmin; opacity: .9; min-height: 4.5vmin; }
+        #focusHeard { font-size: 3vmin; opacity: .7; min-height: 3.6vmin; }
+        #voiceBar { width: min(62vmin, 88vw); height: 2.2vmin; border-radius: 99px; background: rgba(255,255,255,.2); overflow: hidden; }
+        #voiceFill { height: 100%; width: 0; background: #ffd86b; transition: width .08s; }
+        #focus.voiced #voiceFill { background: #2ed573; }
+
+        /* 家長判定列（有發聲後才出現） */
+        #verdict { display: none; gap: 2vmin; margin-top: 1vmin; }
+        #verdict.show { display: flex; }
+        .vbtn { font-size: 4vmin; padding: 2.2vmin 4vmin; border: none; border-radius: 99px; font-weight: 800; color: #10456f; background: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+        .vbtn.ok { background: #ffd86b; }
+        #exitFocus { position: absolute; top: 2vmin; right: 2vmin; font-size: 3.2vmin; padding: 1.4vmin 2.6vmin; border-radius: 99px; border: none; background: rgba(255,255,255,.18); color: #fff; }
+
+        /* 開始遮罩（iOS 需手勢開麥克風） */
+        #startOverlay { position: fixed; inset: 0; background: rgba(16,69,111,.9); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vmin; z-index: 20; padding: 5vmin; text-align: center; }
+        #startBtn { font-size: 7vmin; padding: 3.5vmin 8vmin; border: none; border-radius: 99px; background: #ffd86b; color: #10456f; font-weight: 900; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+        #startOverlay p { font-size: 3.4vmin; opacity: .9; line-height: 1.5; }
+        #startErr { color: #ffb4b4; font-size: 3vmin; }
+
+        /* 家長面板 */
+        #panel { position: fixed; inset: 0; background: #f4f7fb; color: #223; display: none; z-index: 30; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 3vmin; }
+        #panel.show { display: block; }
+        #panel h2 { font-size: 3.6vmin; color: #10456f; margin: 2.5vmin 0 1vmin; }
+        .note { color: #556; font-size: 2.4vmin; line-height: 1.5; }
+        .row { display: flex; gap: 1.5vmin; flex-wrap: wrap; align-items: center; margin: 1.5vmin 0; }
+        .btn { font-size: 2.8vmin; padding: 1.5vmin 2.8vmin; border: none; border-radius: 99px; background: #667eea; color: #fff; font-weight: 700; }
+        .btn.gray { background: #8a94a6; } .btn.red { background: #e05c5c; } .btn.rec { background: #e05c5c; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: .55; } }
+        .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(40vmin, 1fr)); gap: 2vmin; }
+        .item { background: #fff; border-radius: 2vmin; padding: 1.8vmin; box-shadow: 0 2px 8px rgba(0,0,0,.08); display: grid; grid-template-columns: 16vmin 1fr; gap: 1.5vmin; }
+        .item .thumb { width: 16vmin; height: 12vmin; object-fit: cover; border-radius: 1.5vmin; background: #e6edf5; display: flex; align-items: center; justify-content: center; font-size: 7vmin; }
+        .item input[type=text] { width: 100%; font-size: 2.6vmin; padding: .9vmin; border: 1px solid #cdd; border-radius: 1vmin; margin-bottom: .8vmin; }
+        .item label.pick { display: inline-block; background: #667eea; color: #fff; border-radius: 1vmin; padding: .9vmin 1.6vmin; font-size: 2.4vmin; }
+        .item input[type=file] { display: none; }
+        .item .media { display: flex; gap: .8vmin; align-items: center; font-size: 2.4vmin; margin: .5vmin 0; flex-wrap: wrap; }
+        .item .media .sbtn { font-size: 2.4vmin; padding: .8vmin 1.4vmin; border: none; border-radius: 1vmin; background: #e6edf5; color: #10456f; font-weight: 700; }
+        .item .media .sbtn.has { background: #d7f5e1; }
+        .stat { background: #fff; border-radius: 2vmin; padding: 2vmin; font-size: 2.6vmin; line-height: 1.7; }
+        .stat table { border-collapse: collapse; width: 100%; }
+        .stat td, .stat th { text-align: left; padding: .4vmin 1vmin; border-bottom: 1px solid #eef; }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="back" href="../index.html">←</a>
+        <h1 id="title">說話板</h1>
+        <div id="anchor" title="家長：長按開啟">⚓</div>
+    </header>
+    <div id="grid"></div>
+    <div id="empty" style="display:none">還沒有卡片。長按右上角 ⚓ 新增，或到「設定」頁上傳家人照片。</div>
+
+    <div id="focus">
+        <button id="exitFocus">⏭ 換一張</button>
+        <div id="focusPicWrap">
+            <img id="focusPic" alt="" style="display:none">
+            <div id="focusPh"></div>
+            <div id="ring"></div>
+        </div>
+        <div id="focusSay"></div>
+        <div id="focusStatus"></div>
+        <div id="voiceBar"><div id="voiceFill"></div></div>
+        <div id="focusHeard"></div>
+        <div id="verdict">
+            <button class="vbtn ok" data-v="ok">👍 說對了</button>
+            <button class="vbtn" data-v="again">🔁 再一次</button>
+        </div>
+    </div>
+
+    <div id="startOverlay">
+        <h1 id="startTitle" style="font-size:7vmin">說話板</h1>
+        <p id="startHint">點一張圖，聽完示範，說出來。<br>說了就有回應；對不對由家長按。</p>
+        <button id="startBtn">開始</button>
+        <p id="startErr"></p>
+    </div>
+
+    <div id="panel">
+        <div class="row" style="justify-content:space-between">
+            <h2 style="margin:0">⚓ 家長設定</h2>
+            <button class="btn gray" id="closePanel">關閉</button>
+        </div>
+        <p class="note" id="panelNote"></p>
+        <div class="row">
+            <button class="btn" id="addItem">＋ 新增卡片</button>
+            <button class="btn gray" id="resetItems">還原預設卡片（保留錄音與照片）</button>
+        </div>
+        <div class="items" id="items"></div>
+        <h2>今天的紀錄</h2>
+        <div class="stat" id="stats"></div>
+        <div class="row">
+            <button class="btn" id="exportLog">匯出紀錄 (JSON)</button>
+            <button class="btn red" id="clearLog">清除紀錄</button>
+        </div>
+        <p class="note" id="recNote"></p>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/speech-recognition.js"></script>
+    <script>
+        'use strict';
+        // ==========================================
+        // 內容組
+        // ==========================================
+        const SETS = {
+            iwant: {
+                title: '我要…', startHint: '點一張圖，聽完示範，說「我要…」。<br>說了就有回應；對不對由家長按。',
+                note: '卡片是他日常真的會說的需求。照片建議用家裡實物（他的毛巾、家裡的馬桶）。「示範」錄家長唸一次；「回應」錄家人的答覆（例如「好，我們去尿尿」），沒有錄音就用合成語音。',
+                prefix: '我要',
+                defaults: [
+                    { id: 'pee',    label: '尿尿',   say: '我要尿尿',   reply: '好，我們去尿尿', emoji: '🚻' },
+                    { id: 'poo',    label: '便便',   say: '我要便便',   reply: '好，我們去廁所', emoji: '🚽' },
+                    { id: 'towel',  label: '毛巾',   say: '我要毛巾',   reply: '好，毛巾給你',   emoji: '🧺' },
+                    { id: 'tissue', label: '衛生紙', say: '我要衛生紙', reply: '好，衛生紙給你', emoji: '🧻' },
+                    { id: 'rest',   label: '休息',   say: '我要休息',   reply: '好，休息一下',   emoji: '🛋️' },
+                    { id: 'sit',    label: '坐坐',   say: '我要坐坐',   reply: '好，坐下來',     emoji: '🪑' },
+                    { id: 'walk',   label: '走路',   say: '我要走路',   reply: '好，我們去走走', emoji: '🚶' },
+                    { id: 'water',  label: '喝水',   say: '我要喝水',   reply: '好，水給你',     emoji: '🥤' },
+                    { id: 'eat',    label: '吃飯',   say: '我要吃飯',   reply: '好，我們吃飯',   emoji: '🍚' }
+                ]
+            },
+            family: {
+                title: '叫家人', startHint: '點一個家人，聽完示範，叫他。<br>叫了，家人就會回應。',
+                note: '家人照片沿用「設定」頁上傳的；也可在此另外選。「回應」請家人本人錄一句（例如媽媽錄「媽媽在這裡～」），這是這個板的核心報酬。',
+                prefix: '',
+                defaults: null   // 從 familySettings 讀取
+            }
+        };
+        const params = new URLSearchParams(location.search);
+        const SET = SETS[params.get('set')] ? params.get('set') : 'iwant';
+        const CFG = SETS[SET];
+
+        const $ = id => document.getElementById(id);
+        const FRAME_MS = 25;
+        const REWARD_MS = 2600;      // 報酬（照片放大＋回應）之後才出現家長判定列
+        const VERDICT_WAIT_MS = 7000; // 家長沒按就自動回到卡片格
+        const MAX_TIMEOUTS = 3;      // 連續幾次完全沒聲音就回卡片格
+
+        // ==========================================
+        // 資料：卡片文字（localStorage）＋ 媒體（IndexedDB）
+        // ==========================================
+        let items = [];
+        const media = {};            // key → objectURL
+        let db = null;
+
+        function defaultItems() {
+            if (SET === 'family') {
+                let fs = [];
+                try { fs = JSON.parse(localStorage.getItem('familySettings') || '[]'); } catch (e) { /* ignore */ }
+                if (!fs.length) fs = ['爸爸', '媽媽', '哥哥', '姐姐', '弟弟', '妹妹', '爺爺', '奶奶', '外公', '外婆'].map((n, i) => ({ id: 'f' + i, name: n, emoji: '🙂', enabled: true }));
+                return fs.filter(m => m.enabled !== false).map(m => ({
+                    id: m.id, label: m.name, say: m.name, reply: m.name + '在這裡', emoji: m.emoji || '🙂',
+                    settingsImage: m.customImage || null
+                }));
+            }
+            return CFG.defaults.map(d => Object.assign({}, d));
+        }
+        function loadItems() {
+            let saved = null;
+            try { saved = JSON.parse(localStorage.getItem('board.items.' + SET) || 'null'); } catch (e) { /* ignore */ }
+            const defs = defaultItems();
+            if (!saved) return defs;
+            // 家人組：以設定頁為準補上新家人與照片
+            if (SET === 'family') {
+                defs.forEach(d => {
+                    const ex = saved.find(x => x.id === d.id);
+                    if (ex) ex.settingsImage = d.settingsImage; else saved.push(d);
+                });
+            }
+            return saved;
+        }
+        function saveItems() {
+            const slim = items.map(it => ({ id: it.id, label: it.label, say: it.say, reply: it.reply, emoji: it.emoji }));
+            localStorage.setItem('board.items.' + SET, JSON.stringify(slim));
+        }
+        function openDb() {
+            return new Promise(resolve => {
+                if (!('indexedDB' in window)) { resolve(null); return; }
+                const req = indexedDB.open('zhuyin-board', 1);
+                req.onupgradeneeded = () => req.result.createObjectStore('media');
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+        }
+        function mediaKey(id, kind) { return SET + '/' + id + '/' + kind; }
+        function putMedia(id, kind, blob) {
+            return new Promise(resolve => {
+                if (!db) { resolve(false); return; }
+                const tx = db.transaction('media', 'readwrite');
+                tx.objectStore('media').put(blob, mediaKey(id, kind));
+                tx.oncomplete = () => { setMediaUrl(id, kind, blob); resolve(true); };
+                tx.onerror = () => resolve(false);
+            });
+        }
+        function delMedia(id, kind) {
+            return new Promise(resolve => {
+                if (!db) { resolve(false); return; }
+                const tx = db.transaction('media', 'readwrite');
+                tx.objectStore('media').delete(mediaKey(id, kind));
+                tx.oncomplete = () => { const k = mediaKey(id, kind); if (media[k]) URL.revokeObjectURL(media[k]); delete media[k]; resolve(true); };
+                tx.onerror = () => resolve(false);
+            });
+        }
+        function setMediaUrl(id, kind, blob) {
+            const k = mediaKey(id, kind);
+            if (media[k]) URL.revokeObjectURL(media[k]);
+            media[k] = URL.createObjectURL(blob);
+        }
+        function loadAllMedia() {
+            return new Promise(resolve => {
+                if (!db) { resolve(); return; }
+                const tx = db.transaction('media', 'readonly');
+                const store = tx.objectStore('media');
+                const req = store.openCursor();
+                req.onsuccess = () => {
+                    const cur = req.result;
+                    if (!cur) { resolve(); return; }
+                    if (String(cur.key).indexOf(SET + '/') === 0) media[cur.key] = URL.createObjectURL(cur.value);
+                    cur.continue();
+                };
+                req.onerror = () => resolve();
+            });
+        }
+        function photoUrl(it) { return media[mediaKey(it.id, 'photo')] || it.settingsImage || null; }
+        function modelUrl(it) { return media[mediaKey(it.id, 'model')] || null; }
+        function replyUrl(it) { return media[mediaKey(it.id, 'reply')] || null; }
+
+        function loadLog() { try { return JSON.parse(localStorage.getItem('board.log') || '[]'); } catch (e) { return []; } }
+        function appendLog(entry) {
+            const log = loadLog(); log.push(entry);
+            while (log.length > 5000) log.shift();
+            try { localStorage.setItem('board.log', JSON.stringify(log)); } catch (e) { /* ignore */ }
+        }
+        function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+        // ==========================================
+        // 卡片格
+        // ==========================================
+        function renderGrid() {
+            const g = $('grid'); g.innerHTML = '';
+            $('empty').style.display = items.length ? 'none' : 'block';
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const okToday = {};
+            loadLog().forEach(x => { if (x.set === SET && x.t >= today.getTime() && x.verdict === 'ok') okToday[x.id] = true; });
+            items.forEach(it => {
+                const c = document.createElement('div');
+                c.className = 'card' + (okToday[it.id] ? ' done' : '');
+                const pu = photoUrl(it);
+                c.innerHTML = (pu ? '<img class="pic" src="' + pu + '" alt="">' : '<div class="ph">' + escapeHtml(it.emoji || '🙂') + '</div>') +
+                    '<div class="lbl">' + (CFG.prefix ? '<small>' + escapeHtml(CFG.prefix) + '</small>' : '') + escapeHtml(it.label) + '</div>';
+                c.addEventListener('click', () => enterFocus(it));
+                g.appendChild(c);
+            });
+        }
+
+        // ==========================================
+        // 專注畫面：示範 → 聽 → 報酬 → 家長判定
+        // ==========================================
+        let current = null, timeouts = 0, verdictTimer = null, lastUtter = null, focusActive = false;
+
+        function setStatus(t) { $('focusStatus').textContent = t; }
+
+        async function enterFocus(it) {
+            current = it; timeouts = 0; lastUtter = null; focusActive = true;
+            const f = $('focus');
+            f.classList.remove('reward', 'voiced', 'loud');
+            $('verdict').classList.remove('show');
+            const pu = photoUrl(it);
+            if (pu) { $('focusPic').src = pu; $('focusPic').style.display = 'block'; $('focusPh').style.display = 'none'; }
+            else { $('focusPic').style.display = 'none'; $('focusPh').style.display = 'flex'; $('focusPh').textContent = it.emoji || '🙂'; }
+            $('focusSay').textContent = it.say;
+            $('focusHeard').textContent = '';
+            $('voiceFill').style.width = '0';
+            f.classList.add('show');
+            await playModel(it);
+            if (focusActive && current === it) listen();
+        }
+
+        function exitFocus() {
+            focusActive = false; current = null;
+            clearTimeout(verdictTimer);
+            SpeechModule.stopListening();
+            $('focus').classList.remove('show', 'reward');
+            renderGrid();
+        }
+
+        /** 播示範：家人錄音優先，否則 TTS。播放期間喇叭閘門會排除麥克風判定。 */
+        function playModel(it) {
+            setStatus('🔊 聽示範…');
+            const url = modelUrl(it);
+            if (url) return playUrl(url);
+            if (!('speechSynthesis' in window) || !speechSynthesis.getVoices().length) return Promise.resolve();
+            return SpeechModule.speak(it.say, 0.85);
+        }
+        function playReply(it) {
+            const url = replyUrl(it);
+            if (url) return playUrl(url);
+            if (!('speechSynthesis' in window) || !speechSynthesis.getVoices().length) return Promise.resolve();
+            return SpeechModule.speak(it.reply || '好', 0.9);
+        }
+        function playUrl(url) {
+            return new Promise(resolve => {
+                const a = SpeechModule.guardAudio(new Audio(url));
+                let done = false; const fin = () => { if (!done) { done = true; resolve(); } };
+                a.onended = fin; a.onerror = fin;
+                a.play().catch(fin);
+                setTimeout(fin, 15000);
+            });
+        }
+
+        function listen() {
+            if (!focusActive || !current) return;
+            const it = current;
+            const f = $('focus');
+            setStatus('🎤 說「' + it.say + '」');
+            const ok = SpeechModule.startListening(it.say, {
+                onVoiceLevel: v => {
+                    $('voiceFill').style.width = (v.level * 100) + '%';
+                    f.classList.toggle('voiced', v.voiced);
+                    f.classList.toggle('loud', !v.voiced && v.level > 0.15);
+                },
+                onVoiceDetected: () => { setStatus('👂 聽到了！'); if (navigator.vibrate) navigator.vibrate(40); },
+                onInterim: t => { $('focusHeard').textContent = '聽到：' + t; },
+                onResult: r => {
+                    if (!focusActive || current !== it) return;
+                    if (r.transcript) $('focusHeard').textContent = '聽到：' + r.transcript;
+                    if (r.passed) { reward(it, r); return; }
+                    // voice 模式下不過關只會是發聲太短
+                    setStatus('再說一次，說完整');
+                    setTimeout(listen, 600);
+                },
+                onTimeout: info => {
+                    if (!focusActive || current !== it) return;
+                    timeouts++;
+                    setStatus(info.noiseOnly ? '🔊 那不是說話聲，用嘴巴說' : '沒聽到聲音');
+                    if (timeouts >= MAX_TIMEOUTS) { exitFocus(); return; }
+                    setTimeout(listen, 800);
+                },
+                onError: () => { setStatus('❌ 麥克風無法使用'); }
+            }, { passMode: 'voice', hud: false });
+            if (!ok) setTimeout(listen, 500);
+        }
+
+        async function reward(it, r) {
+            const f = $('focus');
+            f.classList.remove('voiced', 'loud');
+            f.classList.add('reward');
+            setStatus('✅ ' + it.say + '！');
+            if (navigator.vibrate) navigator.vibrate([80, 40, 120]);
+            lastUtter = { t: Date.now(), set: SET, id: it.id, say: it.say, ms: r.voicedMs, basis: r.basis, transcript: r.transcript || '' };
+            appendLog(Object.assign({ verdict: 'pending' }, lastUtter));
+            await playReply(it);
+            if (!focusActive || current !== it) return;
+            // 家長判定列：發聲之後才出現，按了只是記錄，不影響已給的報酬
+            $('verdict').classList.add('show');
+            clearTimeout(verdictTimer);
+            verdictTimer = setTimeout(() => { recordVerdict('auto'); exitFocus(); }, VERDICT_WAIT_MS);
+        }
+
+        function recordVerdict(v) {
+            if (!lastUtter) return;
+            const log = loadLog();
+            for (let i = log.length - 1; i >= 0; i--) {
+                if (log[i].t === lastUtter.t && log[i].id === lastUtter.id) { log[i].verdict = v; break; }
+            }
+            try { localStorage.setItem('board.log', JSON.stringify(log)); } catch (e) { /* ignore */ }
+            lastUtter = null;
+        }
+
+        document.querySelectorAll('#verdict .vbtn').forEach(b => b.addEventListener('click', async e => {
+            const v = e.currentTarget.dataset.v;
+            clearTimeout(verdictTimer);
+            recordVerdict(v);
+            $('verdict').classList.remove('show');
+            if (v === 'ok') { setStatus('👍'); setTimeout(exitFocus, 700); return; }
+            // 再一次：重播示範再聽
+            const it = current; $('focus').classList.remove('reward');
+            await playModel(it);
+            if (focusActive && current === it) listen();
+        }));
+        $('exitFocus').addEventListener('click', () => { clearTimeout(verdictTimer); if (lastUtter) recordVerdict('skip'); exitFocus(); });
+        // 觸碰照片＝再聽一次示範（播放期間不算人聲），然後繼續聽
+        $('focusPicWrap').addEventListener('click', async () => {
+            if (!focusActive || !current || $('focus').classList.contains('reward')) return;
+            const it = current;
+            SpeechModule.stopListening();
+            await playModel(it);
+            if (focusActive && current === it) listen();
+        });
+
+        // ==========================================
+        // 開始
+        // ==========================================
+        $('startBtn').addEventListener('click', async () => {
+            $('startErr').textContent = '';
+            const ok = await SpeechModule.init();
+            if (!ok) { $('startErr').textContent = '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風。'; return; }
+            SpeechModule.setHud(false);
+            $('startOverlay').style.display = 'none';
+        });
+
+        // ==========================================
+        // 家長面板（長按 ⚓ 1.2 秒）
+        // ==========================================
+        let pressTimer = null;
+        const anchor = $('anchor');
+        anchor.addEventListener('pointerdown', e => { e.preventDefault(); pressTimer = setTimeout(openPanel, 1200); });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => anchor.addEventListener(ev, () => clearTimeout(pressTimer)));
+        anchor.addEventListener('contextmenu', e => e.preventDefault());
+        function openPanel() { if (focusActive) exitFocus(); renderPanel(); $('panel').classList.add('show'); }
+        $('closePanel').addEventListener('click', () => { $('panel').classList.remove('show'); renderGrid(); });
+
+        const canRecord = typeof MediaRecorder !== 'undefined';
+        function renderPanel() {
+            $('panelNote').textContent = CFG.note;
+            $('recNote').textContent = canRecord ? '錄音存在這台裝置的瀏覽器裡，不上傳。錄示範：家長唸一次；錄回應：家人本人回一句。'
+                                                : '此裝置的瀏覽器不支援錄音（iOS 14.5 以下），示範與回應改用合成語音。';
+            const wrap = $('items'); wrap.innerHTML = '';
+            items.forEach((it, idx) => {
+                const d = document.createElement('div'); d.className = 'item';
+                const pu = photoUrl(it);
+                d.innerHTML =
+                    '<div>' + (pu ? '<img class="thumb" src="' + pu + '">' : '<div class="thumb">' + escapeHtml(it.emoji || '🙂') + '</div>') +
+                        '<label class="pick" style="margin-top:.8vmin">📷 照片<input type="file" accept="image/*" data-idx="' + idx + '"></label></div>' +
+                    '<div>' +
+                        '<input type="text" data-idx="' + idx + '" data-k="label" value="' + escapeHtml(it.label) + '" placeholder="卡片上的字">' +
+                        '<input type="text" data-idx="' + idx + '" data-k="say" value="' + escapeHtml(it.say) + '" placeholder="他要說的話">' +
+                        '<input type="text" data-idx="' + idx + '" data-k="reply" value="' + escapeHtml(it.reply || '') + '" placeholder="家人的回應（沒錄音時用合成語音唸這句）">' +
+                        '<div class="media">示範：' + mediaBtns(idx, 'model', !!modelUrl(it)) + '</div>' +
+                        '<div class="media">回應：' + mediaBtns(idx, 'reply', !!replyUrl(it)) + '</div>' +
+                        '<button class="sbtn del" data-idx="' + idx + '" style="margin-top:.6vmin;font-size:2.4vmin;padding:.8vmin 1.4vmin;border:none;border-radius:1vmin;background:#fde2e2;color:#a33">刪除卡片</button>' +
+                    '</div>';
+                wrap.appendChild(d);
+            });
+            wrap.querySelectorAll('input[type=file]').forEach(inp => inp.addEventListener('change', onPickPhoto));
+            wrap.querySelectorAll('input[type=text]').forEach(inp => inp.addEventListener('change', e => {
+                const it = items[parseInt(e.target.dataset.idx, 10)]; it[e.target.dataset.k] = e.target.value.trim(); saveItems();
+            }));
+            wrap.querySelectorAll('.sbtn.rec').forEach(b => b.addEventListener('click', onRecord));
+            wrap.querySelectorAll('.sbtn.play').forEach(b => b.addEventListener('click', e => {
+                const it = items[parseInt(e.currentTarget.dataset.idx, 10)]; const k = e.currentTarget.dataset.kind;
+                const url = k === 'model' ? modelUrl(it) : replyUrl(it); if (url) playUrl(url);
+            }));
+            wrap.querySelectorAll('.sbtn.clear').forEach(b => b.addEventListener('click', async e => {
+                const it = items[parseInt(e.currentTarget.dataset.idx, 10)]; await delMedia(it.id, e.currentTarget.dataset.kind); renderPanel();
+            }));
+            wrap.querySelectorAll('.sbtn.del').forEach(b => b.addEventListener('click', async e => {
+                const idx = parseInt(e.currentTarget.dataset.idx, 10); const it = items[idx];
+                if (!confirm('刪除「' + it.label + '」卡片與其錄音？')) return;
+                await delMedia(it.id, 'photo'); await delMedia(it.id, 'model'); await delMedia(it.id, 'reply');
+                items.splice(idx, 1); saveItems(); renderPanel();
+            }));
+            renderStats();
+        }
+        function mediaBtns(idx, kind, has) {
+            let h = '';
+            if (canRecord) h += '<button class="sbtn rec' + (has ? ' has' : '') + '" data-idx="' + idx + '" data-kind="' + kind + '">🎙 ' + (has ? '重錄' : '錄音') + '</button>';
+            if (has) h += '<button class="sbtn play" data-idx="' + idx + '" data-kind="' + kind + '">▶ 播放</button><button class="sbtn clear" data-idx="' + idx + '" data-kind="' + kind + '">✕</button>';
+            if (!has && !canRecord) h += '<span class="note">（合成語音）</span>';
+            return h;
+        }
+        $('addItem').addEventListener('click', () => {
+            items.push({ id: 'c' + Date.now(), label: '新卡片', say: CFG.prefix ? CFG.prefix + '…' : '…', reply: '好', emoji: '🙂' });
+            saveItems(); renderPanel();
+        });
+        $('resetItems').addEventListener('click', () => {
+            if (!confirm('還原預設卡片文字？（照片與錄音保留）')) return;
+            localStorage.removeItem('board.items.' + SET); items = loadItems(); renderPanel();
+        });
+
+        function onPickPhoto(e) {
+            const file = e.target.files && e.target.files[0]; if (!file) return;
+            const it = items[parseInt(e.target.dataset.idx, 10)];
+            const reader = new FileReader();
+            reader.onload = () => {
+                const im = new Image();
+                im.onload = () => {
+                    const max = 900, s = Math.min(1, max / Math.max(im.width, im.height));
+                    const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+                    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+                    c.toBlob(async blob => { if (blob) { await putMedia(it.id, 'photo', blob); renderPanel(); } }, 'image/jpeg', 0.8);
+                };
+                im.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 錄音：按一下開始、再按一下停止（最長 8 秒）
+        let recorder = null, recChunks = [], recBtn = null, recTimer = null;
+        async function onRecord(e) {
+            const btn = e.currentTarget;
+            if (recorder && recorder.state === 'recording') { stopRecord(); return; }
+            const it = items[parseInt(btn.dataset.idx, 10)]; const kind = btn.dataset.kind;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+                recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+                recChunks = []; recBtn = btn;
+                recorder.ondataavailable = ev => { if (ev.data.size > 0) recChunks.push(ev.data); };
+                recorder.onstop = async () => {
+                    stream.getTracks().forEach(t => t.stop());
+                    const blob = new Blob(recChunks, { type: recorder.mimeType || 'audio/webm' });
+                    recorder = null; clearTimeout(recTimer);
+                    if (blob.size > 0) await putMedia(it.id, kind, blob);
+                    renderPanel();
+                };
+                recorder.start();
+                btn.textContent = '⏹ 停止'; btn.classList.add('rec');
+                recTimer = setTimeout(stopRecord, 8000);
+            } catch (err) { alert('無法錄音：' + err.message); }
+        }
+        function stopRecord() { if (recorder && recorder.state === 'recording') recorder.stop(); }
+
+        function renderStats() {
+            const log = loadLog().filter(x => x.set === SET);
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const t = log.filter(x => x.t >= today.getTime());
+            const by = {};
+            t.forEach(x => { const b = by[x.say] = by[x.say] || { n: 0, ok: 0, again: 0 }; b.n++; if (x.verdict === 'ok') b.ok++; if (x.verdict === 'again') b.again++; });
+            const rows = Object.keys(by).map(k => '<tr><td>' + escapeHtml(k) + '</td><td>' + by[k].n + '</td><td>' + by[k].ok + '</td><td>' + by[k].again + '</td></tr>').join('');
+            $('stats').innerHTML = '今天發聲 <b>' + t.length + '</b> 次（歷史 ' + log.length + ' 筆）' +
+                (rows ? '<table><tr><th>說的話</th><th>次數</th><th>👍 說對了</th><th>🔁 再一次</th></tr>' + rows + '</table>' : '');
+        }
+        $('exportLog').addEventListener('click', () => {
+            const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), set: SET, items: items.map(i => i.say), log: loadLog().filter(x => x.set === SET) }, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'board-' + SET + '-log.json'; a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        });
+        $('clearLog').addEventListener('click', () => {
+            if (!confirm('確定清除這個板的所有紀錄？')) return;
+            localStorage.setItem('board.log', JSON.stringify(loadLog().filter(x => x.set !== SET))); renderStats();
+        });
+
+        // ==========================================
+        // 啟動
+        // ==========================================
+        (async () => {
+            document.title = CFG.title + ' — 說話板';
+            $('title').textContent = CFG.title;
+            $('startTitle').textContent = CFG.title;
+            $('startHint').innerHTML = CFG.startHint;
+            db = await openDb();
+            await loadAllMedia();
+            items = loadItems();
+            renderGrid();
+            if ('speechSynthesis' in window) speechSynthesis.getVoices(); // 觸發語音清單載入
+        })();
+    </script>
+</body>
+</html>

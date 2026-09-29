@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../icons/icon-96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>郵輪出航 — 說話旅行</title>
@@ -104,7 +105,7 @@
 
         /* 家長列（長按左上角錨點開啟） */
         #anchor { position: absolute; left: 1.5vmin; top: 1.5vmin; width: 9vmin; height: 9vmin; border-radius: 50%; background: rgba(255,255,255,.18);
-                  display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; z-index: 15; }
+                  display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; z-index: 25; } /* 在起始遮罩(20)之上，家長可先設定 */
         #parentPanel { position: absolute; inset: 0; background: #f4f7fb; color: #223; display: none; z-index: 30; overflow-y: auto;
                        -webkit-overflow-scrolling: touch; padding: 3vmin; }
         #parentPanel.show { display: block; }

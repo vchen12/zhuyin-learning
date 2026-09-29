@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="icons/icon-96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#667eea">
@@ -3092,6 +3093,7 @@
             document.getElementById('userName').value = '';
             document.getElementById('userNamePreview').style.display = 'none';
             document.getElementById('similarityThreshold').value = 0;
+            if (typeof renderVoiceSettings === 'function') renderVoiceSettings();   // 靈敏度／聲音燈／單音節 UI 同步
             document.getElementById('thresholdValue').textContent = '0%';
             updateModeButtons();
             renderThresholdPresets();
