@@ -474,17 +474,12 @@
                     utterance.voice = zhVoice;
                 }
 
-                if (callback) {
-                    utterance.onend = callback;
-                    setTimeout(() => {
-                        if (callback) callback();
-                    }, 5000);
-                }
-
-                utterance.onerror = (e) => {
-                    console.error('語音合成錯誤:', e);
-                    if (callback) callback();
-                };
+                // callback 只能執行一次：onend／onerror／保險計時器三者只認第一個
+                let done = false;
+                const finish = () => { if (done) return; done = true; if (callback) callback(); };
+                utterance.onend = finish;
+                utterance.onerror = (e) => { console.error('語音合成錯誤:', e); finish(); };
+                setTimeout(finish, 8000);
 
                 window.speechSynthesis.speak(utterance);
             } else if (callback) {

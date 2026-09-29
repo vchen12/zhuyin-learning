@@ -538,9 +538,9 @@
 
         // 開始遊戲
         function startGame() {
+            // 沒有語音辨識引擎（如 iOS 12）也能玩：v5 以人聲偵測判定，辨識只是加分
             if (!SpeechModule.isSupported()) {
-                alert('很抱歉，您的瀏覽器不支援語音辨識功能。\n\n建議使用 Google Chrome 瀏覽器。');
-                return;
+                console.warn('此瀏覽器無語音辨識引擎，改用純人聲偵測');
             }
 
             document.getElementById('startOverlay').classList.add('hidden');
