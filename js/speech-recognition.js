@@ -45,6 +45,7 @@
     // 語音辨識
     let recognition = null;
     let recognitionSupported = false;
+    let asrWarned = false;         // 辨識引擎不可用的警告只印一次
     let isListening = false;
     let isProcessing = false;
     let currentSession = null;
@@ -582,9 +583,13 @@
      *   onResult(result)           - { transcript, similarity, passed, basis, hadVoice, hasVoice, voiceDuration, voicedMs }
      *   onTimeout(info)            - 沒聽到人聲 { hadVoice, hasVoice, voiceDuration, noiseOnly, peakLevel }
      *   onError(error)
+     * @param {object} [options] - 選用：
+     *   passMode: 'voice' | 'hybrid' | 'speech'  強制判定模式（例如說話板由家長判定對錯，只需確認發聲 → 'voice'）
+     *   hud: false  不顯示內建聲音燈（頁面自行呈現）
      * @returns {boolean}
      */
-    function startListening(targetText, callbacks) {
+    function startListening(targetText, callbacks, options) {
+        const opt = options || {};
         if (isListening || isProcessing) {
             console.log('⚠️ 已經在聆聽/處理中');
             return false;
@@ -599,6 +604,7 @@
         let passMode = 'speech';
         if (threshold === 0) passMode = 'voice';
         else if (single && _singleSyllableMode() !== 'strict') passMode = 'hybrid';
+        if (opt.passMode === 'voice' || opt.passMode === 'hybrid' || opt.passMode === 'speech') passMode = opt.passMode;
 
         const sens = _sensitivity();
         const session = {
@@ -624,6 +630,7 @@
             best: { transcript: '', similarity: 0 },
             lastTranscript: '',
             asrStopRequested: false,
+            asrDisabled: false,
             // 計時器
             frameTimer: null,
             timeout: null,
@@ -639,7 +646,7 @@
 
         _startRecording();
         hudLevel = 0; hudVoiced = false;
-        _hudShow('🎤 我在聽…說出來吧');
+        if (opt.hud !== false) _hudShow('🎤 我在聽…說出來吧');
         if (global.speechSynthesis && global.speechSynthesis.speaking) session.ttsUntil = Date.now() + TTS_TAIL_MS;
 
         session.frameTimer = setInterval(() => _tick(session), FRAME_MS);
@@ -770,8 +777,15 @@
         recognition.onerror = (event) => {
             if (event.error === 'aborted' || event.error === 'no-speech') return;
             console.warn('⚠️ 語音辨識錯誤:', event.error);
-            if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
-                _end(session, 'error', event.error);
+            // 辨識引擎失敗（iPad「聽寫」關閉、無網路、服務不可用…）不等於麥克風失敗：
+            // 麥克風已由 getUserMedia 開啟，人聲偵測照常運作，只停用本次會話的辨識與重啟。
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed' ||
+                event.error === 'audio-capture' || event.error === 'network' || event.error === 'language-not-supported') {
+                session.asrDisabled = true;
+                if (!asrWarned) {
+                    asrWarned = true;
+                    console.warn('⚠️ 語音辨識引擎不可用（' + event.error + '），改用純人聲偵測');
+                }
             }
         };
 
@@ -782,8 +796,8 @@
                 _end(session, 'evaluate');
                 return;
             }
-            // 引擎自己結束（常見於單音節無結果）→ 若還在聆聽就重啟
-            if (isListening) {
+            // 引擎自己結束（常見於單音節無結果）→ 若還在聆聽就重啟；引擎已判定不可用則不重啟
+            if (isListening && !session.asrDisabled) {
                 try { recognition.start(); console.log('🔄 重啟語音辨識'); }
                 catch (e) { /* 等 VAD/超時處理 */ }
             }
