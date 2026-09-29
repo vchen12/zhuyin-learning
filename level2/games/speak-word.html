@@ -620,7 +620,8 @@
         }
 
         function manualConfirm() {
-            SpeechModule.speak(currentWord.text, () => {
+            // SpeechModule.speak(text, rate) 回傳 Promise；callback 不是第二參數
+            SpeechModule.speak(currentWord.text).then(() => {
                 if (confirm('你會唸「' + currentWord.text + '」嗎？\n\n點「確定」表示會唸')) {
                     handleCorrect();
                 } else {
