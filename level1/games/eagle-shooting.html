@@ -437,14 +437,9 @@
             sky.appendChild(eagle);
             currentEagle = eagle;
 
-            // 播放發音並開始聆聽
-            showHint(`大聲唸「${currentSymbol}」！`);
-            playSound(currentSymbol);
-
-            setTimeout(() => {
-                speakShort('請唸兩到三次');
-                startRecognition();
-            }, 500);
+            // 播放示範音，播完立刻開始聆聽（示範音播放期間由 SpeechModule 排除，不算人聲）
+            showHint(`唸「${currentSymbol}」！`);
+            playSound(currentSymbol, () => startRecognition());
 
             // 老鷹飛走時
             eagle.addEventListener('animationend', () => {
@@ -475,15 +470,11 @@
                 },
                 onTimeout: (info) => {
                     if (!gameActive || !currentEagle) return;
-                    if (info.hasVoice) {
-                        showHint('聽到聲音了，但辨識不清楚！');
-                    }
-                    // 自動重試
+                    if (info.noiseOnly) showHint('🔊 那不是說話聲喔，用嘴巴唸');
+                    // 老鷹還在飛就繼續聽
                     setTimeout(() => {
-                        if (gameActive && currentEagle) {
-                            startRecognition();
-                        }
-                    }, 1500);
+                        if (gameActive && currentEagle) startRecognition();
+                    }, 300);
                 },
                 onError: (err) => {
                     console.error('語音辨識錯誤:', err);
@@ -572,11 +563,16 @@
         }
 
         // 播放音檔
-        function playSound(symbol) {
+        function playSound(symbol, onDone) {
             const fileNum = SOUND_MAP[symbol];
-            if (!fileNum) return;
+            if (!fileNum) { if (onDone) onDone(); return; }
             const audio = new Audio(`../../sounds/${fileNum}.mp3`);
-            audio.play().catch(e => console.error('播放失敗:', e));
+            SpeechModule.guardAudio(audio);   // 喇叭播放示範音期間不算人聲（點老鷹重播也一樣）
+            let done = false;
+            const finish = () => { if (!done) { done = true; if (onDone) onDone(); } };
+            audio.onended = finish;
+            audio.onerror = finish;
+            audio.play().catch(e => { console.error('播放失敗:', e); finish(); });
         }
 
         // 語音合成

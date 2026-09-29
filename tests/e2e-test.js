@@ -120,6 +120,14 @@ function run(name, { threshold, target, timeline, sr, expect, setup }) {
           setup: () => { globalThis.speechSynthesis.speaking = true; setTimeout(() => { globalThis.speechSynthesis.speaking = false; }, 900); },
           expect: (k, p) => k === 'onTimeout' && p.hadVoice === false }));
 
+    // K：示範音／重播（<audio> 有基頻）播放中 → 不算人聲；播完孩子真的說 → 過關
+    const fakeAudio = { _h: {}, addEventListener(ev, fn) { (this._h[ev] = this._h[ev] || []).push(fn); }, fire(ev) { (this._h[ev] || []).forEach(fn => fn()); } };
+    SM.guardAudio(fakeAudio);
+    results.push(await run('K 鼓勵模式：點老鷹重播示範音 0–900ms（喇叭人聲）→ 不得過關；播完後說「ㄅ」→ 過關',
+        { threshold: 0, target: 'ㄅ', timeline: [[0, 900, () => voiceFrame(210, 0.12)], [1400, 1800, V]],
+          setup: () => { fakeAudio.fire('play'); const tu = setInterval(() => fakeAudio.fire('timeupdate'), 250); setTimeout(() => { clearInterval(tu); fakeAudio.fire('ended'); }, 900); },
+          expect: (k, p, el, vd) => k === 'onResult' && p.passed && p.basis === 'voice' && vd !== null && vd > 1400 }));
+
     const n = results.filter(Boolean).length;
     out(`\n${n}/${results.length} 情境通過`);
     process.exit(n === results.length ? 0 : 1);

@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.1.0
+- **版本**: v5.1.1
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -126,6 +126,12 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 - 所有語音遊戲統一使用 `js/speech-recognition.js` 的 `SpeechModule`，callback 契約：
   `onVoiceDetected / onInterim / onResult / onTimeout / onError`（另有選用 `onVoiceLevel / onSpeechEnd`）
 - 人聲偵測參數集中在模組常數區與 `SENSITIVITY` 表；改動後務必重跑合成訊號測試
+- **遊戲播放任何音檔（注音示範音、家人錄音）前必須 `SpeechModule.guardAudio(audio)`**：
+  喇叭放出的人聲有基頻，不擋會被當成使用者發聲（點一下重播＝過關）。Web Audio 合成音用 `notifyPlayback(ms)`。
+- **開聽前不要用 TTS 提示**（如「請大聲唸」）：TTS 播放期間麥克風判定被閘門排除，只會延後聆聽。
+- **不要再寫「唸兩到三次」「聲音太短再唸一次」這類補丁**：v5 單次發聲 ≥220ms 即可判定；
+  `onTimeout` 只在完全沒有人聲時觸發（有人聲但不過關走 `onResult(passed:false)`），
+  用 `info.noiseOnly` 區分「那不是說話聲」與「沒聽到聲音」。
 - 相似度門檻: 設定頁的全域設定，由 `config.js` 的 `getSimilarityThreshold()` 讀取
 
 ### 詞彙修改
@@ -140,6 +146,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.1.1**: 清除「唸兩到三次」「大聲唸」TTS 補丁與死碼分支；`guardAudio()` 喇叭播放閘門（示範音、重播、錄音回放期間不算人聲）；老鷹射擊改為示範音播完才開聽
 - **v5.1.0**: 「郵輪出航」原型（聲音即搖桿）、iOS 12 相容性修正（移除 `?.`、時域資料後備）、起音幀清晰度規則、真瀏覽器測試（tests/browser）
 - **v5.0.0**: 人聲偵測架構（NSDF 基頻偵測取代能量 VAD，解決「單音節無即時回應」與「敲螢幕過關」；零死區啟動、說完即判、內建聲音燈 HUD、設定頁靈敏度／單音節模式；mic-test 第 4 項）
 - **v4.0.0**: 語音辨識系統全面重構（統一核心模組 SpeechModule、動態噪音底線、多候選比對、單音節強化、門檻=0 智慧模式、設定頁字詞庫與圖片裁切整合）

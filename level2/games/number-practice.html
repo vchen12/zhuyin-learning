@@ -728,11 +728,9 @@
                 onTimeout: (info) => {
                     speakBtn.disabled = false;
                     speakBtn.classList.remove('listening');
-                    if (info.hadVoice) {
-                        document.getElementById('resultMessage').textContent = '聲音太短，再唸一次！';
-                    } else {
-                        document.getElementById('resultMessage').textContent = '沒聽清楚，再試或點「✅會唸」';
-                    }
+                    document.getElementById('resultMessage').textContent = info.noiseOnly
+                        ? '🔊 那不是說話聲喔，用嘴巴唸出來'
+                        : '沒聽清楚，再試或點「✅會唸」';
                 },
                 onError: (err) => {
                     speakBtn.disabled = false;
