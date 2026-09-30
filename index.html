@@ -198,7 +198,26 @@
         <div class="header">
             <h1>🌟 注音符號學習樂園 🌟</h1>
             <div class="subtitle">專為失語症患者與學齡前兒童設計</div>
-            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v5.2.2</div>
+            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v5.2.3</div>
+        </div>
+
+        <!-- 首次使用指引（家長）：按「我已完成」後不再顯示；頁尾「新手指引」可重開 -->
+        <div id="onboardingCard" style="display: none; background: #fff8e1; border: 2px solid #ffd86b; border-radius: 16px; padding: 16px 18px; margin-bottom: 20px; text-align: left; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <h3 style="margin: 0; color: #8a5a00; font-size: 1.15rem;">👋 第一次使用？家長請先做三件事</h3>
+                <button onclick="dismissOnboarding()" title="關閉" style="border: none; background: transparent; color: #8a5a00; font-size: 1.5rem; cursor: pointer; line-height: 1;">✕</button>
+            </div>
+            <ol style="margin: 10px 0 12px 22px; color: #5a4a1a; line-height: 1.75; font-size: 0.98rem;">
+                <li><b>個人化設定</b>：輸入使用者名字、上傳家人照片、選「失語症復健」或「一般兒童」模式。</li>
+                <li><b>麥克風測試</b>的第 4 項：說「ㄚ——」要亮綠燈、敲螢幕不能亮，確認裝置分得出「說話」和「敲打」。</li>
+                <li><b>郵輪出航／我要…／叫家人</b>：進入後<b>長按左上角 ⚓ 約 1 秒</b>，放他喜歡的照片、錄示範與家人的回應。</li>
+            </ol>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="settings.html" style="flex: 1; min-width: 150px; text-align: center; background: #667eea; color: #fff; text-decoration: none; padding: 12px 14px; border-radius: 12px; font-weight: 800;">⚙️ 前往個人化設定</a>
+                <a href="mic-test.html" style="flex: 1; min-width: 150px; text-align: center; background: #26a69a; color: #fff; text-decoration: none; padding: 12px 14px; border-radius: 12px; font-weight: 800;">🎤 麥克風測試</a>
+                <button onclick="dismissOnboarding()" style="flex: 1; min-width: 150px; background: #fff; color: #8a5a00; border: 2px solid #ffd86b; padding: 12px 14px; border-radius: 12px; font-weight: 800; cursor: pointer;">✅ 我已完成，不再顯示</button>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.88rem; color: #7a6a3a; line-height: 1.5;">iPad 請用 Safari 開啟並允許麥克風。遇到任何問題，請用頁尾的「🐞 回報問題」。</div>
         </div>
 
         <!-- 進度總覽 -->
@@ -316,16 +335,36 @@
         </div>
 
         <div class="footer">
+            <p style="margin-bottom: 14px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <a href="feedback.html" style="background: #fff; color: #764ba2; text-decoration: none; padding: 10px 18px; border-radius: 999px; font-weight: 800;">🐞 回報問題／意見</a>
+                <a href="#" onclick="showOnboarding(); return false;" style="background: rgba(255,255,255,0.25); color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 999px; font-weight: 800;">📖 新手指引</a>
+            </p>
             <p>音檔來源：教育部《國語注音符號手冊》</p>
             <p style="margin-top: 10px;">授權：創用CC 姓名標示 4.0 國際版本</p>
             <p style="margin-top: 15px; font-size: 0.9rem;">
-                建議使用 Chrome 瀏覽器以獲得最佳體驗<br>
-                iPad用戶：請點「分享」→「加入主畫面」
+                iPad 請用 Safari 開啟；電腦建議 Chrome<br>
+                若加入主畫面後麥克風無法使用，請改回 Safari 開啟
             </p>
         </div>
     </div>
 
     <script>
+        // 首次使用指引：localStorage.onboardingDismissed = '1' 後不再顯示
+        function showOnboarding() {
+            const card = document.getElementById('onboardingCard');
+            if (card) { card.style.display = 'block'; card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        }
+        function dismissOnboarding() {
+            try { localStorage.setItem('onboardingDismissed', '1'); } catch (e) { /* ignore */ }
+            const card = document.getElementById('onboardingCard');
+            if (card) card.style.display = 'none';
+        }
+        (function () {
+            let dismissed = false;
+            try { dismissed = localStorage.getItem('onboardingDismissed') === '1'; } catch (e) { /* ignore */ }
+            if (!dismissed) document.getElementById('onboardingCard').style.display = 'block';
+        })();
+
         // 載入進度
         function loadProgress() {
             const masteredZhuyin = JSON.parse(localStorage.getItem('masteredZhuyin') || '[]');

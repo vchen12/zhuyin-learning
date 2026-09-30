@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="icons/icon-96.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>回報問題／意見 - 注音學習樂園</title>
+    <script src="js/prevent-zoom.js" defer></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body { min-height: 100vh; min-height: 100dvh; font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .wrap { max-width: 760px; margin: 0 auto; }
+        .back { display: inline-block; color: #fff; text-decoration: none; font-size: 1.05rem; margin-bottom: 10px; }
+        h1 { color: #fff; font-size: 1.6rem; text-align: center; margin-bottom: 6px; }
+        .sub { color: rgba(255,255,255,.9); text-align: center; margin-bottom: 16px; font-size: .95rem; line-height: 1.5; }
+        .card { background: #fff; border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+        .card h3 { color: #667eea; font-size: 1.1rem; margin-bottom: 10px; }
+        label { display: block; font-weight: 700; margin: 12px 0 6px; color: #444; }
+        select, textarea, input[type=text] { width: 100%; font-size: 1.05rem; padding: 10px; border: 2px solid #dde; border-radius: 10px; font-family: inherit; }
+        textarea { min-height: 80px; resize: vertical; }
+        pre { background: #f4f6fb; border-radius: 10px; padding: 12px; font-size: .8rem; line-height: 1.45; white-space: pre-wrap; word-break: break-all; color: #445; max-height: 260px; overflow: auto; }
+        .btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+        .btn { flex: 1; min-width: 160px; font-size: 1.05rem; padding: 14px 16px; border: none; border-radius: 12px; font-weight: 800; color: #fff; background: #667eea; cursor: pointer; text-align: center; text-decoration: none; }
+        .btn.gold { background: #f39c12; } .btn.dark { background: #333; } .btn.green { background: #2e7d32; }
+        .hint { font-size: .9rem; color: #666; line-height: 1.55; margin-top: 8px; }
+        .ok { background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 10px; margin-top: 10px; display: none; font-weight: 700; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <a class="back" href="index.html">← 回主選單</a>
+    <h1>🐞 回報問題／意見</h1>
+    <div class="sub">公測期間，任何「怪怪的」都值得回報。下面的診斷資訊會自動帶入，您只要寫發生了什麼。</div>
+
+    <div class="card">
+        <h3>1️⃣ 發生在哪裡、做了什麼</h3>
+        <label for="where">哪個遊戲／頁面</label>
+        <select id="where">
+            <option value="">（請選擇）</option>
+            <option>主選單</option><option>個人化設定</option><option>麥克風測試</option>
+            <option>郵輪出航</option><option>我要…板</option><option>叫家人板</option>
+            <option>第一關：發音練習</option><option>第一關：射擊挑戰</option><option>第一關：其他遊戲</option>
+            <option>第二關：看圖學詞／唸唸看</option><option>第二關：其他遊戲</option>
+            <option>第三關：語音遊戲</option><option>第三關：其他遊戲</option>
+            <option>數字練習</option><option>其他</option>
+        </select>
+        <label for="did">我做了什麼（一步一步）</label>
+        <textarea id="did" placeholder="例如：按出航 → 說「ㄚ」→ 船沒動；敲螢幕船卻動了"></textarea>
+        <label for="saw">看到／聽到什麼</label>
+        <textarea id="saw" placeholder="畫面顯示的文字、有沒有聲音、卡住多久…"></textarea>
+        <label for="want">我期待的是</label>
+        <textarea id="want" placeholder="（選填）"></textarea>
+        <label for="contact">聯絡方式（選填，方便追問）</label>
+        <input type="text" id="contact" placeholder="LINE ID、Email 或姓名">
+    </div>
+
+    <div class="card">
+        <h3>2️⃣ 自動收集的診斷資訊</h3>
+        <pre id="diag">收集中…</pre>
+        <div class="hint">包含版本、裝置、瀏覽器、設定值與最近的程式錯誤；不包含照片、錄音或姓名。</div>
+    </div>
+
+    <div class="card">
+        <h3>3️⃣ 送出</h3>
+        <div class="btns">
+            <button class="btn green" id="copyBtn">📋 複製回報內容</button>
+            <a class="btn" id="lineBtn" href="#" target="_blank" rel="noopener" style="display:none; background:#06c755">💬 用 LINE 傳給開發者</a>
+            <a class="btn dark" id="ghBtn" href="#" target="_blank" rel="noopener" style="display:none">🐙 到 GitHub 回報</a>
+            <a class="btn gold" id="mailBtn" href="#" style="display:none">✉️ 用 Email 寄出</a>
+            <a class="btn" id="formBtn" href="#" target="_blank" rel="noopener" style="display:none">📝 填寫回饋表單</a>
+        </div>
+        <div class="ok" id="copied">✅ 已複製，貼到 LINE 或訊息傳給開發者即可。</div>
+        <div class="hint" id="sendHint">最簡單的方式：按「複製回報內容」，再用 LINE 貼給開發者。GitHub 回報需要 GitHub 帳號。</div>
+        <div class="btns" style="margin-top:12px">
+            <button class="btn" style="background:#8a94a6" id="clearErr">清除本機錯誤紀錄</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const cfg = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.feedback) || {};
+
+    function iosVersion() {
+        const m = navigator.userAgent.match(/OS (\d+)_(\d+)(?:_(\d+))?/);
+        return m ? m[1] + '.' + m[2] + (m[3] ? '.' + m[3] : '') : '—';
+    }
+    function ls(k) { try { const v = localStorage.getItem(k); return v === null ? '（預設）' : v; } catch (e) { return '？'; } }
+    function collect() {
+        let errs = [];
+        try { errs = JSON.parse(localStorage.getItem('errorLog') || '[]').slice(-10); } catch (e) { /* ignore */ }
+        const lines = [
+            '版本：v' + (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.version : '?'),
+            '時間：' + new Date().toLocaleString('zh-TW'),
+            '裝置：' + navigator.platform + '，螢幕 ' + screen.width + '×' + screen.height + '，視窗 ' + window.innerWidth + '×' + window.innerHeight,
+            'iOS：' + iosVersion() + '，主畫面模式：' + (navigator.standalone === true ? '是' : '否') + '，線上：' + (navigator.onLine ? '是' : '否'),
+            'UA：' + navigator.userAgent,
+            '功能：語音合成 ' + ('speechSynthesis' in window ? '有' : '無') +
+                '，語音辨識 ' + (('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) ? '有' : '無') +
+                '，錄音 ' + (typeof MediaRecorder !== 'undefined' ? '有' : '無') +
+                '，麥克風 API ' + (navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? '有' : '無'),
+            '設定：模式=' + ls('userMode') + '，門檻=' + ls('similarityThreshold') + '，靈敏度=' + ls('voiceSensitivity') +
+                '，單音節=' + ls('singleSyllableMode') + '，聲音燈=' + ls('showVoiceHud'),
+            '最近錯誤（' + errs.length + '）：' + (errs.length ? '' : '無')
+        ].concat(errs.map(e => '  - ' + e.t.replace('T', ' ').slice(0, 19) + ' ' + e.page + '：' + e.msg));
+        return lines.join('\n');
+    }
+    function compose() {
+        const v = id => ($(id).value || '').trim();
+        return ['【注音學習樂園 公測回報】',
+            '哪裡：' + (v('where') || '（未填）'),
+            '做了什麼：' + (v('did') || '（未填）'),
+            '看到／聽到：' + (v('saw') || '（未填）'),
+            '期待：' + (v('want') || '（未填）'),
+            '聯絡：' + (v('contact') || '（未填）'),
+            '', '--- 診斷資訊 ---', $('diag').textContent].join('\n');
+    }
+    function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+        return new Promise((resolve, reject) => {
+            const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.focus(); ta.select();
+            try { document.execCommand('copy') ? resolve() : reject(new Error('copy failed')); } catch (e) { reject(e); }
+            document.body.removeChild(ta);
+        });
+    }
+
+    $('diag').textContent = collect();
+    $('copyBtn').addEventListener('click', () => {
+        copyText(compose()).then(() => { $('copied').style.display = 'block'; })
+            .catch(() => { alert('無法自動複製，請長按下方文字手動複製：\n\n' + compose()); });
+    });
+    if (cfg.lineId) {
+        // LINE「以 ID 加好友」連結；開發者的 LINE 需開啟「允許利用 ID 加入好友」
+        $('lineBtn').style.display = '';
+        $('lineBtn').href = 'https://line.me/ti/p/~' + encodeURIComponent(cfg.lineId);
+        $('lineBtn').textContent = '💬 用 LINE 傳給開發者（ID：' + cfg.lineId + '）';
+        $('sendHint').textContent = '最簡單的方式：按「複製回報內容」→ 按「用 LINE 傳給開發者」加好友（ID：' + cfg.lineId + '）→ 貼上送出。GitHub 回報需要 GitHub 帳號。';
+        $('copied').textContent = '✅ 已複製。開 LINE 傳給開發者（ID：' + cfg.lineId + '）即可。';
+    }
+    if (cfg.githubRepo) {
+        $('ghBtn').style.display = '';
+        $('ghBtn').addEventListener('click', e => {
+            e.preventDefault();
+            const title = '[公測回報] ' + (($('where').value || '未指定') + '：' + ($('did').value || '').trim().slice(0, 40));
+            const url = 'https://github.com/' + cfg.githubRepo + '/issues/new?title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(compose());
+            window.open(url, '_blank');
+        });
+    }
+    if (cfg.email) {
+        $('mailBtn').style.display = '';
+        $('mailBtn').addEventListener('click', e => {
+            e.preventDefault();
+            location.href = 'mailto:' + cfg.email + '?subject=' + encodeURIComponent('[注音學習樂園 公測回報] ' + ($('where').value || '')) + '&body=' + encodeURIComponent(compose());
+        });
+    }
+    if (cfg.formUrl) { $('formBtn').style.display = ''; $('formBtn').href = cfg.formUrl; }
+    $('clearErr').addEventListener('click', () => { localStorage.removeItem('errorLog'); $('diag').textContent = collect(); });
+</script>
+</body>
+</html>
