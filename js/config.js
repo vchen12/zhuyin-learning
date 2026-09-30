@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.2.4
+ * v5.2.5
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.2.4',
+    version: '5.2.5',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -31,7 +31,7 @@ const APP_CONFIG = {
         //   { type: 'googleForm', formId: '<e/ 後面那串>', fields: { where: 'entry.111', did: 'entry.222',
         //       saw: 'entry.333', want: 'entry.444', contact: 'entry.555', diag: 'entry.666' } }
         //       → 寫入您的 Google 表單回覆（試算表），可開啟「新回覆時寄 Email 通知」。
-        relay: null,
+        relay: { type: 'web3forms', key: '607d16b7-6d49-48fd-9528-8f1fa703ceca' },
         githubRepo: 'vchen12/zhuyin-learning',   // GitHub Issues（回報者需 GitHub 帳號；repo 本來就是公開的）
         email: '',                                // 若填入會顯示「用 Email 寄出」按鈕（會露出信箱，建議留空改用 relay）
         formUrl: ''                               // 若填入會顯示「填寫回饋表單」按鈕（開新分頁）
