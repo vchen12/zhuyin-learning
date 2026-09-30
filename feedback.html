@@ -65,14 +65,16 @@
     <div class="card">
         <h3>3️⃣ 送出</h3>
         <div class="btns">
-            <button class="btn green" id="copyBtn">📋 複製回報內容</button>
-            <a class="btn" id="lineBtn" href="#" target="_blank" rel="noopener" style="display:none; background:#06c755">💬 用 LINE 傳給開發者</a>
+            <button class="btn green" id="sendBtn" style="display:none">📨 送出給開發者</button>
+            <button class="btn" id="copyBtn">📋 複製回報內容</button>
             <a class="btn dark" id="ghBtn" href="#" target="_blank" rel="noopener" style="display:none">🐙 到 GitHub 回報</a>
             <a class="btn gold" id="mailBtn" href="#" style="display:none">✉️ 用 Email 寄出</a>
             <a class="btn" id="formBtn" href="#" target="_blank" rel="noopener" style="display:none">📝 填寫回饋表單</a>
         </div>
-        <div class="ok" id="copied">✅ 已複製，貼到 LINE 或訊息傳給開發者即可。</div>
-        <div class="hint" id="sendHint">最簡單的方式：按「複製回報內容」，再用 LINE 貼給開發者。GitHub 回報需要 GitHub 帳號。</div>
+        <div class="ok" id="sent">✅ 已送出給開發者，謝謝！</div>
+        <div class="ok" id="copied">✅ 已複製，貼到 LINE 或訊息，傳給分享這個網站給您的人即可。</div>
+        <div class="ok" id="sendFail" style="background:#fdecea;color:#b71c1c">❌ 送出失敗（可能沒有網路）。請改按「複製回報內容」，用訊息傳給開發者。</div>
+        <div class="hint" id="sendHint">按「複製回報內容」，貼到 LINE 或訊息，傳給分享這個網站給您的人。GitHub 回報需要 GitHub 帳號。</div>
         <div class="btns" style="margin-top:12px">
             <button class="btn" style="background:#8a94a6" id="clearErr">清除本機錯誤紀錄</button>
         </div>
@@ -134,13 +136,43 @@
         copyText(compose()).then(() => { $('copied').style.display = 'block'; })
             .catch(() => { alert('無法自動複製，請長按下方文字手動複製：\n\n' + compose()); });
     });
-    if (cfg.lineId) {
-        // LINE「以 ID 加好友」連結；開發者的 LINE 需開啟「允許利用 ID 加入好友」
-        $('lineBtn').style.display = '';
-        $('lineBtn').href = 'https://line.me/ti/p/~' + encodeURIComponent(cfg.lineId);
-        $('lineBtn').textContent = '💬 用 LINE 傳給開發者（ID：' + cfg.lineId + '）';
-        $('sendHint').textContent = '最簡單的方式：按「複製回報內容」→ 按「用 LINE 傳給開發者」加好友（ID：' + cfg.lineId + '）→ 貼上送出。GitHub 回報需要 GitHub 帳號。';
-        $('copied').textContent = '✅ 已複製。開 LINE 傳給開發者（ID：' + cfg.lineId + '）即可。';
+    // 自動轉送：使用者看不到開發者的任何聯絡資訊
+    const relay = cfg.relay && cfg.relay.type ? cfg.relay : null;
+    function sendViaRelay() {
+        const v = id => ($(id).value || '').trim();
+        if (relay.type === 'web3forms') {
+            return fetch('https://api.web3forms.com/submit', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    access_key: relay.key,
+                    subject: '[注音學習樂園 公測回報] ' + (v('where') || '未指定'),
+                    from_name: '注音學習樂園 回報頁',
+                    where: v('where'), did: v('did'), saw: v('saw'), want: v('want'), contact: v('contact'),
+                    message: compose()
+                })
+            }).then(r => r.json()).then(j => { if (!j || j.success !== true) throw new Error('relay rejected'); });
+        }
+        if (relay.type === 'googleForm') {
+            const fd = new FormData();
+            const f = relay.fields || {};
+            const put = (k, val) => { if (f[k]) fd.append(f[k], val); };
+            put('where', v('where')); put('did', v('did')); put('saw', v('saw')); put('want', v('want')); put('contact', v('contact'));
+            put('diag', $('diag').textContent);
+            // Google 表單不回 CORS 標頭：no-cors 送出，fetch 成功即視為已送達
+            return fetch('https://docs.google.com/forms/d/e/' + relay.formId + '/formResponse', { method: 'POST', mode: 'no-cors', body: fd });
+        }
+        return Promise.reject(new Error('unknown relay'));
+    }
+    if (relay) {
+        $('sendBtn').style.display = '';
+        $('sendHint').textContent = '按「送出給開發者」即可；內容會直接送達開發者。若送出失敗，再用「複製回報內容」。';
+        $('sendBtn').addEventListener('click', () => {
+            if (!($('did').value || '').trim() && !($('saw').value || '').trim()) { alert('請至少寫一下「做了什麼」或「看到什麼」'); return; }
+            $('sendBtn').disabled = true; $('sendBtn').textContent = '送出中…';
+            $('sent').style.display = 'none'; $('sendFail').style.display = 'none';
+            sendViaRelay().then(() => { $('sent').style.display = 'block'; $('sendBtn').textContent = '📨 已送出'; })
+                .catch(() => { $('sendFail').style.display = 'block'; $('sendBtn').disabled = false; $('sendBtn').textContent = '📨 再試一次'; });
+        });
     }
     if (cfg.githubRepo) {
         $('ghBtn').style.display = '';

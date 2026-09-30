@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.2.3
+- **版本**: v5.2.4
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -152,6 +152,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.2.4**: 回報頁改為 relay 自動轉送（web3forms／Google 表單二選一），介面與設定檔不再出現開發者聯絡資訊
 - **v5.2.3**: 公測支援——主選單首次使用指引卡（家長三步驟，可關閉／頁尾重開）、`feedback.html` 回報頁、`config.js` 全域錯誤紀錄（localStorage `errorLog`）與 `APP_CONFIG.feedback` 回饋管道設定
 - **v5.2.2**: QA round 2 修正——數字練習 speak() callback 重複觸發（題目自動換掉）、唸唸看「我會唸」誤把 callback 當語速、無辨識引擎裝置不再擋住發音練習／射擊
 - **v5.2.1**: QA round 1 修正（詞彙排序整頁失效、TTS 失敗卡死開場、重複載入、還原預設 UI、favicon、`initParentLongPress()` 家長長按「我會唸」）
