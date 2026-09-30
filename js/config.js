@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.2.3
+ * v5.2.4
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.2.3',
+    version: '5.2.4',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -22,12 +22,19 @@ const APP_CONFIG = {
     // 是否啟用語音合成
     enableTTS: true,
 
-    // 公測回饋管道（feedback.html 依此顯示按鈕；空字串＝不顯示該按鈕）
+    // 公測回饋管道（feedback.html 依此顯示按鈕；空字串／null＝不顯示）
+    // 開發者的聯絡資訊不會出現在介面上：使用者按「送出給開發者」，內容經 relay 直接送達。
     feedback: {
-        lineId: '',                       // 開發者 LINE ID（回報頁顯示「用 LINE 傳給開發者」）
-        githubRepo: 'vchen12/zhuyin-learning',   // GitHub Issues（回報者需 GitHub 帳號）
-        email: '',                                // 收件信箱，例如 'someone@example.com'
-        formUrl: ''                               // Google 表單或 LINE 社群連結
+        // 自動轉送設定（擇一）：
+        //   { type: 'web3forms', key: '<access key>' }
+        //       → 送到註冊該 key 的信箱（key 可公開，不會洩漏信箱）。https://web3forms.com
+        //   { type: 'googleForm', formId: '<e/ 後面那串>', fields: { where: 'entry.111', did: 'entry.222',
+        //       saw: 'entry.333', want: 'entry.444', contact: 'entry.555', diag: 'entry.666' } }
+        //       → 寫入您的 Google 表單回覆（試算表），可開啟「新回覆時寄 Email 通知」。
+        relay: null,
+        githubRepo: 'vchen12/zhuyin-learning',   // GitHub Issues（回報者需 GitHub 帳號；repo 本來就是公開的）
+        email: '',                                // 若填入會顯示「用 Email 寄出」按鈕（會露出信箱，建議留空改用 relay）
+        formUrl: ''                               // 若填入會顯示「填寫回饋表單」按鈕（開新分頁）
     },
 
     // 遊戲設定
