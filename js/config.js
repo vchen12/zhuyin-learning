@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.2.2
+ * v5.2.3
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.2.2',
+    version: '5.2.3',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -21,6 +21,14 @@ const APP_CONFIG = {
 
     // 是否啟用語音合成
     enableTTS: true,
+
+    // 公測回饋管道（feedback.html 依此顯示按鈕；空字串＝不顯示該按鈕）
+    feedback: {
+        lineId: '',                       // 開發者 LINE ID（回報頁顯示「用 LINE 傳給開發者」）
+        githubRepo: 'vchen12/zhuyin-learning',   // GitHub Issues（回報者需 GitHub 帳號）
+        email: '',                                // 收件信箱，例如 'someone@example.com'
+        formUrl: ''                               // Google 表單或 LINE 社群連結
+    },
 
     // 遊戲設定
     games: {
@@ -787,4 +795,26 @@ if (typeof module !== 'undefined' && module.exports) {
         getPronunciationReport, clearPronunciationRecords, exportPronunciationRecords,
         passesSimilarityThreshold, getSimilarityLevel
     };
+}
+
+// ==========================================
+// 全域錯誤紀錄（供 feedback.html 的診斷資訊使用；最多保留 30 筆）
+// ==========================================
+if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    window.__logAppError = function (msg) {
+        try {
+            const log = JSON.parse(localStorage.getItem('errorLog') || '[]');
+            log.push({ t: new Date().toISOString(), page: location.pathname.split('/').slice(-2).join('/'), msg: String(msg).slice(0, 300) });
+            while (log.length > 30) log.shift();
+            localStorage.setItem('errorLog', JSON.stringify(log));
+        } catch (e) { /* ignore */ }
+    };
+    window.addEventListener('error', function (e) {
+        const where = e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '';
+        window.__logAppError((e.message || 'error') + where);
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+        const r = e.reason;
+        window.__logAppError('unhandled: ' + (r && r.message ? r.message : String(r)));
+    });
 }
