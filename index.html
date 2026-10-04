@@ -198,7 +198,18 @@
         <div class="header">
             <h1>🌟 注音符號學習樂園 🌟</h1>
             <div class="subtitle">專為失語症患者與學齡前兒童設計</div>
-            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v5.2.5</div>
+            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v5.2.6</div>
+        </div>
+
+        <!-- 非觸控裝置提示：這個樂園為平板／手機觸控設計，電腦滑鼠操作不順 -->
+        <div id="desktopHint" style="display: none; background: #e3f2fd; border: 2px solid #64b5f6; border-radius: 16px; padding: 14px 18px; margin-bottom: 16px; text-align: left; color: #0d47a1;">
+            <div style="font-weight: 800; font-size: 1.1rem; margin-bottom: 6px;">💻 您正在用電腦開啟</div>
+            <div style="line-height: 1.6;">這個樂園是為 <b>iPad／平板／手機的觸控</b> 設計的，用滑鼠操作會慢而且不順，小朋友尤其難控制。請在 iPad 或手機的瀏覽器輸入下面的網址（iPad 請用 Safari）：</div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
+                <code id="siteUrl" style="flex: 1; min-width: 200px; background: #fff; padding: 10px 12px; border-radius: 10px; font-size: 1.05rem; word-break: break-all;"></code>
+                <button onclick="copySiteUrl()" style="background: #1976d2; color: #fff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 800; cursor: pointer;">📋 複製網址</button>
+            </div>
+            <div id="urlCopied" style="display: none; margin-top: 8px; font-weight: 700;">✅ 已複製，可貼到 LINE 傳給自己的手機。</div>
         </div>
 
         <!-- 首次使用指引（家長）：按「我已完成」後不再顯示；頁尾「新手指引」可重開 -->
@@ -217,7 +228,7 @@
                 <a href="mic-test.html" style="flex: 1; min-width: 150px; text-align: center; background: #26a69a; color: #fff; text-decoration: none; padding: 12px 14px; border-radius: 12px; font-weight: 800;">🎤 麥克風測試</a>
                 <button onclick="dismissOnboarding()" style="flex: 1; min-width: 150px; background: #fff; color: #8a5a00; border: 2px solid #ffd86b; padding: 12px 14px; border-radius: 12px; font-weight: 800; cursor: pointer;">✅ 我已完成，不再顯示</button>
             </div>
-            <div style="margin-top: 10px; font-size: 0.88rem; color: #7a6a3a; line-height: 1.5;">iPad 請用 Safari 開啟並允許麥克風。遇到任何問題，請用頁尾的「🐞 回報問題」。</div>
+            <div style="margin-top: 10px; font-size: 0.88rem; color: #7a6a3a; line-height: 1.5;">請用 <b>iPad／平板／手機（觸控）</b>開啟，iPad 請用 Safari 並允許麥克風；電腦滑鼠操作不順。遇到任何問題，請用頁尾的「🐞 回報問題」。</div>
         </div>
 
         <!-- 進度總覽 -->
@@ -349,6 +360,22 @@
     </div>
 
     <script>
+        // 非觸控裝置（電腦＋滑鼠）提示；iPad 以桌面版 UA 瀏覽時 maxTouchPoints 仍 > 0，不會誤判
+        (function () {
+            const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+            if (touch) return;
+            const el = document.getElementById('desktopHint');
+            if (!el) return;
+            document.getElementById('siteUrl').textContent = location.href.replace(/[#?].*$/, '').replace(/index\.html$/, '');
+            el.style.display = 'block';
+        })();
+        function copySiteUrl() {
+            const url = document.getElementById('siteUrl').textContent;
+            const done = () => { document.getElementById('urlCopied').style.display = 'block'; };
+            if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done).catch(() => prompt('請手動複製：', url)); }
+            else { prompt('請手動複製：', url); }
+        }
+
         // 首次使用指引：localStorage.onboardingDismissed = '1' 後不再顯示
         function showOnboarding() {
             const card = document.getElementById('onboardingCard');
