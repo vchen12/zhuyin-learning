@@ -530,7 +530,12 @@
         <div id="gameScreen" class="learn-container hidden">
             <div style="display: flex; align-items: center; gap: 15px; flex-shrink: 0; margin-bottom: 8px;">
                 <button class="back-btn" onclick="goHome()" style="margin: 0;">← 返回</button>
-                <h2 style="color: white; font-size: 1.1rem; margin: 0;">🎯 點擊掉下來的注音！</h2>
+                <h2 style="color: white; font-size: 1.1rem; margin: 0; flex: 1;">🎯 點擊掉下來的注音！</h2>
+                <div id="speedBtns" style="display: flex; gap: 6px;" title="掉落速度">
+                    <button onclick="setFallSpeed('slow')" data-speed="slow" style="border: 2px solid #fff; background: transparent; color: #fff; border-radius: 999px; padding: 6px 12px; font-weight: 800; cursor: pointer;">🐢 慢</button>
+                    <button onclick="setFallSpeed('normal')" data-speed="normal" style="border: 2px solid #fff; background: transparent; color: #fff; border-radius: 999px; padding: 6px 12px; font-weight: 800; cursor: pointer;">🙂 中</button>
+                    <button onclick="setFallSpeed('fast')" data-speed="fast" style="border: 2px solid #fff; background: transparent; color: #fff; border-radius: 999px; padding: 6px 12px; font-weight: 800; cursor: pointer;">🐇 快</button>
+                </div>
             </div>
             <div class="game-area" id="gameArea"></div>
         </div>
@@ -766,13 +771,43 @@
             }
         }
 
+        // 掉落速度：慢／中／快。滑鼠（非觸控裝置）操控較慢，預設「慢」；觸控裝置預設「中」。
+        const FALL_SPEEDS = {
+            slow:   { step: 0.2, spawnMs: 3500 },   // 一個符號約 29 秒落地
+            normal: { step: 0.5, spawnMs: 2000 },   // 約 11.5 秒
+            fast:   { step: 0.8, spawnMs: 1400 }    // 約 7 秒
+        };
+        let fallSpeed = 'normal';
+        (function () {
+            const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+            let saved = null;
+            try { saved = localStorage.getItem('fallSpeed'); } catch (e) { /* ignore */ }
+            fallSpeed = FALL_SPEEDS[saved] ? saved : (touch ? 'normal' : 'slow');
+        })();
+        function setFallSpeed(key) {
+            if (!FALL_SPEEDS[key]) return;
+            fallSpeed = key;
+            try { localStorage.setItem('fallSpeed', key); } catch (e) { /* ignore */ }
+            document.querySelectorAll('#speedBtns button').forEach(b => {
+                const on = b.dataset.speed === key;
+                b.style.background = on ? '#fff' : 'transparent';
+                b.style.color = on ? '#764ba2' : '#fff';
+            });
+            if (gameInterval) {   // 遊戲進行中：重設生成間隔；已在掉落的符號下一格起即改用新速度
+                clearInterval(gameInterval);
+                gameInterval = setInterval(() => createFallingItem(currentGameSymbols), FALL_SPEEDS[fallSpeed].spawnMs);
+            }
+        }
+        let currentGameSymbols = [];
+
         function startGame() {
             showScreen('gameScreen');
-            const allSymbols = [...STAGES[1].symbols, ...STAGES[2].symbols];
-
+            currentGameSymbols = [...STAGES[1].symbols, ...STAGES[2].symbols];
+            setFallSpeed(fallSpeed);
+            if (gameInterval) clearInterval(gameInterval);
             gameInterval = setInterval(() => {
-                createFallingItem(allSymbols);
-            }, 2000);
+                createFallingItem(currentGameSymbols);
+            }, FALL_SPEEDS[fallSpeed].spawnMs);
         }
 
         function createFallingItem(symbols) {
@@ -795,7 +830,7 @@
 
             let position = -15;
             const fall = setInterval(() => {
-                position += 0.5; // 降低掉落速度（原本是 1）
+                position += FALL_SPEEDS[fallSpeed].step;   // 依目前速度設定
                 item.style.top = position + '%';
 
                 if (position > 100) {
