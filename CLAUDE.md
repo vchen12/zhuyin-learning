@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.6.3
+- **版本**: v5.6.4
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -106,14 +106,14 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 - 注音退為構音輔助層（附掛在已會說的詞的首音），不是入口。
 
 `voyage/index.html`（郵輪出航）：持續發聲船前進；說完一個詞（確認人聲，且累計有聲 ≥150ms 或首尾跨度 ≥250ms；「嘟嘟」「出發」這種母音很短的兩音節詞靠跨度）即抵達下一港，港口揭示家人合照＋合成汽笛；
-五港後終點。照片由家長在 iPad 上從「照片」選取，裁切縮至 900px 後存 IndexedDB `zhuyin-media`（key `voyage/ship`、`voyage/p<i>/<id>`），
+五港後終點。**過關門檻（設定頁）也適用**：0% 有說話就抵港；>0% 時船仍隨聲音前進，但要 `SpeechModule` 辨識會話判定說對口令（相似度 ≥ 門檻）才進港，說錯顯示「聽到「X」，再說一次：郵輪」（船停在港前不退）；無語音辨識的瀏覽器退回有說話就抵港。照片由家長在 iPad 上從「照片」選取，裁切縮至 900px 後存 IndexedDB `zhuyin-media`（key `voyage/ship`、`voyage/p<i>/<id>`），
 `voyage.data`（localStorage）只存參照 `idb:voyage/…` 與港名、口令；舊版塞在 localStorage 的 dataURL 第一次載入時自動搬移
 （iOS Safari localStorage 約 5MB，四、五張照片就會「儲存空間不足」，與 iPad 容量無關）。
 起始畫面有「⚓ 家長設定」鈕（與 ⚓ 一樣要按住 1.2 秒，輕按只顯示提示；共用 `initParentLongPress` 的 `data-parent-longpress`／`data-parent-hint`）與「個人化設定」連結；`?setup=1` 直接開家長面板（設定頁「說話旅行」區由此連入）；左上「← 返回」與各關卡一致；
 每次發聲與抵港寫入 `voyage.log`，家長面板可看今日統計與匯出。喇叭播音（汽笛／TTS）期間關閉麥克風判定。
 
 `board/index.html`（說話板，`?set=iwant` / `?set=family`）：照片卡格 → 點卡進專注畫面 → 播示範（家人錄音，否則 TTS）
-→ `startListening(say, cb, { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: 1500 })`：只確認真的發聲，且**等他說完**（靜音 1.5 秒，容許「我要…尿尿」中間停頓）才判定，不在句中回覆 → 報酬（稱讚語 TTS → 照片放大、播家人錄的回應）
+→ `startListening(say, cb, { hud: false, waitForEnd: true, silenceEndMs: 1500 })`（門檻 0% 時加 `passMode: 'voice'`，>0% 交給 SpeechModule 依相似度判定）：**等他說完**（靜音 1.5 秒，容許「我要…尿尿」中間停頓）才判定，不在句中回覆 → 報酬（稱讚語 TTS → 照片放大、播家人錄的回應）
 → 家長判定列（👍 說對了／🔁 再一次；發聲後才出現，只記錄不影響報酬）→ 回卡片格。
 家人組沿用設定頁 `familySettings` 的名字與 `customImage`。卡片文字存 localStorage `board.items.<set>`；
 照片／示範／回應錄音存 IndexedDB `zhuyin-board`（key `<set>/<id>/<photo|model|reply>`）；紀錄 `board.log`。
@@ -185,6 +185,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.6.4**: 郵輪與說話板也看過關門檻：0% 有說話就過；>0% 要辨識說對（郵輪：船隨聲音前進、說對口令才進港、說錯提示再說一次；說話板：不再強制 voice 模式，說錯顯示聽到的字）；起始畫面與家長面板顯示目前門檻
 - **v5.6.3**: 郵輪實測修正——(1) 口令改在「出航」點擊事件內同步開講（iOS 只播手勢觸發的語音；之前口令與抵港稱讚全被丟掉）、TTS 佇列同步起講、移除 `getVoices()` 守門；(2) 兩音節短詞（出發、嘟嘟）算一個詞：有聲 ≥150ms 或首尾跨度 ≥250ms、確認幀 3；`SpeechModule`：`_ttsSpeaking()` 卡住保護、結果加 `asrError`／`asrUsed`，`SpeechGame` 沒有辨識文字時顯示原因，`speak()` 只在有語句時才 `cancel()`
 - **v5.6.2**: 長按統一：家長設定（郵輪／說話板的 ⚓ 與起始畫面「家長設定」鈕）與**全站的「← 返回」鈕**都要按住 1.2 秒才生效，輕按只顯示共用提示（`config.js` 的 `wireLongPress`／`initParentLongPress`／`initBackLongPress`／`showParentHint`，載入 config.js 的頁面自動生效）
 - **v5.6.1**: 郵輪照片改存 IndexedDB（共用 `js/media-store.js`，說話板改用同一模組；修正加到第 4、5 張就「儲存空間不足」）；郵輪與說話板起始畫面加「⚓ 家長設定」鈕與「個人化設定」連結、`?setup=1` 直接開家長面板，設定頁新增「說話旅行」入口；郵輪左上改為各關卡一致的「← 返回」（移除 🏠 長按）

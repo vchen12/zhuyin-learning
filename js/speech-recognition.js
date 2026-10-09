@@ -873,7 +873,8 @@
         const cb = session.callbacks;
         const noiseOnly = !session.voiceConfirmed && session.loudMs >= NOISE_ONLY_MS;
         const base = {
-            transcript: session.best.transcript || '',
+            // 完全不像目標時 best 是空的：仍回報最後聽到的字，家長才看得到「聽到了什麼」
+            transcript: session.best.transcript || session.lastTranscript || '',
             similarity: session.best.similarity || 0,
             hadVoice: session.voiceConfirmed,
             hasVoice: session.voiceConfirmed,     // shooting.html 用此名
