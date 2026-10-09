@@ -348,8 +348,8 @@
         </div>
     </div>
 
+    <script src="../../js/config.js"></script>
     <script>
-        const ENCOURAGEMENTS = ['太棒了！', '好厲害！', '答對了！', '真聰明！', '很棒喔！'];
 
         let currentRound = 0;
         let totalRounds = 10;
@@ -373,13 +373,6 @@
             return allWords;
         }
 
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
 
         function initGame() {
             currentRound = 0;
@@ -473,7 +466,7 @@
                 score += 10;
                 updateScore();
 
-                const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+                const encouragement = getEncouragement();
                 document.getElementById('resultMessage').textContent = encouragement;
                 speak(encouragement);
                 createFireworks(20);
@@ -508,33 +501,7 @@
             initGame();
         }
 
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.1;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
-        function createFireworks(count) {
-            const container = document.getElementById('fireworks');
-            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
-
-            for (let i = 0; i < count; i++) {
-                const firework = document.createElement('div');
-                firework.className = 'firework';
-                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                firework.style.left = Math.random() * 100 + '%';
-                firework.style.top = Math.random() * 100 + '%';
-                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
-                firework.style.animationDelay = Math.random() * 0.5 + 's';
-                container.appendChild(firework);
-            }
-            setTimeout(() => { container.innerHTML = ''; }, 2000);
-        }
 
         initGame();
     </script>

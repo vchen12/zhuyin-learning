@@ -350,13 +350,6 @@
             'ㄚ', 'ㄛ', 'ㄜ', 'ㄝ', 'ㄞ', 'ㄟ', 'ㄠ', 'ㄡ', 'ㄢ', 'ㄣ', 'ㄤ', 'ㄥ', 'ㄦ', 'ㄧ', 'ㄨ', 'ㄩ'
         ];
 
-        const SOUND_MAP = {
-            'ㄅ': 'F1', 'ㄆ': 'F2', 'ㄇ': 'F3', 'ㄈ': 'F4', 'ㄉ': 'F5', 'ㄊ': 'F6', 'ㄋ': 'F7', 'ㄌ': 'F8',
-            'ㄍ': 'F9', 'ㄎ': 'F10', 'ㄏ': 'F11', 'ㄐ': 'F12', 'ㄑ': 'F13', 'ㄒ': 'F14', 'ㄓ': 'F15', 'ㄔ': 'F16',
-            'ㄕ': 'F17', 'ㄖ': 'F18', 'ㄗ': 'F19', 'ㄘ': 'F20', 'ㄙ': 'F21',
-            'ㄚ': 'F22', 'ㄛ': 'F23', 'ㄜ': 'F24', 'ㄝ': 'F25', 'ㄞ': 'F26', 'ㄟ': 'F27', 'ㄠ': 'F28', 'ㄡ': 'F29',
-            'ㄢ': 'F30', 'ㄣ': 'F31', 'ㄤ': 'F32', 'ㄥ': 'F33', 'ㄦ': 'F34', 'ㄧ': 'F35', 'ㄨ': 'F36', 'ㄩ': 'F37'
-        };
 
         const GIFT_EMOJIS = ['🍬', '🍭', '🍫', '🎈', '⭐', '🌟', '💎', '🏆'];
 
@@ -563,46 +556,8 @@
             }
         }
 
-        // 播放音檔
-        function playSound(symbol, onDone) {
-            const fileNum = SOUND_MAP[symbol];
-            if (!fileNum) { if (onDone) onDone(); return; }
-            const audio = new Audio(`../../sounds/${fileNum}.mp3`);
-            SpeechModule.guardAudio(audio);   // 喇叭播放示範音期間不算人聲（點老鷹重播也一樣）
-            let done = false;
-            const finish = () => { if (!done) { done = true; if (onDone) onDone(); } };
-            audio.onended = finish;
-            audio.onerror = finish;
-            audio.play().catch(e => { console.error('播放失敗:', e); finish(); });
-        }
 
-        // 語音合成
-        function speak(text, callback) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                let __done = false;
-                const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
-                utterance.onend = __finish;
-                utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
-                setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
-                window.speechSynthesis.speak(utterance);
-            } else if (callback) {
-                callback();
-            }
-        }
 
-        function speakShort(text) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.volume = 0.8;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
         // 顯示提示
         function showHint(message) {

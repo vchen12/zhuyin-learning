@@ -508,6 +508,7 @@
         </div>
     </div>
 
+    <script src="../../js/config.js"></script>
     <script>
         // 聲調資料
         const TONES = [
@@ -700,13 +701,6 @@
             return shuffle(questions).slice(0, totalRounds);
         }
 
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
 
         function renderQuizChoices() {
             const container = document.getElementById('quizChoices');
@@ -804,38 +798,7 @@
             currentMode = 'menu';
         }
 
-        // 語音合成
-        function speak(text, callback) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.8;
-                utterance.pitch = 1.1;
-                if (callback) {
-                    utterance.onend = callback;
-                }
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
-        // 煙火效果
-        function createFireworks(count) {
-            const container = document.getElementById('fireworks');
-            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
-
-            for (let i = 0; i < count; i++) {
-                const firework = document.createElement('div');
-                firework.className = 'firework';
-                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                firework.style.left = Math.random() * 100 + '%';
-                firework.style.top = Math.random() * 100 + '%';
-                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
-                firework.style.animationDelay = Math.random() * 0.5 + 's';
-                container.appendChild(firework);
-            }
-            setTimeout(() => { container.innerHTML = ''; }, 2000);
-        }
 
         // 初始化
         init();
