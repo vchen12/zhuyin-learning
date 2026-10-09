@@ -26,8 +26,10 @@ function check(n, c) { if (c) { pass++; console.log('  ✓', n); } else { fail++
   check('IndexedDB 有 3 筆', idbCount === 3);
   check('船圖顯示（objectURL）', await page.$eval('#shipPhoto', e => e.style.display === 'block' && e.src.indexOf('blob:') === 0));
   check('左上「← 返回」、右上 ⚓、沒有 🏠', await page.$eval('.back-btn', e => e.textContent.trim() === '← 返回' && e.getAttribute('href') === '../index.html') && (await page.$('#home')) === null && await page.$eval('#anchor', e => getComputedStyle(e).right !== 'auto'));
-  console.log('起始畫面 ⚓ 家長設定');
+  console.log('起始畫面 ⚓ 家長設定（長按才開，輕按只提示）');
   await page.click('#setupBtn'); await page.waitForTimeout(300);
+  check('輕按不開面板、顯示提示', !(await page.$eval('#parentPanel', e => e.classList.contains('show'))) && await page.$eval('#parentHintToast', e => e.style.opacity === '1' && /按住/.test(e.textContent)));
+  { const bb = await (await page.$('#setupBtn')).boundingBox(); await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await page.mouse.down(); await page.waitForTimeout(1400); await page.mouse.up(); await page.waitForTimeout(300); }
   const p0thumbs = await page.$$eval('#portSlots .slot:first-child .thumbs img', i => i.map(x => x.src.indexOf('blob:') === 0));   // 其他港口可能有本機 manifest 的網址照片
   check('面板開啟、基隆兩張縮圖用 blob', await page.$eval('#parentPanel', e => e.classList.contains('show')) && p0thumbs.length === 2 && p0thumbs.every(Boolean));
   // 加一張到港口 2（日本福岡）

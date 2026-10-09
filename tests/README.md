@@ -8,7 +8,7 @@ node tests/user-data-test.js     # 使用者資料層 UserData：遷移、家人
 ```
 
 瀏覽器測試（Playwright + Chromium，先在專案根目錄 `python3 -m http.server 8123`）：
-`tests/browser/voyage-browser-test.js`（郵輪）、`voyage-photos-test.js`（郵輪照片：IndexedDB、舊資料搬移、?setup=1）、`board-browser-test.js`（說話板）、`settings-browser-test.js`（設定頁：遷移、家人、照片裁切、字詞圖片、還原）。
+`tests/browser/voyage-browser-test.js`（郵輪）、`voyage-photos-test.js`（郵輪照片：IndexedDB、舊資料搬移、?setup=1）、`back-longpress-test.js`（返回鈕長按：輕按只提示、按住才回上一頁）、`board-browser-test.js`（說話板）、`settings-browser-test.js`（設定頁：遷移、家人、照片裁切、字詞圖片、還原）。
 
 `js/speech-recognition.js` 頂層不觸碰瀏覽器 API，可直接 `require()`；
 純函數由 `SpeechModule.__dsp` 匯出。改動人聲偵測參數後務必重跑兩者。

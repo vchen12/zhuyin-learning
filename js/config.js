@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.6.1
+ * v5.6.2
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.6.1',
+    version: '5.6.2',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -803,37 +803,78 @@ function getSimilarityLevel(similarity) {
  * 標記 data-parent-longpress="函數名" 的按鈕要按住 1.2 秒才執行，短按無效。
  * 用於「我會唸」這類不需發聲就計分的家長判定功能——使用者敲一下不會過關。
  */
+/** 家長提示（輕按長按鈕時顯示）：共用的小浮動提示，不需頁面準備標記 */
+function showParentHint(msg) {
+    if (typeof document === 'undefined') return;
+    let t = document.getElementById('parentHintToast');
+    if (!t) {
+        t = document.createElement('div'); t.id = 'parentHintToast';
+        t.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);background:rgba(16,69,111,.94);color:#fff;' +
+            'padding:10px 20px;border-radius:99px;font-size:clamp(14px,3.2vmin,20px);white-space:nowrap;z-index:10000;pointer-events:none;' +
+            'box-shadow:0 6px 18px rgba(0,0,0,.3);opacity:0;transition:opacity .2s';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(showParentHint._timer);
+    showParentHint._timer = setTimeout(() => { t.style.opacity = '0'; }, 1800);
+}
+
+/** 把一個元素接成「按住 1.2 秒才生效、輕按只提示」（家長用的按鈕與返回鈕共用） */
+function wireLongPress(el, action, hint) {
+    if (el.__lpWired) return;
+    el.__lpWired = true;
+    const HOLD_MS = 1200;
+    let timer = null, fired = false;
+    el.title = '按住 1.2 秒';
+    el.style.webkitTouchCallout = 'none';
+    el.style.webkitUserSelect = 'none';
+    const start = e => {
+        e.preventDefault();
+        el.style.opacity = '0.6'; fired = false;
+        clearTimeout(timer);
+        timer = setTimeout(() => { timer = null; fired = true; el.style.opacity = ''; action(); }, HOLD_MS);
+    };
+    const cancel = e => {
+        el.style.opacity = '';
+        if (timer) { clearTimeout(timer); timer = null; if (e.type === 'pointerup' && !fired) showParentHint(hint); }
+    };
+    el.addEventListener('pointerdown', start);
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => el.addEventListener(ev, cancel));
+    el.addEventListener('click', e => e.preventDefault());
+    el.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+/**
+ * 家長長按：`data-parent-longpress="fnName"` 的元素按住 1.2 秒才呼叫 window[fnName]；
+ * 輕按只顯示提示（`data-parent-hint` 文字），孩子亂按不會觸發。
+ */
 function initParentLongPress(root) {
     if (typeof document === 'undefined') return;
-    const HOLD_MS = 1200;
     (root || document).querySelectorAll('[data-parent-longpress]').forEach(el => {
-        if (el.__lpWired) return;
-        el.__lpWired = true;
         const fnName = el.getAttribute('data-parent-longpress');
-        let timer = null;
-        el.title = '家長按住 1.2 秒';
-        el.style.webkitTouchCallout = 'none';
-        el.style.webkitUserSelect = 'none';
-        const start = e => {
-            e.preventDefault();
-            el.style.opacity = '0.6';
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                timer = null; el.style.opacity = '';
-                const fn = window[fnName];
-                if (typeof fn === 'function') fn();
-            }, HOLD_MS);
-        };
-        const cancel = () => { el.style.opacity = ''; if (timer) { clearTimeout(timer); timer = null; } };
-        el.addEventListener('pointerdown', start);
-        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => el.addEventListener(ev, cancel));
-        el.addEventListener('click', e => e.preventDefault());
-        el.addEventListener('contextmenu', e => e.preventDefault());
+        const hint = el.getAttribute('data-parent-hint') || '按住約一秒才會生效（家長用）';
+        wireLongPress(el, () => { const fn = window[fnName]; if (typeof fn === 'function') fn(); }, hint);
+    });
+}
+
+/**
+ * 返回鈕一律長按（v5.6.2，全站統一）：`a.back-btn`／`button.back-btn`／`a.back` 按住 1.2 秒才回上一頁，
+ * 輕按只提示——孩子玩到一半亂按左上角不會跳出遊戲。
+ */
+function initBackLongPress(root) {
+    if (typeof document === 'undefined') return;
+    (root || document).querySelectorAll('a.back-btn, button.back-btn, a.back').forEach(el => {
+        if (el.__lpWired) return;
+        let action = null;
+        if (el.tagName === 'A' && el.getAttribute('href')) { const href = el.href; action = () => { location.href = href; }; }
+        else if (el.getAttribute('onclick')) { const code = el.getAttribute('onclick'); el.removeAttribute('onclick'); action = () => { new Function(code).call(el); }; }
+        if (action) wireLongPress(el, action, '按住「← 返回」約一秒才會回上一頁');
     });
 }
 if (typeof document !== 'undefined') {
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => initParentLongPress());
-    else initParentLongPress();
+    const _initLongPress = () => { initParentLongPress(); initBackLongPress(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initLongPress);
+    else _initLongPress();
 }
 
 // 匯出給其他模組使用
