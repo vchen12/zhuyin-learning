@@ -332,7 +332,8 @@ function getEffectiveFamilyVocabulary(vocab, deletedWords, editedWords, addedWor
                     emoji: member.customImage ? null : member.emoji,
                     customImage: member.customImage,
                     text: member.name,  // 使用自訂名稱
-                    zhuyin: originalWord.zhuyin,
+                    // 改名時可一併改注音（v5.2.9）；舊資料改了名卻沒存注音 → 先試自動建議，再退回原始注音
+                    zhuyin: member.zhuyin || (member.name !== defaultName ? suggestZhuyin(member.name) : '') || originalWord.zhuyin,
                     image: originalWord.image,
                     originalText: defaultName,  // 保留原始名稱供參考
                     gender: member.emoji === '👨' || member.emoji === '👴' || member.emoji === '👦' ? 'male' : 'female'
@@ -392,5 +393,51 @@ function getEffectiveVocabularyStats() {
 
 // 匯出
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ZHUYIN_SYMBOLS, VOCABULARY, SENTENCES, getEffectiveVocabulary, getEffectiveFamilyVocabulary, getEffectiveVocabularyStats };
+    module.exports = { ZHUYIN_SYMBOLS, VOCABULARY, SENTENCES, getEffectiveVocabulary, getEffectiveFamilyVocabulary, getEffectiveVocabularyStats, suggestZhuyin };
+}
+
+// ==========================================
+// 注音建議（v5.2.9）：由字詞庫既有詞彙建立「字 → 注音」對照，供改名／新增字詞時自動帶入
+// ==========================================
+const EXTRA_CHAR_ZHUYIN = {
+    '阿': 'ㄚ', '嬤': 'ㄇㄚˋ', '公': 'ㄍㄨㄥ', '婆': 'ㄆㄛˊ', '爸': 'ㄅㄚˋ', '媽': 'ㄇㄚ', '爺': 'ㄧㄝˊ', '奶': 'ㄋㄞˇ',
+    '哥': 'ㄍㄜ', '姐': 'ㄐㄧㄝˇ', '姊': 'ㄐㄧㄝˇ', '弟': 'ㄉㄧˋ', '妹': 'ㄇㄟˋ', '叔': 'ㄕㄨˊ', '姨': 'ㄧˊ', '舅': 'ㄐㄧㄡˋ',
+    '姑': 'ㄍㄨ', '嬸': 'ㄕㄣˇ', '伯': 'ㄅㄛˊ', '丈': 'ㄓㄤˋ', '母': 'ㄇㄨˇ', '父': 'ㄈㄨˋ', '外': 'ㄨㄞˋ', '祖': 'ㄗㄨˇ',
+    '乾': 'ㄍㄢ', '老': 'ㄌㄠˇ', '師': 'ㄕ', '寶': 'ㄅㄠˇ', '貝': 'ㄅㄟˋ', '哥': 'ㄍㄜ', '小': 'ㄒㄧㄠˇ', '大': 'ㄉㄚˋ',
+    '姪': 'ㄓˊ', '孫': 'ㄙㄨㄣ', '女': 'ㄋㄩˇ', '兒': 'ㄦˊ', '子': 'ㄗˇ', '太': 'ㄊㄞˋ', '先': 'ㄒㄧㄢ', '生': 'ㄕㄥ',
+    '同': 'ㄊㄨㄥˊ', '學': 'ㄒㄩㄝˊ', '朋': 'ㄆㄥˊ', '友': 'ㄧㄡˇ', '醫': 'ㄧ', '護': 'ㄏㄨˋ', '士': 'ㄕˋ', '看': 'ㄎㄢˋ'
+};
+let _charZhuyinMap = null;
+function _buildCharZhuyinMap() {
+    const map = {};
+    if (typeof VOCABULARY !== 'undefined') {
+        Object.keys(VOCABULARY).forEach(cat => {
+            (VOCABULARY[cat].words || []).forEach(w => {
+                if (!w.text || !w.zhuyin) return;
+                const chars = Array.from(w.text);
+                const parts = w.zhuyin.trim().split(/\s+/);
+                if (chars.length !== parts.length) return;   // 字數與音節數不符就不採用
+                chars.forEach((c, i) => { if (!map[c]) map[c] = parts[i]; });
+            });
+        });
+    }
+    Object.keys(EXTRA_CHAR_ZHUYIN).forEach(c => { map[c] = EXTRA_CHAR_ZHUYIN[c]; });
+    return map;
+}
+/**
+ * 依文字建議注音；任一字查不到則回傳空字串（讓使用者自行輸入）
+ * 疊字第二字用輕聲（爸爸 → ㄅㄚˋ ㄅㄚ˙），與字詞庫慣例一致
+ */
+function suggestZhuyin(text) {
+    if (!_charZhuyinMap) _charZhuyinMap = _buildCharZhuyinMap();
+    const chars = Array.from((text || '').trim());
+    if (!chars.length) return '';
+    const parts = [];
+    for (let i = 0; i < chars.length; i++) {
+        const z = _charZhuyinMap[chars[i]];
+        if (!z) return '';
+        if (i > 0 && chars[i] === chars[i - 1]) parts.push(z.replace(/[ˊˇˋ˙]$/, '') + '˙');
+        else parts.push(z);
+    }
+    return parts.join(' ');
 }
