@@ -88,8 +88,6 @@
         #prompt.talking #promptWord { animation: wobble .6s ease-in-out infinite; }
         @keyframes wobble { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 
-        /* 右上角 🏠：長按回主選單（單點只提示，避免他亂按就跳離） */
-        #home { position: absolute; right: 1.5vmin; top: 1.5vmin; width: 9vmin; height: 9vmin; border-radius: 50%; background: rgba(255,255,255,.18);
                 display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; z-index: 25; }
         #toast { position: absolute; left: 50%; top: 22vmin; transform: translateX(-50%); background: rgba(16,69,111,.92); color: #fff;
                  padding: 1.4vmin 3vmin; border-radius: 99px; font-size: 3.2vmin; white-space: nowrap; opacity: 0; transition: opacity .25s;
@@ -124,8 +122,13 @@
         #startOverlay .err { color: #ffb4b4; font-size: 3vmin; }
 
         /* 家長列（長按左上角錨點開啟） */
-        #anchor { position: absolute; left: 1.5vmin; top: 1.5vmin; width: 9vmin; height: 9vmin; border-radius: 50%; background: rgba(255,255,255,.18);
+        #anchor { position: absolute; right: 1.5vmin; top: 1.5vmin; width: 9vmin; height: 9vmin; border-radius: 50%; background: rgba(255,255,255,.18);
                   display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; z-index: 25; } /* 在起始遮罩(20)之上，家長可先設定 */
+        /* 左上「← 返回」：與各關卡相同的介面 */
+        .back-btn { position: absolute; left: 1.5vmin; top: 1.5vmin; z-index: 25; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;
+                    padding: 1.6vmin 2.8vmin; border-radius: 99px; font-size: 3.2vmin; font-weight: 700; text-decoration: none;
+                    box-shadow: 0 4px 14px rgba(0,0,0,.25); display: inline-flex; align-items: center; }
+        .back-btn:active { transform: scale(.96); }
         #parentPanel { position: absolute; inset: 0; background: #f4f7fb; color: #223; display: none; z-index: 30; overflow-y: auto;
                        -webkit-overflow-scrolling: touch; padding: 3vmin; }
         #parentPanel.show { display: block; }
@@ -180,8 +183,8 @@
         <div id="finale"><h2>🎉 到了！</h2><div id="finaleStrip"></div><p style="font-size:3.6vmin;opacity:.85">等一下會再出航一次</p></div>
     </div>
 
+    <a class="back-btn" href="../index.html">← 返回</a>
     <div id="anchor" title="家長：長按開啟">⚓</div>
-    <div id="home" title="長按回主選單">🏠</div>
     <div id="toast"></div>
 
     <div id="startOverlay">
@@ -189,8 +192,12 @@
         <p>按下開始後，<b>說話</b>船就會往前開。<br>說完一個詞，就會到一個港口。</p>
         <button id="startBtn">出航</button>
         <p class="err" id="startErr"></p>
-        <p style="font-size:2.8vmin;opacity:.75">出航後 Safari 可能再問一次麥克風；按「允許」即可。<br>
-        系統分不出是誰在說話：家長要提示時，請按畫面上的 🔊 讓系統示範。<br>長按右上角 🏠 回主選單。</p>
+        <div class="row" style="justify-content:center;margin:0">
+            <button class="btn" id="setupBtn">⚓ 家長設定：船與港口照片、口令</button>
+            <a class="btn gray" href="../settings.html" style="text-decoration:none">👤 個人化設定</a>
+        </div>
+        <p style="font-size:2.8vmin;opacity:.8">第一次玩請家長先按「⚓ 家長設定」放入他喜歡的郵輪與家人合照。<br>遊戲中長按右上角 ⚓ 也能開啟；名字、家人照片、靈敏度在「個人化設定」。</p>
+        <p style="font-size:2.6vmin;opacity:.7">出航後 Safari 可能再問一次麥克風，按「允許」即可。<br>系統分不出是誰在說話：家長要提示時，請按畫面上的 🔊 讓系統示範。</p>
     </div>
 
     <div id="parentPanel">
@@ -198,7 +205,8 @@
             <h2 style="margin:0">⚓ 家長設定</h2>
             <button class="btn gray" id="closePanel">關閉</button>
         </div>
-        <p class="note">照片存在這台 iPad 的瀏覽器裡（不上傳）。船的照片建議用他喜歡的郵輪；港口照片用那次旅行的家人合照。港口名稱可改成真實地名。</p>
+        <p class="note">照片存在這台 iPad 的瀏覽器裡（不上傳）。船的照片建議用他喜歡的郵輪；港口照片用那次旅行的家人合照。港口名稱可改成真實地名。<br>
+        使用者名字、家人照片、人聲靈敏度在 <a href="../settings.html">👤 個人化設定</a>。</p>
 
         <h2>船</h2>
         <div class="slots"><div class="slot" id="shipSlot"></div></div>
@@ -223,6 +231,7 @@
         <p class="note">綠色＝人聲；橘色＝有聲響但不是說話（敲打）。靈敏度在「設定」頁的「人聲偵測」調整。</p>
         <div class="row">
             <button class="btn gray" id="restart">↺ 重新出航</button>
+            <a class="btn gray" href="../settings.html" style="text-decoration:none">👤 個人化設定</a>
             <a class="btn gray" href="../index.html" style="text-decoration:none">← 回主選單</a>
         </div>
     </div>
@@ -230,6 +239,7 @@
     <script src="../js/config.js"></script>
     <script src="../js/speech-recognition.js"></script>
     <script src="../js/photo-crop.js"></script>
+    <script src="../js/media-store.js"></script>
     <script>
         'use strict';
         // ==========================================
@@ -250,6 +260,7 @@
         const IDLE_PROMPT_MS = 15000;    // 多久沒人聲就再唸一次口令
         const TAP_PROMPT_MS = 4000;      // 一直按螢幕：最多每 4 秒唸一次口令
         const MANIFEST_URL = '../images/private/voyage/manifest.json'; // 本機／私人主機可放預設照片；不存在則略過
+        const MEDIA_DB = 'zhuyin-media', MEDIA_PREFIX = 'voyage/';   // 照片存 IndexedDB（localStorage 只有約 5MB，存四五張就滿）
 
         // ==========================================
         // 狀態
@@ -264,6 +275,9 @@
         let loop = null, busy = false, finished = false;
         let audioCtx = null;
         let wordIdx = 0, lastPromptAt = 0;   // 目前口令 / 上次唸口令的時間
+        let store = null;                    // MediaStore（IndexedDB）；不支援時照片退回存 localStorage dataURL
+        const media = {};                    // 'voyage/...' → objectURL
+        const params = new URLSearchParams(location.search);
 
         // ==========================================
         // 資料（localStorage）
@@ -306,7 +320,47 @@
         }
         function saveData() {
             try { localStorage.setItem('voyage.data', JSON.stringify(data)); return true; }
-            catch (e) { alert('儲存空間不足，請把照片張數減少，或清除紀錄。'); return false; }
+            catch (e) { alert('瀏覽器給這個網站的儲存空間已滿（與 iPad 本身容量無關）。請刪掉幾張照片再試。'); return false; }
+        }
+
+        // ---------- 照片：IndexedDB（參照字串 'idb:voyage/…'）；manifest 的網址與舊的 dataURL 也能顯示 ----------
+        function imgSrc(ref) {
+            if (!ref) return null;
+            if (ref.indexOf('idb:') === 0) return media[ref.slice(4)] || null;
+            return ref;
+        }
+        function setMedia(key, blob) { if (media[key]) URL.revokeObjectURL(media[key]); media[key] = URL.createObjectURL(blob); }
+        /** 裁切結果存進 IndexedDB，回傳參照；沒有 IndexedDB 就原樣回傳 dataURL（退回 localStorage） */
+        async function storePhoto(name, dataUrl) {
+            if (!store) return dataUrl;
+            const key = MEDIA_PREFIX + name;
+            const blob = MediaStore.dataUrlToBlob(dataUrl);
+            if (!(await store.put(key, blob))) { toast('照片存不進去，請再試一次'); return null; }
+            setMedia(key, blob);
+            return 'idb:' + key;
+        }
+        async function removePhoto(ref) {
+            if (!ref || ref.indexOf('idb:') !== 0) return;
+            const key = ref.slice(4);
+            if (store) await store.del(key);
+            if (media[key]) { URL.revokeObjectURL(media[key]); delete media[key]; }
+        }
+        async function loadMedia() {
+            await store.each(MEDIA_PREFIX, (key, blob) => { media[key] = URL.createObjectURL(blob); });
+        }
+        /** 舊版把 dataURL 直接塞在 localStorage：搬進 IndexedDB，localStorage 只留參照 */
+        async function migratePhotos() {
+            let changed = false;
+            if (MediaStore.isDataUrl(data.ship)) { const r = await storePhoto('ship', data.ship); if (r) { data.ship = r; changed = true; } }
+            for (let i = 0; i < PORT_COUNT; i++) {
+                const p = data.ports[i];
+                for (let k = 0; k < p.imgs.length; k++) {
+                    if (!MediaStore.isDataUrl(p.imgs[k])) continue;
+                    const r = await storePhoto('p' + i + '/' + Date.now().toString(36) + k, p.imgs[k]);
+                    if (r) { p.imgs[k] = r; changed = true; }
+                }
+            }
+            if (changed) { saveData(); console.log('📷 照片已搬進 IndexedDB'); }
         }
         function loadLog() { try { return JSON.parse(localStorage.getItem('voyage.log') || '[]'); } catch (e) { return []; } }
         function appendLog(entry) {
@@ -331,7 +385,8 @@
         }
         function renderShip() {
             const img = $('shipPhoto'), svg = $('shipSvg');
-            if (data.ship) { img.src = data.ship; img.style.display = 'block'; svg.style.display = 'none'; }
+            const src = imgSrc(data.ship);
+            if (src) { img.src = src; img.style.display = 'block'; svg.style.display = 'none'; }
             else { img.style.display = 'none'; svg.style.display = 'block'; }
         }
         function updatePorts() {
@@ -497,7 +552,7 @@
         function showPortCard(i) {
             const p = data.ports[i];
             let img = null;
-            if (p.imgs.length) { img = p.imgs[p.next % p.imgs.length]; p.next++; }   // 每次抵達換下一張
+            if (p.imgs.length) { img = imgSrc(p.imgs[p.next % p.imgs.length]); p.next++; }   // 每次抵達換下一張
             $('portMedia').innerHTML = img ? '<img src="' + img + '" alt="">' : '<div class="empty">📷</div>';
             $('portName').textContent = '到 ' + p.name + ' 了！';
             $('portCard').classList.add('show');
@@ -507,7 +562,7 @@
         function finale() {
             finished = true; busy = false;
             const strip = $('finaleStrip'); strip.innerHTML = '';
-            data.ports.forEach(p => { if (p.imgs.length) { const im = document.createElement('img'); im.src = p.imgs[0]; strip.appendChild(im); } });
+            data.ports.forEach(p => { const src = imgSrc(p.imgs[0]); if (src) { const im = document.createElement('img'); im.src = src; strip.appendChild(im); } });
             $('finale').classList.add('show');
             horn(2);
             setTimeout(() => { $('finale').classList.remove('show'); resetVoyage(); }, FINALE_MS);
@@ -551,12 +606,6 @@
             if (loop && e.target.id !== 'promptPlay' && Date.now() - lastPromptAt > TAP_PROMPT_MS) promptWord();
         });
 
-        // 🏠 長按 0.8 秒回主選單；單點只提示（他亂按不會跳離）
-        let homeTimer = null;
-        const home = $('home');
-        home.addEventListener('pointerdown', e => { e.preventDefault(); homeTimer = setTimeout(() => { homeTimer = null; location.href = '../index.html'; }, 800); });
-        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => home.addEventListener(ev, () => { if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; if (ev === 'pointerup') toast('按住 🏠 不放，回主選單'); } }));
-        home.addEventListener('contextmenu', e => e.preventDefault());
 
         // ==========================================
         // 家長面板（長按錨點 1.2 秒）
@@ -572,17 +621,18 @@
         anchor.addEventListener('contextmenu', e => e.preventDefault());
 
         function openPanel() { renderPanel(); $('parentPanel').classList.add('show'); busy = true; }
+        $('setupBtn').addEventListener('click', openPanel);   // 起始畫面直接開家長設定（不必長按）
         $('closePanel').addEventListener('click', () => { $('parentPanel').classList.remove('show'); buildRoute(); busy = false; });
         $('restart').addEventListener('click', () => { resetVoyage(); $('parentPanel').classList.remove('show'); });
 
         function renderPanel() {
-            $('shipSlot').innerHTML = slotHtml('ship', data.ship, null);
+            $('shipSlot').innerHTML = slotHtml('ship', imgSrc(data.ship), null);
             const ps = $('portSlots'); ps.innerHTML = '';
             data.ports.forEach((p, i) => { const d = document.createElement('div'); d.className = 'slot'; d.innerHTML = portSlotHtml(i, p); ps.appendChild(d); });
             document.querySelectorAll('#parentPanel input[type=file]').forEach(inp => inp.addEventListener('change', onPick));
             document.querySelectorAll('#parentPanel .del').forEach(btn => btn.addEventListener('click', e => {
                 const i = parseInt(e.target.dataset.port, 10), k = parseInt(e.target.dataset.idx, 10);
-                data.ports[i].imgs.splice(k, 1); saveData(); renderPanel();
+                const ref = data.ports[i].imgs.splice(k, 1)[0]; saveData(); removePhoto(ref); renderPanel();
             }));
             document.querySelectorAll('#portSlots input[type=text]').forEach(inp => inp.addEventListener('change', e => {
                 const i = parseInt(e.target.dataset.port, 10); data.ports[i].name = e.target.value.trim() || ('港口 ' + (i + 1)); saveData();
@@ -601,7 +651,7 @@
         }
         function portSlotHtml(i, p) {
             const thumbs = p.imgs.length
-                ? '<div class="thumbs">' + p.imgs.map((im, k) => '<div class="t"><img src="' + im + '"><button class="del" data-port="' + i + '" data-idx="' + k + '">✕</button></div>').join('') + '</div>'
+                ? '<div class="thumbs">' + p.imgs.map((im, k) => '<div class="t"><img src="' + (imgSrc(im) || '') + '"><button class="del" data-port="' + i + '" data-idx="' + k + '">✕</button></div>').join('') + '</div>'
                 : '<div class="thumb"></div>';
             return thumbs +
                 '<input type="text" value="' + escapeHtml(p.name) + '" data-port="' + i + '" placeholder="港口名稱">' +
@@ -621,7 +671,10 @@
                         hint: isShip ? '把郵輪放進框裡' : '拖曳移動、滑桿或雙指縮放，框出要顯示的部分'
                     });
                     if (!dataUrl) continue;
-                    if (isShip) data.ship = dataUrl; else data.ports[parseInt(key.slice(4), 10)].imgs.push(dataUrl);
+                    const pi = isShip ? -1 : parseInt(key.slice(4), 10);
+                    const ref = await storePhoto(isShip ? 'ship' : 'p' + pi + '/' + Date.now().toString(36) + i, dataUrl);
+                    if (!ref) continue;
+                    if (isShip) data.ship = ref; else data.ports[pi].imgs.push(ref);
                     changed = true;
                 }
                 if (changed && saveData()) renderPanel();
@@ -644,8 +697,14 @@
         });
         $('clearLog').addEventListener('click', () => { if (confirm('確定清除所有發聲紀錄？')) { localStorage.removeItem('voyage.log'); renderStats(); } });
 
-        buildRoute(); showWord();
-        loadManifest().then(changed => { if (changed) buildRoute(); });
+        // 啟動：開 IndexedDB → 載入照片 → 搬移舊 dataURL → 畫航線 → 預設 manifest → ?setup=1 直接開家長設定
+        (async () => {
+            store = await MediaStore.open(MEDIA_DB);
+            if (store) { await loadMedia(); await migratePhotos(); }
+            buildRoute(); showWord();
+            if (await loadManifest()) buildRoute();
+            if (params.get('setup') === '1') openPanel();
+        })();
     </script>
 </body>
 </html>
