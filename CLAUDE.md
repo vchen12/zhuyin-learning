@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.6.0
+- **版本**: v5.6.1
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -26,6 +26,7 @@ js/speech-game.js         - 語音遊戲共用流程（聽一次／沒過關回�
 js/vocabulary.js          - 詞彙資料庫（8大分類、80+詞彙）
 js/sentence-generator.js  - 句型產生器（從字詞庫動態產生遊戲內容）
 js/prevent-zoom.js        - 防止雙擊放大
+js/media-store.js         - 照片／錄音的 IndexedDB 共用存取（MediaStore.open(db) → put/get/del/each；localStorage 只有約 5MB，照片一律存這裡）
 js/photo-crop.js          - 共用照片裁切（PhotoCrop.open(file,{aspect,outWidth}) → dataURL；拖曳／雙指／滑桿縮放／整張使用）
 sw.js                     - Service Worker 快取策略
 settings.html             - 設定頁面（字詞庫管理、麥克風測試）
@@ -105,7 +106,10 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 - 注音退為構音輔助層（附掛在已會說的詞的首音），不是入口。
 
 `voyage/index.html`（郵輪出航）：持續發聲船前進；一次發聲 ≥250ms 即抵達下一港，港口揭示家人合照＋合成汽笛；
-五港後終點。照片由家長在 iPad 上從「照片」選取，縮至 900px 存 localStorage（`voyage.data`）；
+五港後終點。照片由家長在 iPad 上從「照片」選取，裁切縮至 900px 後存 IndexedDB `zhuyin-media`（key `voyage/ship`、`voyage/p<i>/<id>`），
+`voyage.data`（localStorage）只存參照 `idb:voyage/…` 與港名、口令；舊版塞在 localStorage 的 dataURL 第一次載入時自動搬移
+（iOS Safari localStorage 約 5MB，四、五張照片就會「儲存空間不足」，與 iPad 容量無關）。
+起始畫面有「⚓ 家長設定」鈕與「個人化設定」連結；`?setup=1` 直接開家長面板（設定頁「說話旅行」區由此連入）；左上「← 返回」與各關卡一致；
 每次發聲與抵港寫入 `voyage.log`，家長面板可看今日統計與匯出。喇叭播音（汽笛／TTS）期間關閉麥克風判定。
 
 `board/index.html`（說話板，`?set=iwant` / `?set=family`）：照片卡格 → 點卡進專注畫面 → 播示範（家人錄音，否則 TTS）
@@ -177,6 +181,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.6.1**: 郵輪照片改存 IndexedDB（共用 `js/media-store.js`，說話板改用同一模組；修正加到第 4、5 張就「儲存空間不足」）；郵輪與說話板起始畫面加「⚓ 家長設定」鈕與「個人化設定」連結、`?setup=1` 直接開家長面板，設定頁新增「說話旅行」入口；郵輪左上改為各關卡一致的「← 返回」（移除 🏠 長按）
 - **v5.6.0**: 共用化第 3 階段——使用者資料層 `UserData`（`js/vocabulary.js`）：家人單一名單（預設＋新增）、字詞修改與自訂圖片單一入口、舊 `customWords`／`vocabularyModifications.family` 自動遷移；設定頁「自訂字詞」改為「我新增的」（直接寫進各類別，遊戲會用到）、家人管理單一列表、字詞換圖改用共用 `PhotoCrop`（移除設定頁自己的裁切 modal）；說話板家人組改讀 `UserData`（含新增的家人）；修正新增字詞的自訂圖片存錯位置而遊戲看不到的問題；注音建議補生活用字
 - **v5.5.0**: 共用化第 2 階段——`js/speech-game.js`（`SpeechGame.listen／review／celebrate／manualConfirm／skip`）；12 個語音遊戲改呼叫共用流程，刪除各自的 startListening 回呼樣板、錄音回放＋正確示範流程、稱讚流程與「我會唸」confirm；各遊戲開聽時機不變
 - **v5.4.1**: 郵輪加口令提示（畫面大字＋🔊 系統示範，閒置／按螢幕時再唸，家長面板可改詞）、右上角 🏠 長按回主選單、起始遮罩與設定頁說明 Safari 每頁會再問一次麥克風
