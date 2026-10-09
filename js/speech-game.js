@@ -22,6 +22,8 @@ const SpeechGame = (function () {
         voice: '👂 聽到了，繼續說...',
         heard: '你說：',
         heardNone: '（聽到聲音）',
+        heardNoText: '（有聲音，但辨識引擎沒有回傳文字）',
+        asrError: '（辨識引擎錯誤：',
         noVoice: '沒有聽到聲音，再按麥克風試一次',
         noiseOnly: '🔊 那不是說話聲喔，用嘴巴說',
         micError: '❌ 麥克風無法使用，請按「✅ 我會唸」',
@@ -97,7 +99,8 @@ const SpeechGame = (function () {
             onInterim: function (text) { showHeard(text); if (opts.onInterim) opts.onInterim(text); },
             onResult: function (result) {
                 done();
-                showHeard(result.transcript || m.heardNone);
+                // 沒有文字時說明原因：引擎回錯誤碼（network／not-allowed…）或完全沒回傳，家長才知道該查「聽寫」與網路
+                showHeard(result.transcript || (result.asrError ? m.asrError + result.asrError + '）' : (result.asrUsed && result.hadVoice ? m.heardNoText : m.heardNone)));
                 if (result.passed) { if (opts.onPass) opts.onPass(result); }
                 else if (opts.onFail) opts.onFail(result);
             },

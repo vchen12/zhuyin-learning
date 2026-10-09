@@ -9,7 +9,14 @@ const tap = () => segs.push({ ms: 60, fn: (t) => { const env = Math.exp(-t / 0.0
 const taps = (n, gapMs) => { for (let i = 0; i < n; i++) { tap(); quiet(gapMs); } };
 
 const mode = process.argv[2] || 'voyage';
-if (mode === 'board') {
+if (mode === 'dudu') {
+    // 兩音節短詞（嘟嘟／出發）：母音各 120ms、中間 80ms 不發聲的子音；之前只算有聲幀 ≥250ms 抵不了港
+    quiet(1500);
+    word(120, 300); quiet(80); word(120, 300);   // 1.5–1.82 → 抵港 ≈2.3，卡片到 ≈5.5
+    quiet(4680);
+    word(110, 320); quiet(90); word(110, 320);   // 6.5–6.81 第二個詞（卡片結束後）
+    quiet(3000);
+} else if (mode === 'board') {
     // 說話板：一句四字固定句（≥660ms）→ 應得到報酬
     quiet(1500);
     word(500, 300);               // 1.5–2.0 「我要」
@@ -44,6 +51,6 @@ buf.write('RIFF', 0); buf.writeUInt32LE(36 + pcm.length * 2, 4); buf.write('WAVE
 buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20); buf.writeUInt16LE(1, 22); buf.writeUInt32LE(SR, 24); buf.writeUInt32LE(SR * 2, 28); buf.writeUInt16LE(2, 32); buf.writeUInt16LE(16, 34);
 buf.write('data', 36); buf.writeUInt32LE(pcm.length * 2, 40);
 Buffer.from(pcm.buffer).copy(buf, 44);
-const outName = mode === 'board' ? 'board-test.wav' : 'voyage-test.wav';
+const outName = mode === 'board' ? 'board-test.wav' : mode === 'dudu' ? 'dudu-test.wav' : 'voyage-test.wav';
 fs.writeFileSync(outName, buf);
 console.log(outName, '長度', (total / SR).toFixed(1), '秒');

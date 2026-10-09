@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.6.2
+- **版本**: v5.6.3
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -105,7 +105,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 - 觸碰螢幕不推進任何進度；家長功能以長按開啟。
 - 注音退為構音輔助層（附掛在已會說的詞的首音），不是入口。
 
-`voyage/index.html`（郵輪出航）：持續發聲船前進；一次發聲 ≥250ms 即抵達下一港，港口揭示家人合照＋合成汽笛；
+`voyage/index.html`（郵輪出航）：持續發聲船前進；說完一個詞（確認人聲，且累計有聲 ≥150ms 或首尾跨度 ≥250ms；「嘟嘟」「出發」這種母音很短的兩音節詞靠跨度）即抵達下一港，港口揭示家人合照＋合成汽笛；
 五港後終點。照片由家長在 iPad 上從「照片」選取，裁切縮至 900px 後存 IndexedDB `zhuyin-media`（key `voyage/ship`、`voyage/p<i>/<id>`），
 `voyage.data`（localStorage）只存參照 `idb:voyage/…` 與港名、口令；舊版塞在 localStorage 的 dataURL 第一次載入時自動搬移
 （iOS Safari localStorage 約 5MB，四、五張照片就會「儲存空間不足」，與 iPad 容量無關）。
@@ -165,6 +165,9 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 - **遊戲播放任何音檔（注音示範音、家人錄音）前必須 `SpeechModule.guardAudio(audio)`**：
   喇叭放出的人聲有基頻，不擋會被當成使用者發聲（點一下重播＝過關）。Web Audio 合成音用 `notifyPlayback(ms)`。
 - **開聽前不要用 TTS 提示**（如「請大聲唸」）：TTS 播放期間麥克風判定被閘門排除，只會延後聆聽。
+- **iOS Safari 只播由使用者手勢觸發的 TTS**：頁面第一次 `speak()` 必須在點擊事件裡同步呼叫（不能先 `await` 麥克風或 timer），
+  之後由 timer 觸發的稱讚、提示才播得出來；否則整頁的 TTS 都靜音（v5.6.3 郵輪實測：有汽笛、有照片、沒有口令與稱讚）。
+  `SpeechModule._ttsSpeaking()` 另有卡住保護：`speaking` 旗標連續 15 秒為真即忽略並 cancel。
 - **不要再寫「唸兩到三次」「聲音太短再唸一次」這類補丁**：v5 單次發聲 ≥220ms 即可判定；
   `onTimeout` 只在完全沒有人聲時觸發（有人聲但不過關走 `onResult(passed:false)`），
   用 `info.noiseOnly` 區分「那不是說話聲」與「沒聽到聲音」。
@@ -182,6 +185,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.6.3**: 郵輪實測修正——(1) 口令改在「出航」點擊事件內同步開講（iOS 只播手勢觸發的語音；之前口令與抵港稱讚全被丟掉）、TTS 佇列同步起講、移除 `getVoices()` 守門；(2) 兩音節短詞（出發、嘟嘟）算一個詞：有聲 ≥150ms 或首尾跨度 ≥250ms、確認幀 3；`SpeechModule`：`_ttsSpeaking()` 卡住保護、結果加 `asrError`／`asrUsed`，`SpeechGame` 沒有辨識文字時顯示原因，`speak()` 只在有語句時才 `cancel()`
 - **v5.6.2**: 長按統一：家長設定（郵輪／說話板的 ⚓ 與起始畫面「家長設定」鈕）與**全站的「← 返回」鈕**都要按住 1.2 秒才生效，輕按只顯示共用提示（`config.js` 的 `wireLongPress`／`initParentLongPress`／`initBackLongPress`／`showParentHint`，載入 config.js 的頁面自動生效）
 - **v5.6.1**: 郵輪照片改存 IndexedDB（共用 `js/media-store.js`，說話板改用同一模組；修正加到第 4、5 張就「儲存空間不足」）；郵輪與說話板起始畫面加「⚓ 家長設定」鈕與「個人化設定」連結、`?setup=1` 直接開家長面板，設定頁新增「說話旅行」入口；郵輪左上改為各關卡一致的「← 返回」（移除 🏠 長按）
 - **v5.6.0**: 共用化第 3 階段——使用者資料層 `UserData`（`js/vocabulary.js`）：家人單一名單（預設＋新增）、字詞修改與自訂圖片單一入口、舊 `customWords`／`vocabularyModifications.family` 自動遷移；設定頁「自訂字詞」改為「我新增的」（直接寫進各類別，遊戲會用到）、家人管理單一列表、字詞換圖改用共用 `PhotoCrop`（移除設定頁自己的裁切 modal）；說話板家人組改讀 `UserData`（含新增的家人）；修正新增字詞的自訂圖片存錯位置而遊戲看不到的問題；注音建議補生活用字

@@ -92,6 +92,7 @@
     const NOISE_HISTORY_LEN = 40;        // 背景噪音樣本數（約 4 秒）
     const NOISE_SAMPLE_MS = 100;
     const TTS_TAIL_MS = 250;             // TTS 結束後再忽略的尾音時間
+    const TTS_STUCK_MS = 15000;          // speaking 旗標連續為真超過此時間視為卡住（iOS 偶發），不再當成喇叭在響
 
     // 靈敏度預設（可由 config.js getVoiceSensitivity() 切換）
     const SENSITIVITY = {
@@ -332,12 +333,28 @@
         return analyzeFrame(timeBuf, sampleRate);
     }
 
+    let ttsSpeakingSince = 0;
+    /** TTS 是否正在播：iOS 偶爾會讓 speaking 卡在 true（例如手勢外排入的語句從未播出），超過 TTS_STUCK_MS 就不再採信並清掉 */
+    function _ttsSpeaking() {
+        const ss = global.speechSynthesis;
+        if (!ss || !ss.speaking) { ttsSpeakingSince = 0; return false; }
+        const now = Date.now();
+        if (!ttsSpeakingSince) ttsSpeakingSince = now;
+        if (now - ttsSpeakingSince > TTS_STUCK_MS) {
+            try { ss.cancel(); } catch (e) { /* ignore */ }
+            console.warn('⚠️ TTS 的 speaking 旗標卡住超過 ' + TTS_STUCK_MS + 'ms，已忽略');
+            ttsSpeakingSince = 0;
+            return false;
+        }
+        return true;
+    }
+
     function _startNoiseTracking() {
         if (noiseTimer) clearInterval(noiseTimer);
         noiseTimer = setInterval(() => {
             if (!analyser || isListening) return;
             // TTS 播放中的聲音不算環境噪音
-            if (global.speechSynthesis && global.speechSynthesis.speaking) return;
+            if (_ttsSpeaking()) return;
             const a = _readFrame();
             noiseHistory.push(a.rms);
             if (noiseHistory.length > NOISE_HISTORY_LEN) noiseHistory.shift();
@@ -413,7 +430,7 @@
     function speak(text, rate) {
         return new Promise((resolve) => {
             if (!('speechSynthesis' in global) || !text) { resolve(); return; }
-            global.speechSynthesis.cancel();
+            if (global.speechSynthesis.speaking || global.speechSynthesis.pending) global.speechSynthesis.cancel();   // iOS：沒在講時 cancel 後立刻 speak 偶爾會被吞掉
             const u = new SpeechSynthesisUtterance(text);
             u.lang = 'zh-TW';
             u.rate = rate || 0.85;
@@ -652,7 +669,7 @@
         _startRecording();
         hudLevel = 0; hudVoiced = false;
         if (opt.hud !== false) _hudShow('🎤 我在聽…說出來吧');
-        if (global.speechSynthesis && global.speechSynthesis.speaking) session.ttsUntil = Date.now() + TTS_TAIL_MS;
+        if (_ttsSpeaking()) session.ttsUntil = Date.now() + TTS_TAIL_MS;
 
         session.frameTimer = setInterval(() => _tick(session), FRAME_MS);
         session.timeout = setTimeout(() => _end(session, 'timeout'), _getListenDuration(targetText));
@@ -676,7 +693,7 @@
         if (a.rms > session.peakLevel) session.peakLevel = a.rms;
 
         // 系統正在播 TTS（如「請大聲唸」）：喇叭放出的合成人聲也有基頻，必須排除
-        if (global.speechSynthesis && global.speechSynthesis.speaking) session.ttsUntil = now + TTS_TAIL_MS;
+        if (_ttsSpeaking()) session.ttsUntil = now + TTS_TAIL_MS;
         if (now < session.ttsUntil || now < playbackUntil) {
             hudLevel = 0; hudVoiced = false;
             session.voicedRun = 0; session.lastF0 = 0;
@@ -784,6 +801,7 @@
         recognition.onerror = (event) => {
             if (event.error === 'aborted' || event.error === 'no-speech') return;
             console.warn('⚠️ 語音辨識錯誤:', event.error);
+            session.asrError = event.error;
             // 辨識引擎失敗（iPad「聽寫」關閉、無網路、服務不可用…）不等於麥克風失敗：
             // 麥克風已由 getUserMedia 開啟，人聲偵測照常運作，只停用本次會話的辨識與重啟。
             if (event.error === 'not-allowed' || event.error === 'service-not-allowed' ||
@@ -862,6 +880,8 @@
             voiceDuration: session.voicedMs,
             voicedMs: session.voicedMs,
             noiseOnly: noiseOnly,
+            asrError: session.asrError || '',     // 辨識引擎錯誤碼（network／not-allowed／service-not-allowed…），給畫面提示
+            asrUsed: !!(recognitionSupported && recognition),
             peakLevel: session.peakLevel,
             elapsedMs: Date.now() - session.startTime
         };
@@ -948,7 +968,7 @@
         const a = _readFrame();
         const s = _sensitivity();
         const voiced = classifyFrame(a, _gate(), s, false);
-        const speaker = Date.now() < playbackUntil || !!(global.speechSynthesis && global.speechSynthesis.speaking);
+        const speaker = Date.now() < playbackUntil || _ttsSpeaking();
         return { rms: a.rms, clarity: a.clarity, f0: a.f0, decay: a.decay, gate: _gate(), noiseRms: noiseRms,
                  voiced: voiced && !speaker, speakerActive: speaker };
     }

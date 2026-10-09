@@ -247,9 +247,10 @@
         // ==========================================
         const PORT_COUNT = 5;
         const FRAME_MS = 25;
-        const CONFIRM_FRAMES = 4;        // 連續 4 幀人聲 → 引擎啟動（≈100ms）
+        const CONFIRM_FRAMES = 3;        // 連續 3 幀人聲 → 引擎啟動（≈75ms；短音節如「嘟」也抓得到）
         const ENGINE_OFF_MS = 320;       // 靜音多久引擎停
-        const UTTER_MIN_MS = 250;        // 一個「詞」至少發聲多久
+        const UTTER_MIN_MS = 150;        // 一個「詞」至少累計有聲多久（母音部分）
+        const UTTER_SPAN_MS = 250;       // 或：第一聲到最後一聲的跨度（含子音與音節間的停頓）≥ 此值也算一個詞（「出發」「嘟嘟」）
         const UTTER_END_MS = 450;        // 發聲後靜音多久算說完
         const LEG_FULL_MS = 1400;        // 持續發聲多久走完一段航程
         const CARD_MS = 3200;            // 港口照片顯示時間
@@ -439,13 +440,20 @@
             const total = (times || 1) * (dur + gap) * 1000;
             speakerUntil = Math.max(speakerUntil, Date.now() + total + SPEAKER_TAIL_MS);
         }
-        // TTS 依序排隊：稱讚還沒講完，口令不會把它切掉（SpeechModule.speak 會先 cancel）
-        let sayChain = Promise.resolve();
-        function say(text) { const run = () => _say(text); sayChain = sayChain.then(run, run); return sayChain; }
-        async function _say(text) {
-            speakerUntil = Math.max(speakerUntil, Date.now() + 4000);   // TTS 起音前先關麥克風；tick 會在 speaking 期間持續延長
-            await SpeechModule.speak(text, 0.9);                          // TTS 不可用時立即返回 → 只關 SPEAKER_TAIL_MS
-            speakerUntil = Date.now() + SPEAKER_TAIL_MS;
+        // TTS 依序排隊：稱讚還沒講完，口令不會把它切掉。
+        // 佇列空的時候「同步」開講：iOS Safari 只播由使用者手勢觸發的語音，所以出航那一下必須在點擊事件裡直接呼叫 speak，
+        // 不能先 await 麥克風再講（之前口令與抵港稱讚全被 iOS 丟掉：有汽笛、有照片、沒有聲音，就是這個原因）。
+        const sayQueue = []; let saying = false;
+        function say(text) { return new Promise(resolve => { sayQueue.push({ text: text, resolve: resolve }); if (!saying) sayNext(); }); }
+        function sayNext() {
+            const item = sayQueue.shift();
+            if (!item) { saying = false; return; }
+            saying = true;
+            speakerUntil = Math.max(speakerUntil, Date.now() + 4000);   // TTS 起音前先關麥克風；tick 會在播放期間持續延長
+            SpeechModule.speak(item.text, 0.9).then(() => {               // TTS 不可用時立即返回 → 只關 SPEAKER_TAIL_MS
+                speakerUntil = Date.now() + SPEAKER_TAIL_MS;
+                item.resolve(); sayNext();
+            });
         }
 
         // ==========================================
@@ -475,9 +483,9 @@
             const now = Date.now();
             const v = SpeechModule.getVoiceState();
 
-            // 喇叭在響（汽笛/TTS）或正在換場：忽略麥克風
+            // 喇叭在響（汽笛/TTS）或正在換場：忽略麥克風（v.speakerActive 由 SpeechModule 判斷，含 TTS 卡住保護）
             const muted = now < speakerUntil || busy || finished;
-            if (!muted && (window.speechSynthesis && window.speechSynthesis.speaking)) speakerUntil = now + SPEAKER_TAIL_MS;
+            if (!muted && v.speakerActive) speakerUntil = now + SPEAKER_TAIL_MS;
 
             // 門檻：他在說話時不更新（避免背景校準被自己的聲音拉高）
             if (now > gateFrozenUntil) gate = v.gate;
@@ -514,8 +522,10 @@
                 // 說完一個詞：發聲夠長且靜音夠久
                 if (utterOpen && now - lastVoicedAt > UTTER_END_MS) {
                     utterOpen = false;
-                    // 核心承諾：說完一個詞（發聲 ≥ UTTER_MIN_MS）就抵達下一個港口；進度只影響途中的視覺移動
-                    if (utterMs >= UTTER_MIN_MS && utterConfirmed) {
+                    // 核心承諾：說完一個詞就抵達下一個港口；進度只影響途中的視覺移動。
+                    // 「詞」＝確認過人聲，且（累計有聲 ≥ UTTER_MIN_MS 或 首尾跨度 ≥ UTTER_SPAN_MS）——兩音節短詞的母音很短，不能只算有聲幀
+                    const span = lastVoicedAt - utterStart;
+                    if (utterConfirmed && (utterMs >= UTTER_MIN_MS || span >= UTTER_SPAN_MS)) {
                         appendLog({ t: utterStart, ms: utterMs, peak: +utterPeak.toFixed(4), leg: leg });
                         arrive(); return;
                     }
@@ -536,10 +546,8 @@
             appendLog({ t: Date.now(), arrive: i, name: data.ports[i].name });
             // 汽笛後稱讚：「太棒了！到基隆了！」（say() 會在播音期間關閉麥克風判定）
             setTimeout(() => {
-                if ('speechSynthesis' in window && speechSynthesis.getVoices().length) {
-                    const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！';
-                    say(praise + ' 到' + data.ports[i].name + '了！');
-                }
+                const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！';
+                say(praise + ' 到' + data.ports[i].name + '了！');
             }, 1000);
             setTimeout(() => {
                 hidePortCard();
@@ -581,6 +589,8 @@
         $('startBtn').addEventListener('click', async () => {
             $('startErr').textContent = '';
             ensureAudio();
+            // 先講口令（同步、在手勢內）：iOS 的 TTS 要由這一下點擊「解鎖」，之後抵港稱讚、閒置提示才播得出來
+            promptWord('說話，船就會開！跟我說：');
             const ok = await SpeechModule.init();
             if (!ok) { $('startErr').textContent = '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風；若從主畫面圖示開啟，請改用 Safari。'; return; }
             SpeechModule.setHud(false);
@@ -590,7 +600,6 @@
             lastVoicedAt = Date.now();
             if (loop) clearInterval(loop);
             loop = setInterval(tick, FRAME_MS);
-            promptWord('說話，船就會開！跟我說：');
         });
 
         // 🔊：由系統示範口令（喇叭播音期間不算人聲，家長提示請用這個）
