@@ -19,15 +19,17 @@ const path = require('path');
   await page.click('.card');                             // 點第一張 → 播示範(TTS 無聲音則略過) → 開聽
   await page.waitForSelector('#focus.show');
   const t0 = Date.now();
-  let seen = { voiced: false, reward: false, verdict: false };
+  let seen = { voiced: false, reward: false, verdict: false, rewardAt: null };
   while (Date.now() - t0 < 9000) {
     const s = await page.evaluate(() => ({ voiced: document.getElementById('focus').classList.contains('voiced'), reward: document.getElementById('focus').classList.contains('reward'), verdict: document.getElementById('verdict').classList.contains('show'), status: document.getElementById('focusStatus').textContent }));
-    seen.voiced = seen.voiced || s.voiced; seen.reward = seen.reward || s.reward; seen.verdict = seen.verdict || s.verdict;
+    seen.voiced = seen.voiced || s.voiced; if (s.reward && !seen.reward) seen.rewardAt = Date.now() - t0; seen.reward = seen.reward || s.reward; seen.verdict = seen.verdict || s.verdict;
     if (s.verdict) { await page.screenshot({ path: path.resolve(__dirname, 'board-reward.png') }); break; }
     await page.waitForTimeout(100);
   }
   const status = await page.evaluate(() => document.getElementById('focusStatus').textContent);
-  console.log(`人聲燈=${seen.voiced} 報酬=${seen.reward} 判定列=${seen.verdict} 狀態="${status}" 耗時=${Date.now() - t0}ms`);
+  // 「尿尿」約在點卡後 2.95s 說完（音軌 3.25s − 開聽延遲）；報酬必須在說完之後（≥ 3.25s + 1.5s 靜音 − 誤差）
+  const rewardAfterSpeech = seen.rewardAt !== null && seen.rewardAt > 4000;
+  console.log(`人聲燈=${seen.voiced} 報酬=${seen.reward}（@${seen.rewardAt}ms，說完後才給=${rewardAfterSpeech}） 判定列=${seen.verdict} 狀態="${status}" 耗時=${Date.now() - t0}ms`);
   let verdictOk = false, backToGrid = false;
   if (seen.verdict) {
     await page.click('#verdict .vbtn.ok');
@@ -39,7 +41,7 @@ const path = require('path');
   }
   await browser.close();
   if (errs.length) console.log('錯誤：', errs.join('\n'));
-  const ok = seen.voiced && seen.reward && seen.verdict && verdictOk && backToGrid && errs.length === 0;
+  const ok = seen.voiced && seen.reward && rewardAfterSpeech && seen.verdict && verdictOk && backToGrid && errs.length === 0;
   console.log(ok ? '\n✅ 說話板煙霧測試通過' : '\n❌ 說話板煙霧測試未通過');
   process.exit(ok ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(2); });

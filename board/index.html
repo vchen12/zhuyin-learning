@@ -187,6 +187,7 @@
         const REWARD_MS = 2600;      // 報酬（照片放大＋回應）之後才出現家長判定列
         const VERDICT_WAIT_MS = 7000; // 家長沒按就自動回到卡片格
         const MAX_TIMEOUTS = 3;      // 連續幾次完全沒聲音就回卡片格
+        const SILENCE_END_MS = 1500; // 說完的判定：靜音 1.5 秒（他在「我要」與「尿尿」之間會停頓，要等得夠久）
 
         // ==========================================
         // 資料：卡片文字（localStorage）＋ 媒體（IndexedDB）
@@ -344,6 +345,10 @@
             if (!('speechSynthesis' in window) || !speechSynthesis.getVoices().length) return Promise.resolve();
             return SpeechModule.speak(it.say, 0.85);
         }
+        function speakPraise(text) {
+            if (!('speechSynthesis' in window) || !speechSynthesis.getVoices().length) return Promise.resolve();
+            return SpeechModule.speak(text, 0.95);
+        }
         function playReply(it) {
             const url = replyUrl(it);
             if (url) return playUrl(url);
@@ -371,7 +376,8 @@
                     f.classList.toggle('voiced', v.voiced);
                     f.classList.toggle('loud', !v.voiced && v.level > 0.15);
                 },
-                onVoiceDetected: () => { setStatus('👂 聽到了！'); if (navigator.vibrate) navigator.vibrate(40); },
+                onVoiceDetected: () => { setStatus('👂 聽到了，說完我就回答'); if (navigator.vibrate) navigator.vibrate(40); },
+                onSpeechEnd: () => { setStatus('…'); },
                 onInterim: t => { $('focusHeard').textContent = '聽到：' + t; },
                 onResult: r => {
                     if (!focusActive || current !== it) return;
@@ -389,7 +395,7 @@
                     setTimeout(listen, 800);
                 },
                 onError: () => { setStatus('❌ 麥克風無法使用'); }
-            }, { passMode: 'voice', hud: false });
+            }, { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: SILENCE_END_MS });   // 等他說完整句才判定
             if (!ok) setTimeout(listen, 500);
         }
 
@@ -397,10 +403,14 @@
             const f = $('focus');
             f.classList.remove('voiced', 'loud');
             f.classList.add('reward');
-            setStatus('✅ ' + it.say + '！');
+            // 先稱讚（鼓勵語含使用者名字），再播家人的回應
+            const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！';
+            setStatus('🌟 ' + praise);
             if (navigator.vibrate) navigator.vibrate([80, 40, 120]);
             lastUtter = { t: Date.now(), set: SET, id: it.id, say: it.say, ms: r.voicedMs, basis: r.basis, transcript: r.transcript || '' };
             appendLog(Object.assign({ verdict: 'pending' }, lastUtter));
+            await speakPraise(praise);
+            if (!focusActive || current !== it) return;
             await playReply(it);
             if (!focusActive || current !== it) return;
             // 家長判定列：發聲之後才出現，按了只是記錄，不影響已給的報酬

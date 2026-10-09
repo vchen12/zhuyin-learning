@@ -136,6 +136,14 @@ function run(name, { threshold, target, timeline, sr, expect, setup, options }) 
         { threshold: 80, target: '我要尿尿', timeline: [[300, 1100, V]], sr: null,
           expect: (k, p) => k === 'onResult' && p.passed === false && p.hadVoice === true }));
 
+    // N：說話板用法 waitForEnd —— 「我要」(500ms) 停 800ms 「尿尿」(400ms)：不得在「我要」時就過關；說完 1.5 秒靜音後過關
+    results.push(await run('N waitForEnd：我要(500ms)…停 0.8s…尿尿(400ms) → 說完 1.5 秒後才過關，不在途中',
+        { threshold: 0, target: '我要尿尿', timeline: [[300, 800, V], [1600, 2000, V]], options: { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: 1500 },
+          expect: (k, p, el) => k === 'onResult' && p.passed && p.basis === 'voice' && el > 3300 && el < 4200 && p.voicedMs >= 660 }));
+    results.push(await run('O waitForEnd：只說「我要」(500ms) 就停 → 說完後判定不過（發聲不足），回報有說話',
+        { threshold: 0, target: '我要尿尿', timeline: [[300, 800, V]], options: { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: 1500 },
+          expect: (k, p, el) => k === 'onResult' && p.passed === false && p.hadVoice === true && el > 2200 && el < 3000 }));
+
     const n = results.filter(Boolean).length;
     out(`\n${n}/${results.length} 情境通過`);
     process.exit(n === results.length ? 0 : 1);
