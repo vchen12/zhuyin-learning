@@ -199,6 +199,7 @@
 
     <script src="../js/config.js"></script>
     <script src="../js/speech-recognition.js"></script>
+    <script src="../js/photo-crop.js"></script>
     <script>
         'use strict';
         // ==========================================
@@ -524,24 +525,22 @@
         function onPick(e) {
             const files = Array.from(e.target.files || []); if (!files.length) return;
             const key = e.target.dataset.key;
-            let pending = files.length;
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const im = new Image();
-                    im.onload = () => {
-                        // 縮到最長邊 900px，JPEG 0.8，避免 localStorage 爆量
-                        const max = 900, s = Math.min(1, max / Math.max(im.width, im.height));
-                        const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
-                        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-                        const url = c.toDataURL('image/jpeg', 0.8);
-                        if (key === 'ship') data.ship = url; else data.ports[parseInt(key.slice(4), 10)].imgs.push(url);
-                        if (--pending === 0) { if (saveData()) renderPanel(); }
-                    };
-                    im.src = reader.result;
-                };
-                reader.readAsDataURL(file);
-            });
+            const isShip = key === 'ship';
+            // 逐張裁切：船 1.3:1（船身框）、港口 4:3（卡片）；取消該張則略過
+            (async () => {
+                let changed = false;
+                for (let i = 0; i < files.length; i++) {
+                    const dataUrl = await PhotoCrop.open(files[i], {
+                        aspect: isShip ? 1.3 : 4 / 3, outWidth: 900,
+                        title: isShip ? '✂️ 船的照片' : '✂️ 港口照片（' + (i + 1) + '/' + files.length + '）',
+                        hint: isShip ? '把郵輪放進框裡' : '拖曳移動、滑桿或雙指縮放，框出要顯示的部分'
+                    });
+                    if (!dataUrl) continue;
+                    if (isShip) data.ship = dataUrl; else data.ports[parseInt(key.slice(4), 10)].imgs.push(dataUrl);
+                    changed = true;
+                }
+                if (changed && saveData()) renderPanel();
+            })();
         }
         function renderStats() {
             const log = loadLog();

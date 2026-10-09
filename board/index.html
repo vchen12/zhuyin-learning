@@ -149,6 +149,7 @@
 
     <script src="../js/config.js"></script>
     <script src="../js/speech-recognition.js"></script>
+    <script src="../js/photo-crop.js"></script>
     <script>
         'use strict';
         // ==========================================
@@ -533,18 +534,11 @@
         function onPickPhoto(e) {
             const file = e.target.files && e.target.files[0]; if (!file) return;
             const it = items[parseInt(e.target.dataset.idx, 10)];
-            const reader = new FileReader();
-            reader.onload = () => {
-                const im = new Image();
-                im.onload = () => {
-                    const max = 900, s = Math.min(1, max / Math.max(im.width, im.height));
-                    const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
-                    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-                    c.toBlob(async blob => { if (blob) { await putMedia(it.id, 'photo', blob); renderPanel(); } }, 'image/jpeg', 0.8);
-                };
-                im.src = reader.result;
-            };
-            reader.readAsDataURL(file);
+            // 裁切成卡片比例 4:3（從合照中框出要的部分）；取消則不變更
+            PhotoCrop.open(file, { aspect: 4 / 3, outWidth: 900, title: '✂️ 「' + it.label + '」的照片', hint: '拖曳移動、滑桿或雙指縮放，框出要顯示的部分' }).then(dataUrl => {
+                if (!dataUrl) return;
+                fetch(dataUrl).then(r => r.blob()).then(async blob => { await putMedia(it.id, 'photo', blob); renderPanel(); });
+            });
         }
 
         // 錄音：按一下開始、再按一下停止（最長 8 秒）
