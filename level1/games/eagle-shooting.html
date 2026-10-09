@@ -342,6 +342,7 @@
     <div class="hint-message" id="hintMessage">準備中...</div>
 
     <script src="../../js/speech-recognition.js"></script>
+    <script src="../../js/speech-game.js"></script>
     <script>
         // 注音符號
         const ALL_SYMBOLS = [
@@ -444,35 +445,16 @@
         }
 
         // 開始語音辨識
-        async function startRecognition() {
+        function startRecognition() {
             if (SpeechModule.isListening() || !gameActive) return;
-
-            await SpeechModule.init();
-
-            SpeechModule.startListening(currentSymbol, {
-                onVoiceDetected: () => {
-                    showHint('🎤 聽到你的聲音了！');
-                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-                },
-                onInterim: (text) => {
-                    showHint('🎤 聽到：' + text);
-                },
-                onResult: (result) => {
-                    if (result.passed) {
-                        hitEagle();
-                    }
-                },
-                onTimeout: (info) => {
-                    if (!gameActive || !currentEagle) return;
-                    if (info.noiseOnly) showHint('🔊 那不是說話聲喔，用嘴巴唸');
-                    // 老鷹還在飛就繼續聽
-                    setTimeout(() => {
-                        if (gameActive && currentEagle) startRecognition();
-                    }, 300);
-                },
-                onError: (err) => {
-                    console.error('語音辨識錯誤:', err);
-                }
+            // 老鷹還在飛就繼續聽（沒過關或沒聽到都一樣）
+            const again = () => setTimeout(() => { if (gameActive && currentEagle) startRecognition(); }, 300);
+            SpeechGame.listen({
+                target: currentSymbol, status: showHint,
+                messages: { listening: '唸「' + currentSymbol + '」！🎤' },
+                onPass: () => hitEagle(),
+                onFail: again,
+                onNoVoice: again
             });
         }
 
@@ -513,10 +495,8 @@
             // 加入收集的禮物
             addCollectedGift();
 
-            // 鼓勵語
-            const encouragement = getEncouragement('correct');
-            showHint('🎉 ' + encouragement);
-            speak(encouragement);
+            // 鼓勵語（老鷹有自己的掉禮物動畫，不另放煙火）
+            SpeechGame.celebrate({ status: showHint, fireworks: 0, suffix: '' });
 
             // 生成下一隻老鷹
             setTimeout(spawnEagle, 2500);

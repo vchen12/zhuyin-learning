@@ -149,6 +149,7 @@
     </div>
 
     <script src="../js/config.js"></script>
+    <script src="../js/vocabulary.js"></script>
     <script src="../js/speech-recognition.js"></script>
     <script src="../js/photo-crop.js"></script>
     <script>
@@ -200,9 +201,8 @@
 
         function defaultItems() {
             if (SET === 'family') {
-                let fs = [];
-                try { fs = JSON.parse(localStorage.getItem('familySettings') || '[]'); } catch (e) { /* ignore */ }
-                if (!fs.length) fs = ['爸爸', '媽媽', '哥哥', '姐姐', '弟弟', '妹妹', '爺爺', '奶奶', '外公', '外婆'].map((n, i) => ({ id: 'f' + i, name: n, emoji: '🙂', enabled: true }));
+                // 家人名單只從資料層讀（預設角色、改名、照片、新增的家人都在裡面）
+                const fs = typeof UserData !== 'undefined' ? UserData.loadFamily() : [];
                 return fs.filter(m => m.enabled !== false).map(m => ({
                     id: m.id, label: m.name, say: m.name, reply: m.name + '在這裡', emoji: m.emoji || '🙂',
                     settingsImage: m.customImage || null

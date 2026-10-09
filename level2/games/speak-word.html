@@ -401,6 +401,7 @@
     </div>
 
     <script src="../../js/speech-recognition.js"></script>
+    <script src="../../js/speech-game.js"></script>
     <script>
 
 
@@ -465,67 +466,13 @@
             document.getElementById('score').textContent = score;
         }
 
-        async function startListening() {
+        function startListening() {
             if (SpeechModule.isListening() || isProcessing) return;
-
-            // 初始化（首次）
-            await SpeechModule.init();
-
-            const micBtn = document.getElementById('micBtn');
-            const micHint = document.getElementById('micHint');
-            const recognizedText = document.getElementById('recognizedText');
-
-            micBtn.disabled = true;
-            micBtn.classList.add('listening');
-            micBtn.classList.remove('mic-highlight');
-            micHint.textContent = '正在聽...🎙️';
-
-            SpeechModule.startListening(currentWord.text, {
-                onVoiceDetected: () => {
-                    micHint.textContent = '聽到了，繼續說...';
-                    // 震動回饋
-                    if (navigator.vibrate) navigator.vibrate(50);
-                },
-                onInterim: (transcript) => {
-                    recognizedText.textContent = '你說：' + transcript;
-                    recognizedText.classList.add('show');
-                },
-                onResult: (result) => {
-                    micBtn.disabled = false;
-                    micBtn.classList.remove('listening');
-
-                    recognizedText.textContent = '你說：' + (result.transcript || '（聽到聲音）');
-                    recognizedText.classList.add('show');
-
-                    if (result.passed) {
-                        handleCorrect(result.similarity, result.transcript);
-                    } else {
-                        handleWrong(result.similarity, result.transcript);
-                    }
-                },
-                onTimeout: (info) => {
-                    micBtn.disabled = false;
-                    micBtn.classList.remove('listening');
-                    micBtn.classList.add('mic-highlight');
-
-                    if (info.hadVoice) {
-                        micHint.textContent = '沒聽清楚，再試一次吧！';
-                        handleWrong(0, '');
-                    } else {
-                        micHint.textContent = info.noiseOnly ? '🔊 那不是說話聲喔，用嘴巴說' : '按麥克風，說出這是什麼！';
-                        retryCount++;
-                        if (retryCount >= 3) {
-                            document.getElementById('manualBtn').classList.add('highlight-btn');
-                        }
-                    }
-                },
-                onError: (err) => {
-                    micBtn.disabled = false;
-                    micBtn.classList.remove('listening');
-                    console.error('語音辨識錯誤:', err);
-                    micHint.textContent = '語音辨識不可用，請按「我會唸」';
-                    document.getElementById('manualBtn').classList.add('highlight-btn');
-                }
+            SpeechGame.listen({
+                target: currentWord.text, button: 'micBtn', status: 'micHint', heard: 'recognizedText', manualButton: 'manualBtn',
+                onPass: r => handleCorrect(r.similarity, r.transcript),
+                onFail: r => handleWrong(r.similarity, r.transcript),
+                onNoVoice: () => { retryCount++; if (retryCount >= SpeechGame.MANUAL_AFTER) document.getElementById('manualBtn').classList.add('highlight-btn'); }
             });
         }
 
@@ -534,18 +481,10 @@
             score += 10;
             updateScore();
 
-            const encouragement = getEncouragement();
-            document.getElementById('resultMessage').textContent = '🎉 ' + encouragement + ' 🎉';
+            SpeechGame.celebrate({ status: 'resultMessage', fireworks: 20, manualButton: 'manualBtn' });
             document.getElementById('wordHint').textContent = currentWord.text + ' (' + currentWord.zhuyin + ')';
             document.getElementById('wordHint').classList.add('revealed');
             document.getElementById('micHint').textContent = '🎉 太棒了！';
-
-            // 立即震動反饋
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-
-            // 立即播放鼓勵語
-            SpeechModule.speak(encouragement);
-            createFireworks(20);
             saveMastered(currentWord);
 
             // 記錄發音
@@ -563,54 +502,16 @@
         async function handleWrong(similarity = 0, transcript = '') {
             if (isProcessing) return;
             isProcessing = true;
-
             const target = currentWord.text;
-
-            // 顯示辨識結果
-            if (transcript) {
-                document.getElementById('recognizedText').textContent = '🎤 聽到：' + transcript;
-                document.getElementById('recognizedText').classList.add('show');
-            }
-
-            // 回放用戶錄音
-            if (SpeechModule.hasRecording()) {
-                document.getElementById('micHint').textContent = '🔊 讓我們聽聽你的發音...';
-                await new Promise(r => setTimeout(r, 500));
-                await SpeechModule.playRecording();
-                await new Promise(r => setTimeout(r, 300));
-            }
-
-            // 播放正確發音
-            document.getElementById('micHint').textContent = '🔊 正確的發音是...';
-            await new Promise(r => setTimeout(r, 300));
-            await SpeechModule.speak(target);
-            await new Promise(r => setTimeout(r, 500));
-
-            // 記錄發音
-            if (transcript) {
-                recordPronunciation('word', target, transcript, similarity);
-            }
-
-            // 提示重試
-            isProcessing = false;
-            document.getElementById('resultMessage').textContent = '再試一次！';
-            document.getElementById('micHint').textContent = '請再唸一次 🎤 或點「跳過」';
+            if (transcript) recordPronunciation('word', target, transcript, similarity);
             retryCount++;
-            if (retryCount >= 3) {
-                document.getElementById('manualBtn').classList.add('highlight-btn');
-            }
+            await SpeechGame.review({ target: target, status: 'micHint', retryCount: retryCount, manualButton: 'manualBtn' });
+            document.getElementById('resultMessage').textContent = '再試一次！';
+            isProcessing = false;
         }
 
         function manualConfirm() {
-            // SpeechModule.speak(text, rate) 回傳 Promise；callback 不是第二參數
-            SpeechModule.speak(currentWord.text).then(() => {
-                if (confirm('你會唸「' + currentWord.text + '」嗎？\n\n點「確定」表示會唸')) {
-                    handleCorrect();
-                } else {
-                    document.getElementById('resultMessage').textContent = '沒關係，再聽一次！';
-                    SpeechModule.speak('沒關係，再聽一次！');
-                }
-            });
+            SpeechGame.manualConfirm(currentWord.text, () => handleCorrect(), { status: 'resultMessage' });
         }
 
         function playHint() {

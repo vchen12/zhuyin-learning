@@ -484,6 +484,7 @@
     <div class="fireworks" id="fireworks"></div>
 
     <script src="../../js/speech-recognition.js"></script>
+    <script src="../../js/speech-game.js"></script>
     <script>
         // 注音符號
         const ALL_SYMBOLS = [
@@ -597,52 +598,20 @@
         }
 
         // 開始語音辨識（使用 SpeechModule）
-        async function startRecognition() {
+        function startRecognition() {
             if (SpeechModule.isListening() || isProcessing) return;
-
-            await SpeechModule.init();
-
-            SpeechModule.startListening(currentSymbol, {
-                onVoiceDetected: () => {
-                    showHint('👂 聽到了！', true);
-                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-                },
-                onInterim: (text) => {
-                    showHint('🎤 聽到：' + text, true);
-                },
-                onResult: (result) => {
-                    if (result.passed) {
-                        handleCorrect(result.similarity);
-                    } else {
-                        handleWrong(result.similarity);
-                    }
-                },
-                onTimeout: (info) => {
-                    showHint(info.noiseOnly ? '🔊 那不是說話聲喔，用嘴巴唸' : '沒聽到聲音，再聽一次 🔊', false);
-                    setTimeout(() => {
-                        if (!isProcessing) playAndListen();
-                    }, 1500);
-                },
-                onError: (err) => {
-                    console.error('語音辨識錯誤:', err);
-                    showHint('❌ 麥克風無法使用，請點「我會唸」按鈕 👆', false);
-                    document.getElementById('manualBtn').style.display = 'inline-block';
-                }
+            SpeechGame.listen({
+                target: currentSymbol, status: t => showHint(t, SpeechModule.isListening()), manualButton: 'manualBtn',
+                messages: { listening: '唸出來！🎤' },
+                onPass: r => handleCorrect(r.similarity),
+                onFail: r => handleWrong(r.similarity),
+                onNoVoice: () => setTimeout(() => { if (!isProcessing) playAndListen(); }, 1500)   // 沒聽到就再播一次示範
             });
         }
 
         // 手動確認（麥克風不可用時使用）
         function manualConfirm() {
-            speak('你會唸' + currentSymbol + '嗎？', () => {
-                if (confirm('你會唸「' + currentSymbol + '」嗎？\n\n點「確定」表示會唸，點「取消」再練習一下')) {
-                    handleCorrect();
-                } else {
-                    showHint('沒關係，再聽一次！', false);
-                    setTimeout(() => {
-                        playSound(currentSymbol);
-                    }, 500);
-                }
-            });
+            SpeechGame.manualConfirm(currentSymbol, () => handleCorrect(), { status: t => showHint(t, false), playTarget: () => playSoundAsync(currentSymbol) });
         }
 
         // 答對
@@ -656,13 +625,7 @@
             document.getElementById('targetSymbol').classList.add('correct');
             document.getElementById('micIndicator').classList.remove('listening');
 
-            // 震動回饋
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-
-            const encouragement = getEncouragement('correct');
-            speak(encouragement);
-            showHint('🎉 ' + encouragement + ' 🎉', false);
-            createFireworks(25);
+            SpeechGame.celebrate({ status: t => showHint(t, false), fireworks: 25 });
 
             saveMastered(currentSymbol);
             updateUI();
@@ -692,15 +655,9 @@
                 document.getElementById('skipBtn').style.display = 'inline-block';
             }
 
-            // 播放正確發音
-            showHint('🔊 正確的發音是...', false);
-            await new Promise(r => setTimeout(r, 300));
-            await playSoundAsync(currentSymbol);
-            await new Promise(r => setTimeout(r, 500));
-
-            // 提示重試
-            showHint('再試一次！', false);
-            await new Promise(r => setTimeout(r, 500));
+            // 播正確示範再提示重試（射擊節奏快，不回放錄音）
+            await SpeechGame.review({ target: currentSymbol, status: t => showHint(t, false), playTarget: () => playSoundAsync(currentSymbol), playback: false });
+            await SpeechGame.wait(500);
             isProcessing = false;
             playAndListen();
         }

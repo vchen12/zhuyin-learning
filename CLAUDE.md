@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.4.0
+- **版本**: v5.6.0
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -22,6 +22,7 @@
 ```
 js/config.js              - 全域配置、版本號、鼓勵語、相似度計算
 js/speech-recognition.js  - 語音辨識核心（VAD、錄音回放、閃爍動畫）
+js/speech-game.js         - 語音遊戲共用流程（聽一次／沒過關回饋／過關稱讚／家長「我會唸」／跳過）
 js/vocabulary.js          - 詞彙資料庫（8大分類、80+詞彙）
 js/sentence-generator.js  - 句型產生器（從字詞庫動態產生遊戲內容）
 js/prevent-zoom.js        - 防止雙擊放大
@@ -67,6 +68,17 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 ### 內建 HUD（聲音燈）
 聆聽時模組自行在畫面下方顯示音量環與狀態文字（灰＝安靜、橘＝有聲響非人聲、綠＝人聲），
 12 個語音遊戲不需修改即可獲得即時回饋。設定頁可關閉。
+
+### 使用者資料層（v5.6.0，`js/vocabulary.js` 的 `UserData`）
+- `familySettings` 與 `vocabularyModifications` 只能透過 `UserData` 讀寫（`loadFamily／saveFamily／addFamilyMember／removeFamilyMember／familyWords`、
+  `loadMods／saveMods／addWord／editWord／deleteWord／setWordImage／clearWordImage／addedWords／resetAll`）；頁面不得自行 `localStorage.getItem` 這兩個鍵。
+- 家人只有一份名單 `familySettings`：14 個預設角色（唯一定義 `UserData.DEFAULT_FAMILY`，新版本加的角色自動補齊）＋使用者新增的（`isAdded`，`id` 以 `add_` 開頭），
+  每筆 `{ id, name, zhuyin, emoji, gender, enabled, customImage, isAdded }`；預設角色用「停用」，新增的可刪除。
+- 一般字詞的修改在 `vocabularyModifications { deleted, edited, added }`；新增的詞的圖片存在 `added` 項目本身，系統詞的圖片存 `edited[category][text].customImage`。
+- 一次性遷移（第一次讀取時自動執行）：舊的 `customWords`（設定頁「自訂字詞」，遊戲從未讀取）併入 `added`（daily→items、place→nature、sentence→items、family→家人）；
+  `vocabularyModifications` 裡的 family 項目併入 `familySettings`。
+- 所有照片都經 `js/photo-crop.js` 的 `PhotoCrop.open()` 裁切縮圖後才存（家人 1:1 600px、字詞 1:1 600px、說話板 4:3 900px、郵輪 4:3／1.3:1 900px）；
+  設定頁不再有自己的裁切 modal。
 
 ### 設定（localStorage）
 - `similarityThreshold`：過關門檻（0 = 鼓勵模式）
@@ -118,6 +130,12 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
   `playSound`／`playSoundWithCallback`／`playSoundAsync` 相容別名、`createFireworks(count, container)`、
   `shuffle`（就地並回傳）、`getEncouragement(type)`（含名字）、`getUserName`、`initParentLongPress`、錯誤紀錄。
   每一頁都必須載入 `js/config.js`。
+- 語音遊戲流程在 `js/speech-game.js`（`SpeechGame`，v5.5.0 起）：`listen({ target, button, status, heard, manualButton,
+  onPass, onFail, onNoVoice, … })` 聽一次（按鈕狀態、「正在聽／聽到了／沒聽到／那不是說話聲」文案、`你說：…` 統一在此）、
+  `review({ target, status, retryCount, manualButton, playTarget, playback })` 沒過關回饋（回放錄音 → 正確示範 → 再試／第 3 次起提示家長「我會唸」）、
+  `celebrate({ status, fireworks })` 過關稱讚（含名字、震動、煙火、TTS）、`manualConfirm(target, onYes, opts)` 家長長按「我會唸」、`skip(target, next, opts)`。
+  12 個語音遊戲不得再直接呼叫 `SpeechModule.startListening`（說話板 `board/` 與郵輪 `voyage/` 例外：它們是 passMode voice 的獨立流程）。
+  **各遊戲何時開聽（按麥克風才聽、示範音播完自動聽、老鷹飛行中連續聽）是遊戲規則，留在頁面，不得為了統一而改掉。**
 - 版本號更新在 `js/config.js`（`APP_CONFIG.version`）、`sw.js`（`CACHE_VERSION`，觸發快取更新）與 `index.html` 頁尾；`manifest.json` 無版本欄位
 
 ### UI 設計原則
@@ -149,7 +167,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ### 詞彙修改
 - 資料來源: `js/vocabulary.js`
-- 用戶自訂: localStorage 的 `customVocabulary`
+- 用戶修改: `UserData`（`familySettings`／`vocabularyModifications`，見「使用者資料層」）
 - 8 大分類: family, animals, fruits, items, food, actions, body, nature
 
 ### 進度系統
@@ -159,6 +177,9 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.6.0**: 共用化第 3 階段——使用者資料層 `UserData`（`js/vocabulary.js`）：家人單一名單（預設＋新增）、字詞修改與自訂圖片單一入口、舊 `customWords`／`vocabularyModifications.family` 自動遷移；設定頁「自訂字詞」改為「我新增的」（直接寫進各類別，遊戲會用到）、家人管理單一列表、字詞換圖改用共用 `PhotoCrop`（移除設定頁自己的裁切 modal）；說話板家人組改讀 `UserData`（含新增的家人）；修正新增字詞的自訂圖片存錯位置而遊戲看不到的問題；注音建議補生活用字
+- **v5.5.0**: 共用化第 2 階段——`js/speech-game.js`（`SpeechGame.listen／review／celebrate／manualConfirm／skip`）；12 個語音遊戲改呼叫共用流程，刪除各自的 startListening 回呼樣板、錄音回放＋正確示範流程、稱讚流程與「我會唸」confirm；各遊戲開聽時機不變
+- **v5.4.1**: 郵輪加口令提示（畫面大字＋🔊 系統示範，閒置／按螢幕時再唸，家長面板可改詞）、右上角 🏠 長按回主選單、起始遮罩與設定頁說明 Safari 每頁會再問一次麥克風
 - **v5.4.0**: 共用化第 1 階段——`config.js` 成為唯一的 `speak`／`playZhuyinSound`／`createFireworks`／`shuffle`／`getEncouragement`／`getUserName` 來源；30 頁刪除本地重複實作（含 4 份 SOUND_MAP、17 份鼓勵語陣列、9 份 getUserName），13 頁補載 config.js
 - **v5.3.1**: 共用照片裁切模組 `js/photo-crop.js`；設定頁家人照片、說話板卡片、郵輪照片皆可從合照框出臉孔（並縮圖，避免整張原圖塞爆 localStorage）
 - **v5.3.0**: 說話板等使用者說完整句才判定（`waitForEnd`／`silenceEndMs` 選項），報酬先稱讚再播回應；郵輪抵港加稱讚語。實測回饋：說到「我要」就被回覆、沒有稱讚

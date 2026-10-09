@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.4.1
+ * v5.6.0
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.4.1',
+    version: '5.6.0',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -95,19 +95,6 @@ function getImagePath(category, filename) {
  */
 function getUserName() {
     return localStorage.getItem('userName') || '';
-}
-
-/**
- * 取得自訂字詞列表
- * @param {string} category - 分類：'all', 'daily', 'family', 'place', 'sentence'
- * @returns {Array} 自訂字詞陣列
- */
-function getCustomWords(category = 'all') {
-    const customWords = JSON.parse(localStorage.getItem('customWords') || '[]');
-    if (category === 'all') {
-        return customWords;
-    }
-    return customWords.filter(w => w.category === category);
 }
 
 /**
@@ -853,7 +840,7 @@ if (typeof document !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         APP_CONFIG, getImagePath, getEncouragement, getEncouragementSimple,
-        getUserName, getCustomWords, speak, speakShort, playZhuyinSound, playSound, createFireworks,
+        getUserName, speak, speakShort, playZhuyinSound, playSound, createFireworks,
         shuffle, getRandomItems, ZHUYIN_SOUND_MAP, APP_BASE,
         // 語音相似度追蹤系統
         getUserMode, setUserMode, getThresholdPresets, getAphasiaBonus,

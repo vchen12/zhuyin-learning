@@ -408,6 +408,7 @@
     <div id="fireworks"></div>
 
     <script src="../../js/speech-recognition.js"></script>
+    <script src="../../js/speech-game.js"></script>
     <script>
         // 數字資料 (0-30)
         const NUMBERS = [
@@ -661,58 +662,17 @@
             document.getElementById('resultMessage').textContent = '點麥克風唸出來！';
         }
 
-        async function startListening() {
+        function startListening() {
             if (SpeechModule.isListening() || isProcessing) return;
-
-            await SpeechModule.init();
-
-            const speakBtn = document.getElementById('speakBtn');
-            speakBtn.disabled = true;
-            speakBtn.classList.add('listening');
-
-            SpeechModule.startListening(currentNumber.text, {
-                onVoiceDetected: () => {
-                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-                },
-                onInterim: (text) => {
-                    document.getElementById('resultMessage').textContent = '聽到：' + text;
-                },
-                onResult: (result) => {
-                    speakBtn.disabled = false;
-                    speakBtn.classList.remove('listening');
-                    if (result.passed) {
-                        handleSpeakCorrect(result.similarity);
-                    } else {
-                        handleRecognitionFailed(currentNumber.text, result.transcript, result.similarity);
-                    }
-                },
-                onTimeout: (info) => {
-                    speakBtn.disabled = false;
-                    speakBtn.classList.remove('listening');
-                    document.getElementById('resultMessage').textContent = info.noiseOnly
-                        ? '🔊 那不是說話聲喔，用嘴巴唸出來'
-                        : '沒聽清楚，再試或點「✅會唸」';
-                },
-                onError: (err) => {
-                    speakBtn.disabled = false;
-                    speakBtn.classList.remove('listening');
-                    console.error('語音辨識錯誤:', err);
-                    if (err === 'not-allowed' || err === 'audio-capture') {
-                        document.getElementById('resultMessage').textContent = '❌ 無法使用麥克風';
-                    }
-                }
+            SpeechGame.listen({
+                target: currentNumber.text, button: 'speakBtn', status: 'resultMessage', manualButton: 'manualSpeakBtn',
+                onPass: r => handleSpeakCorrect(r.similarity),
+                onFail: r => handleRecognitionFailed(currentNumber.text, r.transcript, r.similarity)
             });
         }
 
         function manualSpeakConfirm() {
-            speak(currentNumber.text, () => {
-                if (confirm('會唸「' + currentNumber.text + '」？')) {
-                    handleSpeakCorrect();
-                } else {
-                    document.getElementById('resultMessage').textContent = '沒關係，再聽一次！';
-                    speak('沒關係！');
-                }
-            });
+            SpeechGame.manualConfirm(currentNumber.text, () => handleSpeakCorrect(), { status: 'resultMessage' });
         }
 
         function skipCurrentNumber() {
@@ -735,19 +695,7 @@
         }
 
         async function handleRecognitionFailed(target, transcript, similarity) {
-            if (SpeechModule.hasRecording()) {
-                document.getElementById('resultMessage').textContent = '🔊 你的發音...';
-                await new Promise(r => setTimeout(r, 500));
-                await SpeechModule.playRecording();
-                await new Promise(r => setTimeout(r, 300));
-            }
-
-            document.getElementById('resultMessage').textContent = '🔊 正確發音...';
-            await new Promise(r => setTimeout(r, 300));
-            await SpeechModule.speak(target);
-            await new Promise(r => setTimeout(r, 500));
-
-            document.getElementById('resultMessage').textContent = '再試或點「✅會唸」';
+            await SpeechGame.review({ target: target, status: 'resultMessage', manualButton: 'manualSpeakBtn', messages: { retry: '再試或點「✅會唸」' } });
         }
 
         function handleSpeakCorrect(similarity = 100) {
@@ -755,15 +703,7 @@
             updateScore();
             saveMastered(currentNumber.num);
 
-            if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100]);
-            }
-
-            const encouragement = getEncouragement();
-            document.getElementById('resultMessage').textContent = '🎉 ' + encouragement + ' 🎉';
-
-            speak(encouragement);
-            createFireworks(15);
+            SpeechGame.celebrate({ status: 'resultMessage', fireworks: 15 });
 
             setTimeout(nextSpeakQuestion, 2000);
         }
