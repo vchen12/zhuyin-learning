@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.3.1
+ * v5.4.1
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.3.1',
+    version: '5.4.1',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -144,96 +144,158 @@ function getEncouragementSimple(type = 'correct') {
     return phrases[Math.floor(Math.random() * phrases.length)];
 }
 
-/**
- * 語音合成
- * @param {string} text - 要說的文字
- * @param {object} options - 選項
- */
-function speak(text, options = {}) {
-    if (!APP_CONFIG.enableTTS || !('speechSynthesis' in window)) return;
+// ==========================================
+// 共用底層（v5.4.0）：所有頁面一律使用這裡的版本，頁面內不得再各自實作
+// ==========================================
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = options.lang || 'zh-TW';
-    utterance.rate = options.rate || 0.9;
-    utterance.pitch = options.pitch || 1.1;
-    window.speechSynthesis.speak(utterance);
+/** 站台根路徑（由 config.js 的 script src 推得，供音檔等資源定位；Node 測試時為空字串） */
+const APP_BASE = (function () {
+    try {
+        const sc = typeof document !== 'undefined' ? document.currentScript : null;
+        const src = sc && sc.src ? sc.src : '';
+        return src ? src.replace(/js\/config\.js(\?.*)?$/, '') : '';
+    } catch (e) { return ''; }
+})();
+
+/** 注音符號 → 音檔編號（教育部《國語注音符號手冊》F1~F37） */
+const ZHUYIN_SOUND_MAP = {
+    'ㄅ': 'F1', 'ㄆ': 'F2', 'ㄇ': 'F3', 'ㄈ': 'F4', 'ㄉ': 'F5',
+    'ㄊ': 'F6', 'ㄋ': 'F7', 'ㄌ': 'F8', 'ㄍ': 'F9', 'ㄎ': 'F10',
+    'ㄏ': 'F11', 'ㄐ': 'F12', 'ㄑ': 'F13', 'ㄒ': 'F14', 'ㄓ': 'F15',
+    'ㄔ': 'F16', 'ㄕ': 'F17', 'ㄖ': 'F18', 'ㄗ': 'F19', 'ㄘ': 'F20',
+    'ㄙ': 'F21', 'ㄚ': 'F22', 'ㄛ': 'F23', 'ㄜ': 'F24', 'ㄝ': 'F25',
+    'ㄞ': 'F26', 'ㄟ': 'F27', 'ㄠ': 'F28', 'ㄡ': 'F29', 'ㄢ': 'F30',
+    'ㄣ': 'F31', 'ㄤ': 'F32', 'ㄥ': 'F33', 'ㄦ': 'F34', 'ㄧ': 'F35',
+    'ㄨ': 'F36', 'ㄩ': 'F37'
+};
+
+let _zhVoiceCache = null;
+function _zhVoice() {
+    if (_zhVoiceCache) return _zhVoiceCache;
+    try {
+        const voices = speechSynthesis.getVoices();
+        _zhVoiceCache = voices.find(v => /^zh[-_]TW/i.test(v.lang)) || voices.find(v => /^zh/i.test(v.lang)) || null;
+    } catch (e) { _zhVoiceCache = null; }
+    return _zhVoiceCache;
 }
 
 /**
- * 播放注音音檔
- * @param {string} symbol - 注音符號
- * @returns {Promise} 播放完成的 Promise
+ * 語音合成（唯一版本）
+ * 相容兩種呼叫：speak(text, callback) 與 speak(text, { rate, pitch, volume, lang, timeoutMs })
+ * - callback／Promise 只會觸發一次：onend、onerror、保險計時器三者只認第一個
+ * - TTS 不可用、文字為空、被下一句打斷：都會結束流程，不會卡死
+ * @returns {Promise<void>}
  */
-function playZhuyinSound(symbol) {
-    const SOUND_MAP = {
-        'ㄅ': 'F1', 'ㄆ': 'F2', 'ㄇ': 'F3', 'ㄈ': 'F4', 'ㄉ': 'F5',
-        'ㄊ': 'F6', 'ㄋ': 'F7', 'ㄌ': 'F8', 'ㄍ': 'F9', 'ㄎ': 'F10',
-        'ㄏ': 'F11', 'ㄐ': 'F12', 'ㄑ': 'F13', 'ㄒ': 'F14', 'ㄓ': 'F15',
-        'ㄔ': 'F16', 'ㄕ': 'F17', 'ㄖ': 'F18', 'ㄗ': 'F19', 'ㄘ': 'F20',
-        'ㄙ': 'F21', 'ㄚ': 'F22', 'ㄛ': 'F23', 'ㄜ': 'F24', 'ㄝ': 'F25',
-        'ㄞ': 'F26', 'ㄟ': 'F27', 'ㄠ': 'F28', 'ㄡ': 'F29', 'ㄢ': 'F30',
-        'ㄣ': 'F31', 'ㄤ': 'F32', 'ㄥ': 'F33', 'ㄦ': 'F34', 'ㄧ': 'F35',
-        'ㄨ': 'F36', 'ㄩ': 'F37'
-    };
-
-    return new Promise((resolve, reject) => {
-        const fileNum = SOUND_MAP[symbol];
-        if (!fileNum) {
-            reject(new Error('Unknown symbol'));
-            return;
-        }
-
-        const audio = new Audio(`../sounds/${fileNum}.mp3`);
-        audio.onended = resolve;
-        audio.onerror = reject;
-        audio.play().catch(reject);
+function speak(text, a, b) {
+    let callback = null, options = {};
+    if (typeof a === 'function') { callback = a; options = b || {}; }
+    else if (a && typeof a === 'object') { options = a; }
+    return new Promise(resolve => {
+        let done = false;
+        const finish = () => {
+            if (done) return;
+            done = true;
+            try { if (callback) callback(); } catch (e) { console.error('speak callback 錯誤:', e); }
+            resolve();
+        };
+        if (!APP_CONFIG.enableTTS || typeof speechSynthesis === 'undefined' || !text) { finish(); return; }
+        try {
+            speechSynthesis.cancel();   // 打斷上一句（上一句的 finish 會由其 onerror 觸發一次）
+            const u = new SpeechSynthesisUtterance(String(text));
+            u.lang = options.lang || 'zh-TW';
+            u.rate = options.rate || 0.9;
+            u.pitch = options.pitch || 1.1;
+            u.volume = (options.volume !== undefined) ? options.volume : 1.0;
+            const voice = _zhVoice();
+            if (voice) u.voice = voice;
+            u.onend = finish;
+            u.onerror = finish;
+            setTimeout(finish, options.timeoutMs || 8000);
+            speechSynthesis.speak(u);
+        } catch (e) { finish(); }
     });
 }
+/** 短提示（較小聲） */
+function speakShort(text) { return speak(text, { volume: 0.8 }); }
+
+let _zhuyinAudio = null;
+/**
+ * 播放注音音檔（唯一版本）：會停掉上一個、登記 SpeechModule.guardAudio（播放期間不算人聲）
+ * @param {string} symbol - 注音符號
+ * @param {function} [onDone] - 播完（或失敗／找不到）時呼叫一次
+ * @returns {Promise<void>} 播完即 resolve（找不到或失敗也 resolve，不拋錯）
+ */
+function playZhuyinSound(symbol, onDone) {
+    return new Promise(resolve => {
+        let done = false;
+        const finish = () => { if (done) return; done = true; try { if (onDone) onDone(); } catch (e) { console.error(e); } resolve(); };
+        const fileNum = ZHUYIN_SOUND_MAP[symbol];
+        if (!fileNum || typeof Audio === 'undefined') { console.warn('找不到音檔:', symbol); finish(); return; }
+        try {
+            if (_zhuyinAudio) { _zhuyinAudio.pause(); _zhuyinAudio.currentTime = 0; }
+            const audio = new Audio(APP_BASE + 'sounds/' + fileNum + '.mp3');
+            _zhuyinAudio = audio;
+            if (typeof SpeechModule !== 'undefined' && SpeechModule.guardAudio) SpeechModule.guardAudio(audio);
+            audio.onended = finish;
+            audio.onerror = finish;
+            audio.play().catch(err => { console.error('播放失敗:', err); finish(); });
+        } catch (e) { finish(); }
+    });
+}
+// 舊名稱相容（頁面若自行定義 playSound 做別的事，頁面版本會覆蓋這個）
+function playSound(symbol, onDone) { return playZhuyinSound(symbol, onDone); }
+function playSoundWithCallback(symbol, callback) { return playZhuyinSound(symbol, callback); }
+function playSoundAsync(symbol) { return playZhuyinSound(symbol); }
 
 /**
- * 創建煙火效果
- * @param {number} count - 煙火數量
- * @param {HTMLElement} container - 容器元素
+ * 煙火效果（唯一版本）
+ * 使用頁面的 .firework 樣式；頁面沒有定義動畫時自動補上預設動畫
+ * @param {number} [count=20]
+ * @param {HTMLElement} [container] - 預設 #fireworks，否則 body
  */
-function createFireworks(count = 20, container = null) {
-    const targetContainer = container || document.getElementById('fireworks') || document.body;
-    const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟', '🎈', '🏆'];
-
-    for (let i = 0; i < count; i++) {
-        const firework = document.createElement('div');
-        firework.className = 'firework';
-        firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-        firework.style.cssText = `
-            position: fixed;
-            left: ${Math.random() * 100}%;
-            top: ${Math.random() * 100}%;
-            font-size: 2.5rem;
-            pointer-events: none;
-            z-index: 9999;
-            animation: firework-explode 1s ease-out forwards;
-            animation-delay: ${Math.random() * 0.5}s;
-        `;
-        targetContainer.appendChild(firework);
+function createFireworks(count, container) {
+    if (typeof document === 'undefined') return;
+    const n = (typeof count === 'number' && count > 0) ? count : 20;
+    const target = container || document.getElementById('fireworks') || document.body;
+    const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
+    let needFallback = false;
+    for (let i = 0; i < n; i++) {
+        const fw = document.createElement('div');
+        fw.className = 'firework';
+        fw.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        fw.style.left = Math.random() * 100 + '%';
+        fw.style.top = Math.random() * 100 + '%';
+        fw.style.fontSize = (2 + Math.random() * 2) + 'rem';
+        fw.style.animationDelay = Math.random() * 0.5 + 's';
+        fw.style.pointerEvents = 'none';
+        target.appendChild(fw);
+        if (i === 0) {
+            const cs = getComputedStyle(fw);
+            needFallback = (cs.animationName === 'none' || cs.position === 'static');
+        }
+        if (needFallback) {
+            fw.style.position = 'fixed';
+            fw.style.zIndex = '9999';
+            fw.style.animation = 'fw-shared-pop 1.5s ease-out forwards';
+        }
     }
-
-    setTimeout(() => {
-        targetContainer.querySelectorAll('.firework').forEach(el => el.remove());
-    }, 2000);
+    if (needFallback && !document.getElementById('fw-shared-style')) {
+        const st = document.createElement('style'); st.id = 'fw-shared-style';
+        st.textContent = '@keyframes fw-shared-pop{0%{transform:scale(0) rotate(0);opacity:1}50%{transform:scale(1.5) rotate(180deg);opacity:1}100%{transform:scale(0) rotate(360deg);opacity:0}}';
+        document.head.appendChild(st);
+    }
+    setTimeout(() => { target.querySelectorAll('.firework').forEach(el => el.remove()); }, 2000);
 }
 
 /**
- * 洗牌函數
- * @param {Array} array - 要洗牌的陣列
- * @returns {Array} 洗牌後的新陣列
+ * 洗牌（唯一版本）：Fisher–Yates，就地洗牌並回傳同一陣列（相容「用回傳值」與「就地」兩種呼叫）
  */
 function shuffle(array) {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
+    for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        const t = array[i]; array[i] = array[j]; array[j] = t;
     }
-    return newArray;
+    return array;
 }
 
 /**
@@ -791,8 +853,8 @@ if (typeof document !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         APP_CONFIG, getImagePath, getEncouragement, getEncouragementSimple,
-        getUserName, getCustomWords, speak, playZhuyinSound, createFireworks,
-        shuffle, getRandomItems,
+        getUserName, getCustomWords, speak, speakShort, playZhuyinSound, playSound, createFireworks,
+        shuffle, getRandomItems, ZHUYIN_SOUND_MAP, APP_BASE,
         // 語音相似度追蹤系統
         getUserMode, setUserMode, getThresholdPresets, getAphasiaBonus,
         getSimilarityThreshold, setSimilarityThreshold, calculateSimilarity,

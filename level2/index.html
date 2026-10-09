@@ -263,6 +263,7 @@
         <div class="category-chips" id="categoryChips"></div>
     </div>
 
+    <script src="../js/config.js"></script>
     <script>
         const CATEGORIES = {
             family: { name: '家人', icon: '👨‍👩‍👧', count: 12 },
@@ -300,20 +301,6 @@
             }
         }
 
-        // 語音合成說話功能
-        function speak(text, callback) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.85;
-                utterance.pitch = 1.1;
-                if (callback) {
-                    utterance.onend = callback;
-                }
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
         // 預先載入語音引擎
         function initVoices() {

@@ -492,13 +492,6 @@
             'ㄚ', 'ㄛ', 'ㄜ', 'ㄝ', 'ㄞ', 'ㄟ', 'ㄠ', 'ㄡ', 'ㄢ', 'ㄣ', 'ㄤ', 'ㄥ', 'ㄦ', 'ㄧ', 'ㄨ', 'ㄩ'
         ];
 
-        const SOUND_MAP = {
-            'ㄅ': 'F1', 'ㄆ': 'F2', 'ㄇ': 'F3', 'ㄈ': 'F4', 'ㄉ': 'F5', 'ㄊ': 'F6', 'ㄋ': 'F7', 'ㄌ': 'F8',
-            'ㄍ': 'F9', 'ㄎ': 'F10', 'ㄏ': 'F11', 'ㄐ': 'F12', 'ㄑ': 'F13', 'ㄒ': 'F14', 'ㄓ': 'F15', 'ㄔ': 'F16',
-            'ㄕ': 'F17', 'ㄖ': 'F18', 'ㄗ': 'F19', 'ㄘ': 'F20', 'ㄙ': 'F21',
-            'ㄚ': 'F22', 'ㄛ': 'F23', 'ㄜ': 'F24', 'ㄝ': 'F25', 'ㄞ': 'F26', 'ㄟ': 'F27', 'ㄠ': 'F28', 'ㄡ': 'F29',
-            'ㄢ': 'F30', 'ㄣ': 'F31', 'ㄤ': 'F32', 'ㄥ': 'F33', 'ㄦ': 'F34', 'ㄧ': 'F35', 'ㄨ': 'F36', 'ㄩ': 'F37'
-        };
 
         const MOUTH_HINTS = {
             'ㄅ': '雙唇緊閉，然後突然打開',
@@ -511,11 +504,6 @@
             'ㄌ': '舌尖抵住上齒齦，氣流從舌側出'
         };
 
-        const ENCOURAGEMENTS = {
-            correct: ['太棒了！', '好厲害！', '完美！', '真聰明！', '超級棒！'],
-            try1: ['再試一次！', '沒關係，加油！', '慢慢來！'],
-            try2: ['你可以的！', '快對了！', '再努力一下！']
-        };
 
         // 遊戲狀態
         let currentSymbol = '';
@@ -527,14 +515,6 @@
         let symbolQueue = [];
         let isProcessing = false;
 
-        // 洗牌
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
 
         // 開始遊戲
         function startGame() {
@@ -594,32 +574,6 @@
             });
         }
 
-        // 播放音檔並在完成後回調
-        function playSoundWithCallback(symbol, callback) {
-            const fileNum = SOUND_MAP[symbol];
-            if (!fileNum) {
-                if (callback) callback();
-                return;
-            }
-
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
-            }
-
-            currentAudio = new Audio(`../../sounds/${fileNum}.mp3`);
-            SpeechModule.guardAudio(currentAudio);   // 示範音播放期間不算人聲
-            currentAudio.onended = () => {
-                if (callback) callback();
-            };
-            currentAudio.onerror = () => {
-                if (callback) callback();
-            };
-
-            currentAudio.play().catch(err => {
-                if (callback) callback();
-            });
-        }
 
         // 顯示符號
         function displaySymbol() {
@@ -631,20 +585,6 @@
             updateUI();
         }
 
-        // 播放音檔
-        function playSound(symbol) {
-            const fileNum = SOUND_MAP[symbol];
-            if (!fileNum) return;
-
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
-            }
-
-            currentAudio = new Audio(`../../sounds/${fileNum}.mp3`);
-            SpeechModule.guardAudio(currentAudio);   // 示範音播放期間不算人聲
-            currentAudio.play().catch(err => console.error('播放失敗:', err));
-        }
 
         // 重播
         function replaySound() {
@@ -834,86 +774,9 @@
             startGame();
         }
 
-        // 語音合成
-        function speak(text, callback) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.1;
-                if (callback) {
-                    let __done = false;
-                    const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
-                    utterance.onend = __finish;
-                    utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
-                    setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
-                }
-                window.speechSynthesis.speak(utterance);
-            } else if (callback) {
-                callback();
-            }
-        }
 
-        // 播放音檔（返回 Promise）
-        function playSoundAsync(symbol) {
-            return new Promise((resolve) => {
-                const fileNum = SOUND_MAP[symbol];
-                if (!fileNum) { resolve(); return; }
 
-                if (currentAudio) {
-                    currentAudio.pause();
-                    currentAudio.currentTime = 0;
-                }
 
-                currentAudio = new Audio(`../../sounds/${fileNum}.mp3`);
-            SpeechModule.guardAudio(currentAudio);   // 示範音播放期間不算人聲
-                currentAudio.onended = () => resolve();
-                currentAudio.onerror = () => resolve();
-                currentAudio.play().catch(() => resolve());
-            });
-        }
-
-        // 語音提示
-        function speakShort(text, callback) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.1;
-                utterance.volume = 0.8;
-                if (callback) {
-                    let __done = false;
-                    const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
-                    utterance.onend = __finish;
-                    utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
-                    setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
-                }
-                window.speechSynthesis.speak(utterance);
-            } else if (callback) {
-                callback();
-            }
-        }
-
-        // 煙火
-        function createFireworks(count) {
-            const container = document.getElementById('fireworks');
-            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
-
-            for (let i = 0; i < count; i++) {
-                const firework = document.createElement('div');
-                firework.className = 'firework';
-                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                firework.style.left = Math.random() * 100 + '%';
-                firework.style.top = Math.random() * 100 + '%';
-                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
-                firework.style.animationDelay = Math.random() * 0.5 + 's';
-                container.appendChild(firework);
-            }
-
-            setTimeout(() => { container.innerHTML = ''; }, 2000);
-        }
     </script>
 </body>
 </html>

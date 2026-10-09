@@ -290,25 +290,8 @@
         </div>
     </div>
 
+    <script src="../js/config.js"></script>
     <script>
-        // 語音合成說話功能
-        function speak(text, callback) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.85;
-                utterance.pitch = 1.1;
-                if (callback) {
-                    let __done = false;
-                    const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
-                    utterance.onend = __finish;
-                    utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
-                    setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
-                }
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
         // 預先載入語音引擎
         function initVoices() {

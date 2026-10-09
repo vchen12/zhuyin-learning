@@ -431,9 +431,9 @@
         </div>
     </div>
 
+    <script src="../../js/config.js"></script>
     <script>
         const TRACK_LENGTH = 10;
-        const ENCOURAGEMENTS = ['太棒了！', '好厲害！', '衝啊！', '加油！', '很棒！'];
 
         let playerPosition = 0;
         let computerPosition = 0;
@@ -470,13 +470,6 @@
             return allWords;
         }
 
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
 
         function initGame() {
             playerPosition = 0;
@@ -568,7 +561,7 @@
                 playerPosition++;
                 updateCarPositions();
 
-                const encouragement = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+                const encouragement = getEncouragement();
                 document.getElementById('resultMessage').textContent = encouragement + ' 🚗💨';
                 speak(encouragement);
                 createFireworks(15);
@@ -653,33 +646,7 @@
             document.getElementById('modeOverlay').classList.remove('hidden');
         }
 
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.1;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
-        function createFireworks(count) {
-            const container = document.getElementById('fireworks');
-            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
-
-            for (let i = 0; i < count; i++) {
-                const firework = document.createElement('div');
-                firework.className = 'firework';
-                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                firework.style.left = Math.random() * 100 + '%';
-                firework.style.top = Math.random() * 100 + '%';
-                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
-                firework.style.animationDelay = Math.random() * 0.5 + 's';
-                container.appendChild(firework);
-            }
-            setTimeout(() => { container.innerHTML = ''; }, 2000);
-        }
 
         // 視窗大小改變時更新車子位置
         window.addEventListener('resize', updateCarPositions);

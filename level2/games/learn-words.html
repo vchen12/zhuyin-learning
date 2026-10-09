@@ -658,24 +658,6 @@
         }
 
 
-        // 煙火效果
-        function createFireworks(count) {
-            const container = document.getElementById('fireworks');
-            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
-
-            for (let i = 0; i < count; i++) {
-                const firework = document.createElement('div');
-                firework.className = 'firework';
-                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                firework.style.left = Math.random() * 100 + '%';
-                firework.style.top = Math.random() * 100 + '%';
-                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
-                firework.style.animationDelay = Math.random() * 0.5 + 's';
-                container.appendChild(firework);
-            }
-
-            setTimeout(() => { container.innerHTML = ''; }, 2000);
-        }
 
         // 啟動
         init();

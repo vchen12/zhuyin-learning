@@ -543,6 +543,7 @@
 
     <div id="fireworks" class="fireworks"></div>
 
+    <script src="../js/config.js"></script>
     <script>
         // 注音符號定義
         const STAGES = {
@@ -565,7 +566,6 @@
             }
         };
 
-        const ALL_SOUND_MAP = {...STAGES[1].soundMap, ...STAGES[2].soundMap};
 
         let currentStage = 0;
         let currentSymbol = '';
@@ -703,24 +703,6 @@
             setTimeout(() => showStatus(''), 1500);
         }
 
-        function playSound(symbol) {
-            const fileNum = ALL_SOUND_MAP[symbol];
-            if (!fileNum) {
-                console.warn('找不到音檔:', symbol);
-                return;
-            }
-
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
-            }
-
-            currentAudio = new Audio(`../sounds/${fileNum}.mp3`);
-            currentAudio.play().catch(err => {
-                console.error('播放失敗:', err);
-                showStatus('音檔載入中...');
-            });
-        }
 
         function showStatus(msg) {
             const statusEl = document.getElementById('statusMsg');
@@ -875,23 +857,6 @@
             document.getElementById('gameArea').innerHTML = '';
         }
 
-        function speak(text, callback) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.85;
-                utterance.pitch = 1.1;
-                if (callback) {
-                    let __done = false;
-                    const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
-                    utterance.onend = __finish;
-                    utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
-                    setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
-                }
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
         function initVoices() {
             if ('speechSynthesis' in window) {

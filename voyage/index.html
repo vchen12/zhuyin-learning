@@ -76,6 +76,26 @@
         #voiceHint { position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%); font-size: 4vmin; font-weight: 700;
                      text-shadow: 0 2px 6px rgba(0,0,0,.4); white-space: nowrap; }
 
+        /* 口令（要他說的詞）：大字＋🔊 由系統示範；家長提示請按 🔊，不要自己唸（系統分不出誰在說話） */
+        #prompt { position: absolute; left: 50%; top: 9%; transform: translateX(-50%); display: flex; align-items: center; gap: 2vmin;
+                  background: rgba(255,255,255,.92); color: #10456f; border-radius: 99px; padding: 1.2vmin 2vmin 1.2vmin 3.5vmin;
+                  box-shadow: 0 6px 18px rgba(0,0,0,.25); white-space: nowrap; }
+        #prompt .lead { font-size: 3.6vmin; font-weight: 700; opacity: .75; }
+        #promptWord { font-size: 7vmin; font-weight: 900; letter-spacing: .3vmin; }
+        #promptPlay { width: 9vmin; height: 9vmin; border-radius: 50%; border: none; background: #ffd86b; color: #10456f; font-size: 4.5vmin;
+                      box-shadow: 0 3px 10px rgba(0,0,0,.25); }
+        #promptPlay:active { transform: scale(.94); }
+        #prompt.talking #promptWord { animation: wobble .6s ease-in-out infinite; }
+        @keyframes wobble { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+        /* 右上角 🏠：長按回主選單（單點只提示，避免他亂按就跳離） */
+        #home { position: absolute; right: 1.5vmin; top: 1.5vmin; width: 9vmin; height: 9vmin; border-radius: 50%; background: rgba(255,255,255,.18);
+                display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; z-index: 25; }
+        #toast { position: absolute; left: 50%; top: 22vmin; transform: translateX(-50%); background: rgba(16,69,111,.92); color: #fff;
+                 padding: 1.4vmin 3vmin; border-radius: 99px; font-size: 3.2vmin; white-space: nowrap; opacity: 0; transition: opacity .25s;
+                 pointer-events: none; z-index: 26; }
+        #toast.show { opacity: 1; }
+
         /* 港口卡片（照片揭示） */
         #portCard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.6); opacity: 0; pointer-events: none;
                     width: min(70vmin, 90vw); background: #fff; border-radius: 3vmin; padding: 2vmin; box-shadow: 0 20px 60px rgba(0,0,0,.45);
@@ -153,6 +173,7 @@
                 </svg>
             </div>
         </div>
+        <div id="prompt"><span class="lead">說</span><span id="promptWord">郵輪</span><button id="promptPlay" title="聽示範">🔊</button></div>
         <div id="voiceHint">說話，船就會開 🚢</div>
         <div id="voiceBar"><div id="voiceFill"></div></div>
         <div id="portCard"><div id="portMedia"></div><div class="name" id="portName"></div></div>
@@ -160,12 +181,16 @@
     </div>
 
     <div id="anchor" title="家長：長按開啟">⚓</div>
+    <div id="home" title="長按回主選單">🏠</div>
+    <div id="toast"></div>
 
     <div id="startOverlay">
         <h1 style="font-size:8vmin">🚢 郵輪出航</h1>
         <p>按下開始後，<b>說話</b>船就會往前開。<br>說完一個詞，就會到一個港口。</p>
         <button id="startBtn">出航</button>
         <p class="err" id="startErr"></p>
+        <p style="font-size:2.8vmin;opacity:.75">出航後 Safari 可能再問一次麥克風；按「允許」即可。<br>
+        系統分不出是誰在說話：家長要提示時，請按畫面上的 🔊 讓系統示範。<br>長按右上角 🏠 回主選單。</p>
     </div>
 
     <div id="parentPanel">
@@ -180,6 +205,11 @@
 
         <h2>港口（依序抵達）</h2>
         <div class="slots" id="portSlots"></div>
+
+        <h2>口令（要他說的詞）</h2>
+        <p class="note">每到一個港口換下一個詞；畫面上方顯示大字，按 🔊 由系統示範。他沒出聲一陣子、或一直按螢幕時，系統會再唸一次口令。<br>
+        <b>系統分不出是誰在說話</b>——家長自己唸出口令也會被當成他的發聲；要提示請按 🔊。</p>
+        <div class="row"><input type="text" id="wordsInput" style="flex:1;min-width:40vmin;font-size:3vmin;padding:1.2vmin;border:1px solid #cdd;border-radius:1vmin" placeholder="用逗號分開，例如：郵輪, 開船, 出發"></div>
 
         <h2>今天的紀錄</h2>
         <div class="stat" id="stats"></div>
@@ -216,6 +246,9 @@
         const FINALE_MS = 9000;          // 終點畫面停留時間，之後自動再出航
         const SPEAKER_TAIL_MS = 350;     // 喇叭播音（汽笛/TTS）結束後再忽略多久
         const DEFAULT_PORTS = ['基隆', '日本福岡', '韓國釜山', '基隆', '回家'];
+        const DEFAULT_WORDS = ['郵輪', '開船', '出發', '嘟嘟'];
+        const IDLE_PROMPT_MS = 15000;    // 多久沒人聲就再唸一次口令
+        const TAP_PROMPT_MS = 4000;      // 一直按螢幕：最多每 4 秒唸一次口令
         const MANIFEST_URL = '../images/private/voyage/manifest.json'; // 本機／私人主機可放預設照片；不存在則略過
 
         // ==========================================
@@ -230,6 +263,7 @@
         let gate = 0.006, gateFrozenUntil = 0;
         let loop = null, busy = false, finished = false;
         let audioCtx = null;
+        let wordIdx = 0, lastPromptAt = 0;   // 目前口令 / 上次唸口令的時間
 
         // ==========================================
         // 資料（localStorage）
@@ -238,6 +272,7 @@
             let d = null;
             try { d = JSON.parse(localStorage.getItem('voyage.data') || 'null'); } catch (e) { /* ignore */ }
             if (!d) d = { ship: null, ports: [] };
+            if (!Array.isArray(d.words) || !d.words.length) d.words = DEFAULT_WORDS.slice();
             for (let i = 0; i < PORT_COUNT; i++) {
                 if (!d.ports[i]) d.ports[i] = { name: DEFAULT_PORTS[i] || ('港口 ' + (i + 1)), imgs: [] };
                 const p = d.ports[i];
@@ -349,10 +384,33 @@
             const total = (times || 1) * (dur + gap) * 1000;
             speakerUntil = Math.max(speakerUntil, Date.now() + total + SPEAKER_TAIL_MS);
         }
-        async function say(text) {
-            speakerUntil = Math.max(speakerUntil, Date.now() + 4000);
-            await SpeechModule.speak(text, 0.9);
+        // TTS 依序排隊：稱讚還沒講完，口令不會把它切掉（SpeechModule.speak 會先 cancel）
+        let sayChain = Promise.resolve();
+        function say(text) { const run = () => _say(text); sayChain = sayChain.then(run, run); return sayChain; }
+        async function _say(text) {
+            speakerUntil = Math.max(speakerUntil, Date.now() + 4000);   // TTS 起音前先關麥克風；tick 會在 speaking 期間持續延長
+            await SpeechModule.speak(text, 0.9);                          // TTS 不可用時立即返回 → 只關 SPEAKER_TAIL_MS
             speakerUntil = Date.now() + SPEAKER_TAIL_MS;
+        }
+
+        // ==========================================
+        // 口令：要他說的詞（畫面大字＋系統示範）
+        // ==========================================
+        function currentWord() { return data.words[wordIdx % data.words.length]; }
+        function showWord() { $('promptWord').textContent = currentWord(); }
+        function nextWord() { wordIdx = (wordIdx + 1) % data.words.length; showWord(); }
+        /** 唸口令。lead：前導語（首次「說話，船就會開」）；之後只唸「跟我說：詞」 */
+        let prompting = false;
+        async function promptWord(lead) {
+            if (busy || finished || prompting) return;
+            prompting = true; lastPromptAt = Date.now();
+            $('prompt').classList.add('talking');
+            try { await say((lead === undefined ? '跟我說：' : lead) + currentWord()); }
+            finally { prompting = false; lastPromptAt = Date.now(); $('prompt').classList.remove('talking'); }
+        }
+        function toast(msg) {
+            const t = $('toast'); t.textContent = msg; t.classList.add('show');
+            clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove('show'), 1800);
         }
 
         // ==========================================
@@ -368,6 +426,9 @@
 
             // 門檻：他在說話時不更新（避免背景校準被自己的聲音拉高）
             if (now > gateFrozenUntil) gate = v.gate;
+
+            // 一陣子沒人聲：再唸一次口令（不佔用進度，只是提醒）
+            if (!muted && !utterOpen && now - lastVoicedAt > IDLE_PROMPT_MS && now - lastPromptAt > IDLE_PROMPT_MS) promptWord();
 
             const loud = v.rms > gate;
             const voiced = !muted && loud && v.voiced;
@@ -414,6 +475,7 @@
             legProgress = 1; placeShip(); setEngine(false);
             leg++;
             updatePorts();
+            nextWord();
             horn(1);
             showPortCard(i);
             appendLog({ t: Date.now(), arrive: i, name: data.ports[i].name });
@@ -429,6 +491,7 @@
                 legProgress = 0;
                 if (leg >= PORT_COUNT) { finale(); return; }
                 placeShip(); busy = false;
+                promptWord();
             }, CARD_MS);
         }
         function showPortCard(i) {
@@ -453,6 +516,8 @@
             leg = 0; legProgress = 0; finished = false; busy = false; utterOpen = false; voicedRun = 0;
             setEngine(false); updatePorts(); placeShip(); hidePortCard(); $('finale').classList.remove('show');
             $('voiceHint').textContent = '說話，船就會開 🚢';
+            wordIdx = 0; showWord();
+            lastVoicedAt = Date.now(); lastPromptAt = 0;
         }
 
         // ==========================================
@@ -467,9 +532,14 @@
             $('startOverlay').style.display = 'none';
             await new Promise(r => setTimeout(r, 500)); // 讓背景噪音校準累積幾個樣本
             gate = SpeechModule.getVoiceState().gate;
+            lastVoicedAt = Date.now();
             if (loop) clearInterval(loop);
             loop = setInterval(tick, FRAME_MS);
+            promptWord('說話，船就會開！跟我說：');
         });
+
+        // 🔊：由系統示範口令（喇叭播音期間不算人聲，家長提示請用這個）
+        $('promptPlay').addEventListener('click', () => { if (!busy && !finished) promptWord(''); });
 
         // 觸碰畫面：只有水面小漣漪，不推進任何進度
         $('scene').addEventListener('pointerdown', e => {
@@ -477,7 +547,16 @@
             const r = document.createElement('div'); r.className = 'ripple';
             r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
             document.body.appendChild(r); setTimeout(() => r.remove(), 700);
+            // 他一直按螢幕：用口令告訴他要「說」，最多每 TAP_PROMPT_MS 一次；按到 🔊 本身不重複
+            if (loop && e.target.id !== 'promptPlay' && Date.now() - lastPromptAt > TAP_PROMPT_MS) promptWord();
         });
+
+        // 🏠 長按 0.8 秒回主選單；單點只提示（他亂按不會跳離）
+        let homeTimer = null;
+        const home = $('home');
+        home.addEventListener('pointerdown', e => { e.preventDefault(); homeTimer = setTimeout(() => { homeTimer = null; location.href = '../index.html'; }, 800); });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => home.addEventListener(ev, () => { if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; if (ev === 'pointerup') toast('按住 🏠 不放，回主選單'); } }));
+        home.addEventListener('contextmenu', e => e.preventDefault());
 
         // ==========================================
         // 家長面板（長按錨點 1.2 秒）
@@ -505,11 +584,17 @@
                 const i = parseInt(e.target.dataset.port, 10), k = parseInt(e.target.dataset.idx, 10);
                 data.ports[i].imgs.splice(k, 1); saveData(); renderPanel();
             }));
-            document.querySelectorAll('#parentPanel input[type=text]').forEach(inp => inp.addEventListener('change', e => {
+            document.querySelectorAll('#portSlots input[type=text]').forEach(inp => inp.addEventListener('change', e => {
                 const i = parseInt(e.target.dataset.port, 10); data.ports[i].name = e.target.value.trim() || ('港口 ' + (i + 1)); saveData();
             }));
+            $('wordsInput').value = data.words.join(', ');
             renderStats();
         }
+        $('wordsInput').addEventListener('change', e => {
+            const words = e.target.value.split(/[,，、\s]+/).map(w => w.trim()).filter(Boolean);
+            data.words = words.length ? words : DEFAULT_WORDS.slice();
+            wordIdx = 0; showWord(); saveData(); e.target.value = data.words.join(', ');
+        });
         function slotHtml(key, img, name) {
             return (img ? '<img class="thumb" src="' + img + '">' : '<div class="thumb"></div>') +
                 '<label class="pick">📷 選照片<input type="file" accept="image/*" data-key="' + key + '"></label>';
@@ -559,7 +644,7 @@
         });
         $('clearLog').addEventListener('click', () => { if (confirm('確定清除所有發聲紀錄？')) { localStorage.removeItem('voyage.log'); renderStats(); } });
 
-        buildRoute();
+        buildRoute(); showWord();
         loadManifest().then(changed => { if (changed) buildRoute(); });
     </script>
 </body>

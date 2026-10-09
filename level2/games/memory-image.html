@@ -308,6 +308,7 @@
     </div>
 
     <script src="../../js/vocabulary.js"></script>
+    <script src="../../js/config.js"></script>
     <script>
         const PAIRS = 6; // 6組配對 = 12張卡片
 
@@ -331,13 +332,6 @@
             return allWords;
         }
 
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
 
         function initGame() {
             matchedPairs = 0;
@@ -490,33 +484,7 @@
             initGame();
         }
 
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.9;
-                utterance.pitch = 1.1;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
-        function createFireworks(count) {
-            const container = document.getElementById('fireworks');
-            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
-
-            for (let i = 0; i < count; i++) {
-                const firework = document.createElement('div');
-                firework.className = 'firework';
-                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                firework.style.left = Math.random() * 100 + '%';
-                firework.style.top = Math.random() * 100 + '%';
-                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
-                firework.style.animationDelay = Math.random() * 0.5 + 's';
-                container.appendChild(firework);
-            }
-            setTimeout(() => { container.innerHTML = ''; }, 2000);
-        }
 
         initGame();
     </script>

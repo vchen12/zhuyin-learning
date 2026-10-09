@@ -198,7 +198,7 @@
         <div class="header">
             <h1>🌟 注音符號學習樂園 🌟</h1>
             <div class="subtitle">專為失語症患者與學齡前兒童設計</div>
-            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v5.3.1</div>
+            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v5.4.1</div>
         </div>
 
         <!-- 非觸控裝置提示：這個樂園為平板／手機觸控設計，電腦滑鼠操作不順 -->
@@ -362,6 +362,7 @@
         </div>
     </div>
 
+    <script src="js/config.js"></script>
     <script>
         // 非觸控裝置（電腦＋滑鼠）提示；iPad 以桌面版 UA 瀏覽時 maxTouchPoints 仍 > 0，不會誤判
         (function () {
@@ -419,23 +420,6 @@
 
         // 語音合成說話功能
         let voicesReady = false;
-        function speak(text, callback) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.85;
-                utterance.pitch = 1.1;
-                if (callback) {
-                    let __done = false;
-                    const __finish = () => { if (!__done) { __done = true; if (callback) callback(); } };
-                    utterance.onend = __finish;
-                    utterance.onerror = __finish;   // TTS 失敗（語音包缺、被中斷）也要繼續流程
-                    setTimeout(__finish, 8000);      // 保險：事件都沒來也不卡死
-                }
-                window.speechSynthesis.speak(utterance);
-            }
-        }
 
         // 預先載入語音引擎
         function initVoices() {

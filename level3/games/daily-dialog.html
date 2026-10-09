@@ -432,18 +432,7 @@
         let currentDialog = null;
         let retryCount = 0;
 
-        // 取得使用者名稱
-        function getUserName() {
-            return localStorage.getItem('userName') || '';
-        }
 
-        // 取得帶名字的鼓勵語
-        function getEncouragement() {
-            const name = getUserName();
-            const encouragements = ['太棒了！', '說得很好！', '真聰明！', '很棒喔！'];
-            const base = encouragements[Math.floor(Math.random() * encouragements.length)];
-            return name ? `${name}，${base}` : base;
-        }
 
         function initGame() {
             currentDialogIndex = 0;
@@ -669,22 +658,6 @@
             loadDialog();
         }
 
-        function createFireworks(count) {
-            const container = document.getElementById('fireworks');
-            const emojis = ['✨', '🎉', '🎊', '⭐', '💫', '🌟'];
-
-            for (let i = 0; i < count; i++) {
-                const firework = document.createElement('div');
-                firework.className = 'firework';
-                firework.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                firework.style.left = Math.random() * 100 + '%';
-                firework.style.top = Math.random() * 100 + '%';
-                firework.style.fontSize = (2 + Math.random() * 2) + 'rem';
-                firework.style.animationDelay = Math.random() * 0.5 + 's';
-                container.appendChild(firework);
-            }
-            setTimeout(() => { container.innerHTML = ''; }, 2000);
-        }
 
         initGame();
     </script>

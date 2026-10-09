@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.3.1
+- **版本**: v5.4.0
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -110,8 +110,14 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ### 程式碼風格
 - 繁體中文註解
-- 每個 HTML 檔案是獨立完整的（包含所有 CSS 和 JS）
-- 共享功能放在 `js/` 目錄
+- **共用邏輯一律在 `js/`，頁面只保留版面與該遊戲專屬規則；同一件事在第二個地方出現第二份實作即視為 bug**
+  （v5.4.0 起。此前「每個 HTML 獨立完整」的慣例讓 26 頁各自複製 `speak`／`playSound`／`shuffle`／
+  `createFireworks`／鼓勵語／`getUserName`，同一功能長出多種行為，是公測期多個 bug 的直接來源）
+- 共用底層在 `js/config.js`：`speak(text, cb|options)`（一次性 callback、onerror、8 秒保險）、`speakShort`、
+  `playZhuyinSound(symbol, onDone)`（停前一個、自動 `guardAudio`、路徑由 `APP_BASE` 推得）、
+  `playSound`／`playSoundWithCallback`／`playSoundAsync` 相容別名、`createFireworks(count, container)`、
+  `shuffle`（就地並回傳）、`getEncouragement(type)`（含名字）、`getUserName`、`initParentLongPress`、錯誤紀錄。
+  每一頁都必須載入 `js/config.js`。
 - 版本號更新在 `js/config.js`（`APP_CONFIG.version`）、`sw.js`（`CACHE_VERSION`，觸發快取更新）與 `index.html` 頁尾；`manifest.json` 無版本欄位
 
 ### UI 設計原則
@@ -153,6 +159,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.4.0**: 共用化第 1 階段——`config.js` 成為唯一的 `speak`／`playZhuyinSound`／`createFireworks`／`shuffle`／`getEncouragement`／`getUserName` 來源；30 頁刪除本地重複實作（含 4 份 SOUND_MAP、17 份鼓勵語陣列、9 份 getUserName），13 頁補載 config.js
 - **v5.3.1**: 共用照片裁切模組 `js/photo-crop.js`；設定頁家人照片、說話板卡片、郵輪照片皆可從合照框出臉孔（並縮圖，避免整張原圖塞爆 localStorage）
 - **v5.3.0**: 說話板等使用者說完整句才判定（`waitForEnd`／`silenceEndMs` 選項），報酬先稱讚再播回應；郵輪抵港加稱讚語。實測回饋：說到「我要」就被回覆、沒有稱讚
 - **v5.2.9**: 家人改名可一併改注音（`familySettings[].zhuyin`，`suggestZhuyin()` 自動帶入）；字詞庫家人頁改名後立即重繪；移除預設名字範例「正昇」
