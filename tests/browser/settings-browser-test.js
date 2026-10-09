@@ -1,0 +1,85 @@
+// 設定頁瀏覽器測試（v5.6.0 資料層）：舊資料遷移、我新增的、家人單一名單＋照片裁切、字詞圖片、還原預設
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright'); const path = require('path');
+const BASE = process.env.BASE || 'http://127.0.0.1:8123';
+const IMG = path.resolve(__dirname, 'board-reward.png');   // 任一張圖即可
+const TTS_STUB = `(() => { const stub = { speaking:false, pending:false, paused:false, getVoices(){return [];}, cancel(){}, addEventListener(){}, speak(u){ setTimeout(()=>{ try{ if(u.onend) u.onend(new Event('end')); }catch(e){} }, 60); } }; Object.defineProperty(window, 'speechSynthesis', { value: stub, configurable: true }); })();`;
+let pass = 0, fail = 0; const errors = [];
+function check(n, c) { if (c) { pass++; console.log('  ✓', n); } else { fail++; console.log('  ✗', n); } }
+(async () => {
+  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined, args: ['--no-sandbox', '--disable-gpu'] });
+  const ctx = await browser.newContext({ viewport: { width: 1024, height: 900 } });
+  const page = await ctx.newPage();
+  page.on('pageerror', e => errors.push('PAGEERROR ' + e.message));
+  page.on('console', m => { if (m.type() === 'error' && !/google|gstatic|network|favicon/.test(m.text())) errors.push('CONSOLE ' + m.text()); });
+  page.on('dialog', d => d.accept());
+  await page.addInitScript(TTS_STUB);
+  // 舊資料：familySettings 部分、mods 內的 family、customWords
+  await page.addInitScript(() => {
+    if (localStorage.getItem('__seeded')) return;
+    localStorage.setItem('familySettings', JSON.stringify([{ id: 'grandma', emoji: '👵', name: '阿嬤', enabled: true, customImage: null, zhuyin: 'ㄚ ㄇㄚˋ' }]));
+    localStorage.setItem('vocabularyModifications', JSON.stringify({ deleted: { family: ['哥哥'] }, edited: {}, added: { family: [{ text: '大舅', zhuyin: 'ㄉㄚˋ ㄐㄧㄡˋ', emoji: '👨', gender: 'male', customImage: null }] } }));
+    localStorage.setItem('customWords', JSON.stringify([{ id: 1, word: '毛巾', zhuyin: 'ㄇㄠˊ ㄐㄧㄣ', category: 'daily' }]));
+    localStorage.setItem('__seeded', '1');
+  });
+  await page.goto(BASE + '/settings.html'); await page.waitForTimeout(800);
+  console.log('遷移');
+  const fam = await page.evaluate(() => JSON.parse(localStorage.getItem('familySettings')));
+  check('familySettings 補齊 14 ＋ 大舅', fam.length === 15 && fam.find(m => m.name === '大舅' && m.isAdded) && fam.find(m => m.name === '阿嬤'));
+  check('哥哥停用', fam.find(m => m.id === 'brother').enabled === false);
+  const mods = await page.evaluate(() => JSON.parse(localStorage.getItem('vocabularyModifications')));
+  check('customWords → items；mods 無 family', !mods.added.family && !mods.deleted.family && mods.added.items[0].text === '毛巾' && (await page.evaluate(() => localStorage.getItem('customWords'))) === null);
+  console.log('我新增的 tab');
+  const addedCards = await page.$$eval('#customWordsContainer .word-card', c => c.map(x => x.textContent.replace(/\s+/g, ' ').trim()));
+  check('列出毛巾（日常用品）與大舅（家人）', addedCards.some(t => /毛巾/.test(t) && /日常用品/.test(t)) && addedCards.some(t => /大舅/.test(t) && /家人/.test(t)));
+  await page.fill('#newWord', '公園'); await page.dispatchEvent('#newWord', 'input');
+  const autoZ = await page.$eval('#newWordZhuyin', e => e.value);
+  await page.selectOption('#newWordCategory', 'nature'); await page.click('#customWordSection button.save-btn'); await page.waitForTimeout(200);
+  const mods2 = await page.evaluate(() => JSON.parse(localStorage.getItem('vocabularyModifications')));
+  console.log('    autoZ =', JSON.stringify(autoZ), 'nature =', JSON.stringify(mods2.added.nature));
+  check('新增「公園」到自然（注音欄＝自動帶入值）', mods2.added.nature && mods2.added.nature[0].text === '公園' && mods2.added.nature[0].zhuyin === autoZ);
+  await page.fill('#newWord', '表哥'); await page.selectOption('#newWordCategory', 'family'); await page.click('#customWordSection button.save-btn'); await page.waitForTimeout(200);
+  check('新增家人「表哥」進 familySettings', (await page.evaluate(() => JSON.parse(localStorage.getItem('familySettings')))).some(m => m.name === '表哥' && m.isAdded));
+  // 詳情換圖（PhotoCrop）
+  await page.click('#customWordsContainer .word-card >> text=毛巾'); await page.waitForTimeout(200);
+  check('詳情開啟且可刪除', await page.$eval('#wordDetailModal', e => e.classList.contains('show')) && await page.$eval('#deleteWordBtn', e => e.style.display === 'inline-block'));
+  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('text=📷 替換圖片')]);
+  await fc.setFiles(IMG); await page.waitForTimeout(600);
+  check('出現共用裁切 modal', await page.$('#photoCropModal') !== null && await page.$eval('#photoCropModal', e => getComputedStyle(e).display !== 'none'));
+  await page.click('#photoCropModal >> text=確認'); await page.waitForTimeout(500);
+  const mods3 = await page.evaluate(() => JSON.parse(localStorage.getItem('vocabularyModifications')));
+  check('毛巾圖片存在 added 項目（dataURL）', /^data:image/.test(mods3.added.items[0].customImage || ''));
+  check('卡片顯示照片', await page.$$eval('#customWordsContainer .word-card img', i => i.length) >= 1);
+  console.log('家人 tab');
+  await page.click('.category-tab[data-category="family"]'); await page.waitForTimeout(300);
+  const famCards = await page.$$eval('#systemWordsContainer .word-card', c => c.map(x => x.textContent.replace(/\s+/g, ' ').trim()));
+  check('家人名單單一列表：含大舅、表哥（新增，可刪除）、哥哥（已停用）', famCards.some(t => /大舅/.test(t) && /新增/.test(t) && /刪除/.test(t)) && famCards.some(t => /表哥/.test(t)) && famCards.some(t => /哥哥/.test(t) && /已停用/.test(t)));
+  check('沒有第二個新增家人區塊', !(await page.content()).includes('uploadAddedFamilyPhoto'));
+  const [fc2] = await Promise.all([page.waitForEvent('filechooser'), page.click('#systemWordsContainer .word-card:has-text("大舅") >> text=換照片')]);
+  await fc2.setFiles(IMG); await page.waitForTimeout(600);
+  await page.click('#photoCropModal >> text=確認'); await page.waitForTimeout(500);
+  check('大舅照片存入 familySettings', /^data:image/.test((await page.evaluate(() => JSON.parse(localStorage.getItem('familySettings')))).find(m => m.name === '大舅').customImage || ''));
+  await page.click('#systemWordsContainer .word-card:has-text("表哥") >> text=刪除'); await page.waitForTimeout(300);
+  check('刪除新增家人', !(await page.evaluate(() => JSON.parse(localStorage.getItem('familySettings')))).some(m => m.name === '表哥'));
+  console.log('一般類別');
+  await page.click('.category-tab[data-category="fruits"]'); await page.waitForTimeout(300);
+  await page.click('#systemWordsContainer .word-card:has-text("蘋果")'); await page.waitForTimeout(200);
+  const [fc3] = await Promise.all([page.waitForEvent('filechooser'), page.click('text=📷 替換圖片')]);
+  await fc3.setFiles(IMG); await page.waitForTimeout(600); await page.click('#photoCropModal >> text=確認'); await page.waitForTimeout(500);
+  const mods4 = await page.evaluate(() => JSON.parse(localStorage.getItem('vocabularyModifications')));
+  check('系統詞「蘋果」圖片存 edited', /^data:image/.test(((mods4.edited.fruits || {})['蘋果'] || {}).customImage || ''));
+  const eff = await page.evaluate(() => getEffectiveVocabulary('fruits').find(w => w.text === '蘋果'));
+  check('遊戲端 getEffectiveVocabulary 看得到圖片', /^data:image/.test(eff.customImage || ''));
+  await page.click('#systemWordsContainer .word-card:has-text("蘋果")'); await page.waitForTimeout(200);
+  await page.click('text=🔄 恢復預設圖示'); await page.waitForTimeout(300);
+  check('恢復後 edited 清空', !((await page.evaluate(() => JSON.parse(localStorage.getItem('vocabularyModifications')))).edited.fruits || {})['蘋果']);
+  await page.click('#systemWordsContainer .word-card:has-text("香蕉") >> text=刪除'); await page.waitForTimeout(300);
+  check('刪系統詞 → 卡片消失', !(await page.$$eval('#systemWordsContainer .word-card', c => c.map(x => x.textContent))).some(t => /香蕉/.test(t)));
+  console.log('還原預設');
+  await page.click('text=↩️ 還原預設值'); await page.waitForTimeout(500);
+  const after = await page.evaluate(() => ({ fam: JSON.parse(localStorage.getItem('familySettings') || '[]'), mods: localStorage.getItem('vocabularyModifications') }));
+  check('還原：家人回 14 預設、修改清空', after.fam.length === 14 && after.fam.every(m => m.enabled && !m.customImage) && !after.mods);
+  await page.screenshot({ path: path.resolve(__dirname, 'settings-end.png') });
+  console.log('錯誤：', errors.length ? errors : '無');
+  console.log(`\n${pass}/${pass + fail} 通過`);
+  await browser.close(); process.exit(fail || errors.length ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(2); });

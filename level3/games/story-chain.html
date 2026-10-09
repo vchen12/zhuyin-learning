@@ -357,6 +357,7 @@
     </div>
 
     <script src="../../js/speech-recognition.js"></script>
+    <script src="../../js/speech-game.js"></script>
     <script>
         // 故事資料
         const STORIES = [
@@ -468,79 +469,20 @@
 
         function startListening() {
             if (SpeechModule.isListening() || isProcessing) return;
-
             const scene = currentStory.scenes[currentSceneIndex];
-            const micBtn = document.getElementById('speakBtn');
-            const micHint = document.getElementById('resultMessage');
-            const recognizedText = document.getElementById('recognizedText');
-
-            (async () => {
-                await SpeechModule.init();
-
-                micBtn.disabled = true;
-                micBtn.classList.add('listening');
-                micHint.textContent = '正在聽...🎙️';
-
-                SpeechModule.startListening(scene.sentence, {
-                    onVoiceDetected: () => {
-                        micHint.textContent = '聽到了，繼續說...';
-                        if (navigator.vibrate) navigator.vibrate(50);
-                    },
-                    onInterim: (text) => {
-                        recognizedText.textContent = '你說：' + text;
-                        recognizedText.classList.add('show');
-                    },
-                    onResult: (result) => {
-                        micBtn.disabled = false;
-                        micBtn.classList.remove('listening');
-                        recognizedText.textContent = '你說：' + (result.transcript || '（聽到聲音）');
-                        recognizedText.classList.add('show');
-
-                        if (result.passed) {
-                            handleCorrect(result.similarity, result.transcript);
-                        } else {
-                            handleWrong(result.similarity, result.transcript);
-                        }
-                    },
-                    onTimeout: (info) => {
-                        micBtn.disabled = false;
-                        micBtn.classList.remove('listening');
-                        if (info.hadVoice) {
-                            handleWrong(0, '');
-                        } else {
-                            micHint.textContent = info.noiseOnly ? '🔊 那不是說話聲喔，用嘴巴說' : '按麥克風開始說話';
-                        }
-                    },
-                    onError: (err) => {
-                        micBtn.disabled = false;
-                        micBtn.classList.remove('listening');
-                    }
-                });
-            })();
+            SpeechGame.listen({
+                target: scene.sentence, button: 'speakBtn', status: 'resultMessage', heard: 'recognizedText',
+                onPass: r => handleCorrect(r.similarity, r.transcript),
+                onFail: r => handleWrong(r.similarity, r.transcript)
+            });
         }
 
         async function handleWrong(similarity, transcript) {
             if (isProcessing) return;
             isProcessing = true;
-
             retryCount++;
             const scene = currentStory.scenes[currentSceneIndex];
-
-            // 回放錄音 + 正確發音
-            await SpeechModule.playRecording();
-            await new Promise(r => setTimeout(r, 300));
-
-            document.getElementById('resultMessage').textContent = '🔊 正確的發音是...';
-            await new Promise(r => setTimeout(r, 300));
-            await SpeechModule.speak(scene.sentence);
-
-            // 自動顯示「我會唸」按鈕（3次重試後）
-            if (retryCount >= 3) {
-                document.getElementById('resultMessage').textContent = '或點「✅ 我會唸」';
-            } else {
-                document.getElementById('resultMessage').textContent = '再試一次！';
-            }
-
+            await SpeechGame.review({ target: scene.sentence, status: 'resultMessage', retryCount: retryCount });
             isProcessing = false;
         }
 
@@ -548,14 +490,7 @@
             if (isProcessing) return;
             isProcessing = true;
 
-            const encouragement = getEncouragement();
-            document.getElementById('resultMessage').textContent = '🎉 ' + encouragement + ' 🎉';
-
-            // 立即震動反饋
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-
-            await SpeechModule.speak(encouragement);
-            createFireworks(15);
+            await SpeechGame.celebrate({ status: 'resultMessage', fireworks: 15 });
 
             // 標記完成
             const cards = document.querySelectorAll('.scene-card');

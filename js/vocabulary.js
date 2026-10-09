@@ -1,6 +1,6 @@
 /**
  * 注音學習樂園 - 詞彙資料庫
- * v2.0.0
+ * v2.1.0（v5.6.0 起含使用者資料層 UserData）
  */
 
 // 注音符號定義
@@ -238,142 +238,212 @@ const SENTENCES = {
 // 取得有效詞彙（考慮用戶修改）
 // ==========================================
 
+// ==========================================
+// 使用者資料層（v5.6.0）：familySettings／vocabularyModifications 唯一的讀寫入口
+// 頁面不得自行 localStorage.getItem/setItem 這兩個鍵；舊版分散的 customWords、
+// vocabularyModifications.*.family 在第一次讀取時自動併入（一次性遷移）。
+// ==========================================
+const UserData = (function () {
+    const FAMILY_KEY = 'familySettings', MODS_KEY = 'vocabularyModifications', LEGACY_CUSTOM_KEY = 'customWords';
+    /** 預設家人角色（唯一定義；settings 頁與遊戲都用這份） */
+    const DEFAULT_FAMILY = [
+        { id: 'dad', emoji: '👨', name: '爸爸' }, { id: 'mom', emoji: '👩', name: '媽媽' },
+        { id: 'grandpa', emoji: '👴', name: '爺爺' }, { id: 'grandma', emoji: '👵', name: '奶奶' },
+        { id: 'grandpa2', emoji: '👴', name: '外公' }, { id: 'grandma2', emoji: '👵', name: '外婆' },
+        { id: 'brother', emoji: '👦', name: '哥哥' }, { id: 'sister', emoji: '👧', name: '姐姐' },
+        { id: 'young_brother', emoji: '👦', name: '弟弟' }, { id: 'young_sister', emoji: '👧', name: '妹妹' },
+        { id: 'uncle', emoji: '👨', name: '叔叔' }, { id: 'aunt', emoji: '👩', name: '阿姨' },
+        { id: 'uncle2', emoji: '👨', name: '舅舅' }, { id: 'aunt2', emoji: '👩', name: '姑姑' }
+    ].map(function (m) { return { id: m.id, emoji: m.emoji, name: m.name, zhuyin: '', enabled: true, customImage: null }; });
+    const LEGACY_CATEGORY = { daily: 'items', place: 'nature', sentence: 'items', family: 'family' };
+
+    function storage() { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch (e) { return null; } }
+    function readJson(key, fallback) { try { const st = storage(); const v = st && st.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
+    function writeJson(key, val) { const st = storage(); if (!st) return false; try { st.setItem(key, JSON.stringify(val)); return true; } catch (e) { console.error('UserData 儲存失敗', key, e); return false; } }
+    function normMods(m) { if (!m || typeof m !== 'object') m = {}; ['deleted', 'edited', 'added'].forEach(function (k) { if (!m[k] || typeof m[k] !== 'object') m[k] = {}; }); return m; }
+    function isMale(emoji) { return emoji === '👨' || emoji === '👴' || emoji === '👦'; }
+    function isFemale(emoji) { return emoji === '👩' || emoji === '👵' || emoji === '👧'; }
+    function defaultName(id) { const d = DEFAULT_FAMILY.find(function (m) { return m.id === id; }); return d ? d.name : ''; }
+    function copy(o) { return JSON.parse(JSON.stringify(o)); }
+    function newMember(name, zhuyin, emoji, gender, customImage) {
+        return {
+            id: 'add_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            name: name, zhuyin: zhuyin || '', emoji: emoji || '👤',
+            gender: gender || (isMale(emoji) ? 'male' : isFemale(emoji) ? 'female' : 'unknown'),
+            enabled: true, customImage: customImage || null, isAdded: true
+        };
+    }
+
+    /** 家人名單：預設角色補齊（新版本加的角色也會出現）＋使用者新增；只在這裡讀 */
+    function readFamily() {
+        let list = readJson(FAMILY_KEY, null);
+        let changed = false;
+        if (!Array.isArray(list)) { list = []; changed = true; }
+        DEFAULT_FAMILY.forEach(function (d) { if (!list.find(function (m) { return m.id === d.id; })) { list.push(copy(d)); changed = true; } });
+        return { list: list, changed: changed };
+    }
+
+    let migrated = false;
+    /** 一次性遷移舊資料：customWords → added；vocabularyModifications 的 family 項目 → familySettings */
+    function migrate() {
+        if (migrated) return; migrated = true;
+        const st = storage(); if (!st) return;
+        const mods = normMods(readJson(MODS_KEY, null));
+        let modsChanged = false;
+        const legacy = readJson(LEGACY_CUSTOM_KEY, null);
+        if (Array.isArray(legacy)) {
+            legacy.forEach(function (w) {
+                if (!w || !w.word) return;
+                const cat = LEGACY_CATEGORY[w.category] || 'items';
+                if (!mods.added[cat]) mods.added[cat] = [];
+                if (mods.added[cat].find(function (x) { return x.text === w.word; })) return;
+                mods.added[cat].push({ text: w.word, zhuyin: w.zhuyin || '', emoji: '📝', customImage: w.image || null });
+            });
+            try { st.removeItem(LEGACY_CUSTOM_KEY); } catch (e) { /* ignore */ }
+            modsChanged = true;
+        }
+        if (mods.edited.family || mods.deleted.family || mods.added.family) {
+            const fam = readFamily(); const list = fam.list;
+            const edited = mods.edited.family || {};
+            Object.keys(edited).forEach(function (text) {
+                const e = edited[text]; const m = list.find(function (x) { return defaultName(x.id) === text; });
+                if (!m || !e) return;
+                if (e.text) m.name = e.text; if (e.zhuyin) m.zhuyin = e.zhuyin; if (e.customImage) m.customImage = e.customImage;
+            });
+            (mods.deleted.family || []).forEach(function (text) {
+                const m = list.find(function (x) { return x.name === text || defaultName(x.id) === text; });
+                if (m) m.enabled = false;
+            });
+            (mods.added.family || []).forEach(function (w) {
+                if (!w || !w.text || list.find(function (x) { return x.name === w.text; })) return;
+                list.push(newMember(w.text, w.zhuyin, w.emoji, w.gender, w.customImage));
+            });
+            delete mods.edited.family; delete mods.deleted.family; delete mods.added.family;
+            writeJson(FAMILY_KEY, list); modsChanged = true;
+        }
+        if (modsChanged) writeJson(MODS_KEY, mods);
+    }
+
+    // ---------- 家人 ----------
+    function loadFamily() { migrate(); const r = readFamily(); if (r.changed) writeJson(FAMILY_KEY, r.list); return r.list; }
+    function saveFamily(list) { return writeJson(FAMILY_KEY, list); }
+    function addFamilyMember(list, name, zhuyin, emoji, gender) {
+        name = (name || '').trim(); if (!name) return null;
+        if (list.find(function (m) { return m.name === name; })) return null;
+        const m = newMember(name, zhuyin, emoji, gender, null); list.push(m); saveFamily(list); return m;
+    }
+    /** 只能刪使用者新增的；預設角色用「停用」 */
+    function removeFamilyMember(list, id) {
+        const i = list.findIndex(function (m) { return m.id === id && m.isAdded; });
+        if (i < 0) return false; list.splice(i, 1); saveFamily(list); return true;
+    }
+    /** 家人 → 遊戲用詞彙（text/zhuyin/emoji/customImage/gender） */
+    function familyWord(member) {
+        const dn = defaultName(member.id);
+        const orig = VOCABULARY.family.words.find(function (w) { return w.text === dn; });
+        const renamed = !orig || member.name !== dn;
+        return {
+            text: member.name,
+            // 改名時可一併改注音（v5.2.9）；沒存注音 → 先試自動建議，再退回原始注音
+            zhuyin: member.zhuyin || (renamed ? suggestZhuyin(member.name) : '') || (orig ? orig.zhuyin : ''),
+            emoji: member.customImage ? null : member.emoji,
+            customImage: member.customImage || null,
+            image: orig ? orig.image : null,
+            originalText: dn || undefined,
+            gender: member.gender || (isMale(member.emoji) ? 'male' : 'female'),
+            isAdded: !!member.isAdded
+        };
+    }
+    function familyWords() { return loadFamily().filter(function (m) { return m.enabled !== false; }).map(familyWord); }
+
+    // ---------- 一般字詞的修改（新增／編輯／刪除／自訂圖片） ----------
+    function loadMods() { migrate(); return normMods(readJson(MODS_KEY, null)); }
+    function saveMods(mods) { return writeJson(MODS_KEY, normMods(mods)); }
+    function findAdded(mods, category, text) { return (mods.added[category] || []).find(function (w) { return w.text === text; }) || null; }
+    /** 新增字詞；系統詞被刪過則改為恢復。回傳 'added' | 'restored' | 'exists' | 'invalid' */
+    function addWord(category, word) {
+        const text = ((word && word.text) || '').trim(); if (!text || !VOCABULARY[category]) return 'invalid';
+        const mods = loadMods();
+        const inSystem = VOCABULARY[category].words.some(function (w) { return w.text === text; });
+        const deleted = mods.deleted[category] || [];
+        if (findAdded(mods, category, text) || (inSystem && deleted.indexOf(text) < 0)) return 'exists';
+        if (inSystem) { mods.deleted[category] = deleted.filter(function (t) { return t !== text; }); saveMods(mods); return 'restored'; }
+        if (!mods.added[category]) mods.added[category] = [];
+        mods.added[category].push({ text: text, zhuyin: word.zhuyin || '', emoji: word.emoji || '📝', customImage: word.customImage || null });
+        saveMods(mods); return 'added';
+    }
+    /** 編輯字詞（text／zhuyin／emoji／customImage 擇要給）；新增的詞直接改，系統詞記在 edited */
+    function editWord(category, text, patch) {
+        const mods = loadMods();
+        const added = findAdded(mods, category, text);
+        if (added) { Object.assign(added, patch); }
+        else {
+            if (!VOCABULARY[category] || !VOCABULARY[category].words.some(function (w) { return w.text === text; })) return false;
+            if (!mods.edited[category]) mods.edited[category] = {};
+            mods.edited[category][text] = Object.assign({}, mods.edited[category][text] || {}, patch);
+        }
+        return saveMods(mods);
+    }
+    function deleteWord(category, text) {
+        const mods = loadMods();
+        if (findAdded(mods, category, text)) {
+            mods.added[category] = mods.added[category].filter(function (w) { return w.text !== text; });
+        } else {
+            if (!mods.deleted[category]) mods.deleted[category] = [];
+            if (mods.deleted[category].indexOf(text) < 0) mods.deleted[category].push(text);
+            if (mods.edited[category]) delete mods.edited[category][text];
+        }
+        return saveMods(mods);
+    }
+    function setWordImage(category, text, dataUrl) { return editWord(category, text, { customImage: dataUrl }); }
+    function clearWordImage(category, text) {
+        const mods = loadMods();
+        const added = findAdded(mods, category, text);
+        if (added) { added.customImage = null; return saveMods(mods); }
+        const e = mods.edited[category] && mods.edited[category][text];
+        if (!e) return true;
+        delete e.customImage;
+        if (!Object.keys(e).length) delete mods.edited[category][text];
+        return saveMods(mods);
+    }
+    /** 使用者新增的所有字詞（各類別），給設定頁總覽 */
+    function addedWords() {
+        const mods = loadMods(); const out = [];
+        Object.keys(mods.added).forEach(function (cat) { (mods.added[cat] || []).forEach(function (w) { out.push(Object.assign({ category: cat, isAdded: true }, w)); }); });
+        return out;
+    }
+    function resetAll() { const st = storage(); if (!st) return; [FAMILY_KEY, MODS_KEY, LEGACY_CUSTOM_KEY].forEach(function (k) { try { st.removeItem(k); } catch (e) { /* ignore */ } }); }
+
+    return { DEFAULT_FAMILY: DEFAULT_FAMILY, loadFamily: loadFamily, saveFamily: saveFamily, addFamilyMember: addFamilyMember, removeFamilyMember: removeFamilyMember,
+             familyWord: familyWord, familyWords: familyWords, defaultName: defaultName,
+             loadMods: loadMods, saveMods: saveMods, addWord: addWord, editWord: editWord, deleteWord: deleteWord, setWordImage: setWordImage, clearWordImage: clearWordImage,
+             addedWords: addedWords, resetAll: resetAll, _resetMigration: function () { migrated = false; } };
+})();
+
 /**
- * 取得指定類別的有效詞彙列表
- * 會整合系統預設詞彙和用戶的修改（新增、編輯、刪除）
- *
+ * 取得指定類別的有效詞彙列表：系統預設 ＋ 使用者的修改（新增、編輯、刪除、自訂圖片）；家人類別來自 familySettings
  * @param {string} category - 類別名稱 (family, animals, fruits, etc.)
  * @returns {Array} 有效的詞彙列表
  */
 function getEffectiveVocabulary(category) {
     const vocab = VOCABULARY[category];
     if (!vocab) return [];
-
-    // 讀取用戶修改
-    const modifications = JSON.parse(localStorage.getItem('vocabularyModifications') || '{"deleted":{},"edited":{},"added":{}}');
-    const deletedWords = modifications.deleted[category] || [];
-    const editedWords = modifications.edited[category] || {};
-    const addedWords = modifications.added[category] || [];
-
-    // 家人類別特殊處理：整合 familySettings
-    if (category === 'family') {
-        return getEffectiveFamilyVocabulary(vocab, deletedWords, editedWords, addedWords);
-    }
-
-    // 一般類別處理
-    let effectiveWords = [];
-
-    // 1. 處理系統詞彙（過濾已刪除、套用編輯）
-    vocab.words.forEach(word => {
-        // 跳過已刪除的
-        if (deletedWords.includes(word.text)) return;
-
-        // 檢查是否有編輯版本
-        if (editedWords[word.text]) {
-            effectiveWords.push({
-                ...word,
-                ...editedWords[word.text]
-            });
-        } else {
-            effectiveWords.push({ ...word });
-        }
+    if (category === 'family') return UserData.familyWords();
+    const mods = UserData.loadMods();
+    const deletedWords = mods.deleted[category] || [];
+    const editedWords = mods.edited[category] || {};
+    const addedWords = mods.added[category] || [];
+    const out = [];
+    vocab.words.forEach(function (word) {
+        if (deletedWords.indexOf(word.text) >= 0) return;
+        out.push(editedWords[word.text] ? Object.assign({}, word, editedWords[word.text], { isEdited: true }) : Object.assign({}, word));
     });
-
-    // 2. 加入用戶新增的詞彙
-    addedWords.forEach(word => {
-        effectiveWords.push({ ...word, isAdded: true });
-    });
-
-    return effectiveWords;
+    addedWords.forEach(function (word) { out.push(Object.assign({}, word, { isAdded: true })); });
+    return out;
 }
 
-/**
- * 家人類別專用：整合 familySettings 和 vocabularyModifications
- */
-function getEffectiveFamilyVocabulary(vocab, deletedWords, editedWords, addedWords) {
-    // 讀取 familySettings
-    const familySettings = JSON.parse(localStorage.getItem('familySettings') || '[]');
-
-    // 預設家人對應表（用於找到原始資料）
-    const defaultFamilyMap = {
-        'dad': '爸爸',
-        'mom': '媽媽',
-        'grandpa': '爺爺',
-        'grandma': '奶奶',
-        'grandpa2': '外公',
-        'grandma2': '外婆',
-        'brother': '哥哥',
-        'sister': '姐姐',
-        'young_brother': '弟弟',
-        'young_sister': '妹妹',
-        'uncle': '叔叔',
-        'aunt': '阿姨',
-        'uncle2': '舅舅',
-        'aunt2': '姑姑'
-    };
-
-    let effectiveWords = [];
-
-    // 1. 處理 familySettings 中已有的角色
-    if (familySettings.length > 0) {
-        familySettings.forEach(member => {
-            // 跳過已停用的
-            if (!member.enabled) return;
-
-            // 找到原始詞彙資料
-            const defaultName = defaultFamilyMap[member.id];
-            const originalWord = vocab.words.find(w => w.text === defaultName);
-
-            if (originalWord) {
-                // 檢查是否被用戶刪除（透過 vocabularyModifications）
-                if (deletedWords.includes(member.name) || deletedWords.includes(defaultName)) return;
-
-                effectiveWords.push({
-                    emoji: member.customImage ? null : member.emoji,
-                    customImage: member.customImage,
-                    text: member.name,  // 使用自訂名稱
-                    // 改名時可一併改注音（v5.2.9）；舊資料改了名卻沒存注音 → 先試自動建議，再退回原始注音
-                    zhuyin: member.zhuyin || (member.name !== defaultName ? suggestZhuyin(member.name) : '') || originalWord.zhuyin,
-                    image: originalWord.image,
-                    originalText: defaultName,  // 保留原始名稱供參考
-                    gender: member.emoji === '👨' || member.emoji === '👴' || member.emoji === '👦' ? 'male' : 'female'
-                });
-            }
-        });
-    } else {
-        // 沒有 familySettings，使用系統預設
-        vocab.words.forEach(word => {
-            if (deletedWords.includes(word.text)) return;
-
-            if (editedWords[word.text]) {
-                effectiveWords.push({
-                    ...word,
-                    ...editedWords[word.text],
-                    gender: word.emoji === '👨' || word.emoji === '👴' || word.emoji === '👦' ? 'male' : 'female'
-                });
-            } else {
-                effectiveWords.push({
-                    ...word,
-                    gender: word.emoji === '👨' || word.emoji === '👴' || word.emoji === '👦' ? 'male' : 'female'
-                });
-            }
-        });
-    }
-
-    // 2. 加入用戶新增的家人（透過 vocabularyModifications.added）
-    addedWords.forEach(word => {
-        // 確保不重複
-        if (!effectiveWords.find(w => w.text === word.text)) {
-            effectiveWords.push({
-                ...word,
-                isAdded: true,
-                gender: word.gender || 'unknown'
-            });
-        }
-    });
-
-    return effectiveWords;
-}
+/** 相容舊名稱：家人類別的有效詞彙（參數已不需要） */
+function getEffectiveFamilyVocabulary() { return UserData.familyWords(); }
 
 /**
  * 取得所有類別的有效詞彙統計
@@ -382,18 +452,14 @@ function getEffectiveVocabularyStats() {
     const stats = {};
     for (const category of Object.keys(VOCABULARY)) {
         const words = getEffectiveVocabulary(category);
-        stats[category] = {
-            name: VOCABULARY[category].name,
-            count: words.length,
-            icon: VOCABULARY[category].icon
-        };
+        stats[category] = { name: VOCABULARY[category].name, count: words.length, icon: VOCABULARY[category].icon };
     }
     return stats;
 }
 
 // 匯出
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ZHUYIN_SYMBOLS, VOCABULARY, SENTENCES, getEffectiveVocabulary, getEffectiveFamilyVocabulary, getEffectiveVocabularyStats, suggestZhuyin };
+    module.exports = { ZHUYIN_SYMBOLS, VOCABULARY, SENTENCES, UserData, getEffectiveVocabulary, getEffectiveFamilyVocabulary, getEffectiveVocabularyStats, suggestZhuyin };
 }
 
 // ==========================================
@@ -405,7 +471,12 @@ const EXTRA_CHAR_ZHUYIN = {
     '姑': 'ㄍㄨ', '嬸': 'ㄕㄣˇ', '伯': 'ㄅㄛˊ', '丈': 'ㄓㄤˋ', '母': 'ㄇㄨˇ', '父': 'ㄈㄨˋ', '外': 'ㄨㄞˋ', '祖': 'ㄗㄨˇ',
     '乾': 'ㄍㄢ', '老': 'ㄌㄠˇ', '師': 'ㄕ', '寶': 'ㄅㄠˇ', '貝': 'ㄅㄟˋ', '哥': 'ㄍㄜ', '小': 'ㄒㄧㄠˇ', '大': 'ㄉㄚˋ',
     '姪': 'ㄓˊ', '孫': 'ㄙㄨㄣ', '女': 'ㄋㄩˇ', '兒': 'ㄦˊ', '子': 'ㄗˇ', '太': 'ㄊㄞˋ', '先': 'ㄒㄧㄢ', '生': 'ㄕㄥ',
-    '同': 'ㄊㄨㄥˊ', '學': 'ㄒㄩㄝˊ', '朋': 'ㄆㄥˊ', '友': 'ㄧㄡˇ', '醫': 'ㄧ', '護': 'ㄏㄨˋ', '士': 'ㄕˋ', '看': 'ㄎㄢˋ'
+    '同': 'ㄊㄨㄥˊ', '學': 'ㄒㄩㄝˊ', '朋': 'ㄆㄥˊ', '友': 'ㄧㄡˇ', '醫': 'ㄧ', '護': 'ㄏㄨˋ', '士': 'ㄕˋ', '看': 'ㄎㄢˋ',
+    // 生活用詞（語言障礙者常用的功能性單詞）
+    '毛': 'ㄇㄠˊ', '巾': 'ㄐㄧㄣ', '尿': 'ㄋㄧㄠˋ', '便': 'ㄅㄧㄢˋ', '衛': 'ㄨㄟˋ', '紙': 'ㄓˇ', '走': 'ㄗㄡˇ', '路': 'ㄌㄨˋ',
+    '坐': 'ㄗㄨㄛˋ', '休': 'ㄒㄧㄡ', '息': 'ㄒㄧˊ', '要': 'ㄧㄠˋ', '園': 'ㄩㄢˊ', '喝': 'ㄏㄜ', '洗': 'ㄒㄧˇ', '澡': 'ㄗㄠˇ',
+    '睡': 'ㄕㄨㄟˋ', '覺': 'ㄐㄧㄠˋ', '痛': 'ㄊㄨㄥˋ', '藥': 'ㄧㄠˋ', '出': 'ㄔㄨ', '去': 'ㄑㄩˋ', '玩': 'ㄨㄢˊ', '郵': 'ㄧㄡˊ',
+    '輪': 'ㄌㄨㄣˊ', '船': 'ㄔㄨㄢˊ', '車': 'ㄔㄜ', '飛': 'ㄈㄟ', '機': 'ㄐㄧ', '回': 'ㄏㄨㄟˊ', '家': 'ㄐㄧㄚ', '廁': 'ㄘㄜˋ', '所': 'ㄙㄨㄛˇ'
 };
 let _charZhuyinMap = null;
 function _buildCharZhuyinMap() {
