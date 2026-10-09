@@ -184,7 +184,7 @@
     </div>
 
     <a class="back-btn" href="../index.html">← 返回</a>
-    <div id="anchor" title="家長：長按開啟">⚓</div>
+    <div id="anchor" data-parent-longpress="openPanel" data-parent-hint="按住 ⚓ 約一秒，開啟家長設定">⚓</div>
     <div id="toast"></div>
 
     <div id="startOverlay">
@@ -193,10 +193,10 @@
         <button id="startBtn">出航</button>
         <p class="err" id="startErr"></p>
         <div class="row" style="justify-content:center;margin:0">
-            <button class="btn" id="setupBtn">⚓ 家長設定：船與港口照片、口令</button>
+            <button class="btn" id="setupBtn" data-parent-longpress="openPanel" data-parent-hint="按住約一秒才會開啟（家長用）">⚓ 家長設定：船與港口照片、口令（按住一秒）</button>
             <a class="btn gray" href="../settings.html" style="text-decoration:none">👤 個人化設定</a>
         </div>
-        <p style="font-size:2.8vmin;opacity:.8">第一次玩請家長先按「⚓ 家長設定」放入他喜歡的郵輪與家人合照。<br>遊戲中長按右上角 ⚓ 也能開啟；名字、家人照片、靈敏度在「個人化設定」。</p>
+        <p style="font-size:2.8vmin;opacity:.8">第一次玩請家長先按住「⚓ 家長設定」約一秒，放入他喜歡的郵輪與家人合照（輕按只會提示）。<br>遊戲中按住右上角 ⚓ 也能開啟；名字、家人照片、靈敏度在「個人化設定」。</p>
         <p style="font-size:2.6vmin;opacity:.7">出航後 Safari 可能再問一次麥克風，按「允許」即可。<br>系統分不出是誰在說話：家長要提示時，請按畫面上的 🔊 讓系統示範。</p>
     </div>
 
@@ -608,20 +608,10 @@
 
 
         // ==========================================
-        // 家長面板（長按錨點 1.2 秒）
+        // 家長面板：⚓ 與起始畫面的「家長設定」都要按住 1.2 秒（共用 initParentLongPress；輕按只提示）
         // ==========================================
-        let pressTimer = null;
-        const anchor = $('anchor');
-        const startPress = e => { e.preventDefault(); pressTimer = setTimeout(openPanel, 1200); };
-        const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
-        anchor.addEventListener('pointerdown', startPress);
-        anchor.addEventListener('pointerup', cancelPress);
-        anchor.addEventListener('pointercancel', cancelPress);
-        anchor.addEventListener('pointerleave', cancelPress);
-        anchor.addEventListener('contextmenu', e => e.preventDefault());
-
         function openPanel() { renderPanel(); $('parentPanel').classList.add('show'); busy = true; }
-        $('setupBtn').addEventListener('click', openPanel);   // 起始畫面直接開家長設定（不必長按）
+        window.openPanel = openPanel;   // 給 data-parent-longpress 呼叫
         $('closePanel').addEventListener('click', () => { $('parentPanel').classList.remove('show'); buildRoute(); busy = false; });
         $('restart').addEventListener('click', () => { resetVoyage(); $('parentPanel').classList.remove('show'); });
 

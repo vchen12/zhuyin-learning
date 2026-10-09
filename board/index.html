@@ -98,7 +98,7 @@
     <header>
         <a class="back" href="../index.html">← 返回</a>
         <h1 id="title">說話板</h1>
-        <div id="anchor" title="家長：長按開啟">⚓</div>
+        <div id="anchor" data-parent-longpress="openPanel" data-parent-hint="按住 ⚓ 約一秒，開啟家長設定">⚓</div>
     </header>
     <div id="grid"></div>
     <div id="empty" style="display:none">還沒有卡片。長按右上角 ⚓ 新增，或到「設定」頁上傳家人照片。</div>
@@ -126,10 +126,10 @@
         <button id="startBtn">開始</button>
         <p id="startErr"></p>
         <div style="display:flex;gap:2vmin;flex-wrap:wrap;justify-content:center">
-            <button class="btn" id="setupBtn">⚓ 家長設定：卡片照片與錄音</button>
+            <button class="btn" id="setupBtn" data-parent-longpress="openPanel" data-parent-hint="按住約一秒才會開啟（家長用）">⚓ 家長設定：卡片照片與錄音（按住一秒）</button>
             <a class="btn gray" href="../settings.html" style="text-decoration:none">👤 個人化設定</a>
         </div>
-        <p style="font-size:2.8vmin;opacity:.75">第一次玩請家長先設定照片；遊戲中長按右上角 ⚓ 也能開啟。<br>開始後 Safari 可能再問一次麥克風；按「允許」即可。</p>
+        <p style="font-size:2.8vmin;opacity:.75">第一次玩請家長先按住「⚓ 家長設定」約一秒放照片（輕按只會提示）；遊戲中按住右上角 ⚓ 也能開啟。<br>開始後 Safari 可能再問一次麥克風；按「允許」即可。</p>
     </div>
 
     <div id="panel">
@@ -446,15 +446,9 @@
         });
 
         // ==========================================
-        // 家長面板（長按 ⚓ 1.2 秒）
-        // ==========================================
-        let pressTimer = null;
-        const anchor = $('anchor');
-        anchor.addEventListener('pointerdown', e => { e.preventDefault(); pressTimer = setTimeout(openPanel, 1200); });
-        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => anchor.addEventListener(ev, () => clearTimeout(pressTimer)));
-        anchor.addEventListener('contextmenu', e => e.preventDefault());
+        // 家長面板：⚓ 與「家長設定」鈕都要按住 1.2 秒（共用 initParentLongPress；輕按只提示）
         function openPanel() { if (focusActive) exitFocus(); renderPanel(); $('panel').classList.add('show'); }
-        $('setupBtn').addEventListener('click', openPanel);
+        window.openPanel = openPanel;   // 給 data-parent-longpress 呼叫
         $('closePanel').addEventListener('click', () => { $('panel').classList.remove('show'); renderGrid(); });
 
         const canRecord = typeof MediaRecorder !== 'undefined';
