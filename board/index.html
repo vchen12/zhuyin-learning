@@ -195,6 +195,7 @@
         const REWARD_MS = 2600;      // 報酬（照片放大＋回應）之後才出現家長判定列
         const VERDICT_WAIT_MS = 7000; // 家長沒按就自動回到卡片格
         const MAX_TIMEOUTS = 3;      // 連續幾次完全沒聲音就回卡片格
+        const THRESHOLD = typeof getSimilarityThreshold === 'function' ? getSimilarityThreshold() : 0;   // 設定頁過關門檻：0 = 有說話就算；>0 = 辨識要夠像
         const SILENCE_END_MS = 1500; // 說完的判定：靜音 1.5 秒（他在「我要」與「尿尿」之間會停頓，要等得夠久）
 
         // ==========================================
@@ -367,8 +368,8 @@
                     if (!focusActive || current !== it) return;
                     if (r.transcript) $('focusHeard').textContent = '聽到：' + r.transcript;
                     if (r.passed) { reward(it, r); return; }
-                    // voice 模式下不過關只會是發聲太短
-                    setStatus('再說一次，說完整');
+                    // 門檻 0：不過關只會是發聲太短；門檻 > 0：辨識結果與卡片文字不夠像
+                    setStatus(THRESHOLD > 0 ? (r.transcript ? '聽到「' + r.transcript + '」，再說一次「' + it.say + '」' : '沒辨識出字，再說一次「' + it.say + '」') : '再說一次，說完整');
                     setTimeout(listen, 600);
                 },
                 onTimeout: info => {
@@ -379,7 +380,7 @@
                     setTimeout(listen, 800);
                 },
                 onError: () => { setStatus('❌ 麥克風無法使用'); }
-            }, { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: SILENCE_END_MS });   // 等他說完整句才判定
+            }, Object.assign({ hud: false, waitForEnd: true, silenceEndMs: SILENCE_END_MS }, THRESHOLD > 0 ? {} : { passMode: 'voice' }));   // 等他說完整句才判定；門檻 > 0 交給 SpeechModule 依相似度判
             if (!ok) setTimeout(listen, 500);
         }
 
@@ -572,7 +573,7 @@
             document.title = CFG.title + ' — 說話板';
             $('title').textContent = CFG.title;
             $('startTitle').textContent = CFG.title;
-            $('startHint').innerHTML = CFG.startHint;
+            $('startHint').innerHTML = CFG.startHint + '<br><span style="opacity:.8">' + (THRESHOLD > 0 ? '過關門檻 ' + THRESHOLD + '%：要說得夠像卡片的字才有回應' : '鼓勵模式（門檻 0%）：有說話就有回應') + '（在「個人化設定」調整）</span>';
             db = await openDb();
             await loadAllMedia();
             items = loadItems();

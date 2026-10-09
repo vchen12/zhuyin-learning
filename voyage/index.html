@@ -197,7 +197,7 @@
             <a class="btn gray" href="../settings.html" style="text-decoration:none">👤 個人化設定</a>
         </div>
         <p style="font-size:2.8vmin;opacity:.8">第一次玩請家長先按住「⚓ 家長設定」約一秒，放入他喜歡的郵輪與家人合照（輕按只會提示）。<br>遊戲中按住右上角 ⚓ 也能開啟；名字、家人照片、靈敏度在「個人化設定」。</p>
-        <p style="font-size:2.6vmin;opacity:.7">出航後 Safari 可能再問一次麥克風，按「允許」即可。<br>系統分不出是誰在說話：家長要提示時，請按畫面上的 🔊 讓系統示範。</p>
+        <p style="font-size:2.6vmin;opacity:.7"><span id="modeLine"></span><br>出航後 Safari 可能再問一次麥克風，按「允許」即可。<br>系統分不出是誰在說話：家長要提示時，請按畫面上的 🔊 讓系統示範。</p>
     </div>
 
     <div id="parentPanel">
@@ -227,6 +227,7 @@
         </div>
 
         <h2>偵測</h2>
+        <p class="note" id="modeNote"></p>
         <div class="stat" id="detectStat">—</div>
         <p class="note">綠色＝人聲；橘色＝有聲響但不是說話（敲打）。靈敏度在「設定」頁的「人聲偵測」調整。</p>
         <div class="row">
@@ -262,6 +263,9 @@
         const TAP_PROMPT_MS = 4000;      // 一直按螢幕：最多每 4 秒唸一次口令
         const MANIFEST_URL = '../images/private/voyage/manifest.json'; // 本機／私人主機可放預設照片；不存在則略過
         const MEDIA_DB = 'zhuyin-media', MEDIA_PREFIX = 'voyage/';   // 照片存 IndexedDB（localStorage 只有約 5MB，存四五張就滿）
+        // 過關門檻（設定頁）：0 = 鼓勵模式，有說話就抵港；>0 = 要說對口令（辨識相似度 ≥ 門檻）才抵港，船照樣隨聲音前進
+        const THRESHOLD = typeof getSimilarityThreshold === 'function' ? getSimilarityThreshold() : 0;
+        const ASR_MODE = THRESHOLD > 0 && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
         // ==========================================
         // 狀態
@@ -276,6 +280,7 @@
         let loop = null, busy = false, finished = false;
         let audioCtx = null;
         let wordIdx = 0, lastPromptAt = 0;   // 目前口令 / 上次唸口令的時間
+        let lastMissAt = 0;                  // 門檻模式：上次「再說一次」的時間（別一直唸）
         let store = null;                    // MediaStore（IndexedDB）；不支援時照片退回存 localStorage dataURL
         const media = {};                    // 'voyage/...' → objectURL
         const params = new URLSearchParams(location.search);
@@ -439,6 +444,7 @@
             }
             const total = (times || 1) * (dur + gap) * 1000;
             speakerUntil = Math.max(speakerUntil, Date.now() + total + SPEAKER_TAIL_MS);
+            SpeechModule.notifyPlayback(total);
         }
         // TTS 依序排隊：稱讚還沒講完，口令不會把它切掉。
         // 佇列空的時候「同步」開講：iOS Safari 只播由使用者手勢觸發的語音，所以出航那一下必須在點擊事件裡直接呼叫 speak，
@@ -477,6 +483,35 @@
         }
 
         // ==========================================
+        // 門檻模式：用 SpeechModule 的辨識會話決定「說對了沒」；說對 → 抵港，說錯 → 提示再說一次（船停在原地，不退）
+        // ==========================================
+        function listenWord() {
+            if (!ASR_MODE || !loop || busy || finished || SpeechModule.isListening()) return;
+            const word = currentWord();
+            const again = () => setTimeout(listenWord, 150);
+            SpeechModule.startListening(word, {
+                onResult: r => {
+                    if (busy || finished) return;
+                    if (r.passed) { appendLog({ t: Date.now(), ms: r.voicedMs || 0, word: word, transcript: r.transcript || '', similarity: r.similarity || 0 }); arrive(); return; }
+                    missWord(word, r); again();
+                },
+                onTimeout: again,
+                onError: again
+            }, { hud: false });
+        }
+        function missWord(word, r) {
+            const heard = r.transcript ? '聽到「' + r.transcript + '」，' : '';
+            $('voiceHint').textContent = heard + '再說一次：' + word + ' 🎤';
+            appendLog({ t: Date.now(), miss: word, transcript: r.transcript || '', similarity: r.similarity || 0 });
+            const now = Date.now();
+            if (now - lastMissAt > 6000) { lastMissAt = now; say('再說一次：' + word); }
+        }
+        function modeText() {
+            if (!ASR_MODE) return THRESHOLD > 0 ? '門檻 ' + THRESHOLD + '%，但這個瀏覽器沒有語音辨識，改為有說話就抵港' : '鼓勵模式（門檻 0%）：有說話就抵港';
+            return '門檻 ' + THRESHOLD + '%：要說對口令才抵港（在「個人化設定」調整）';
+        }
+
+        // ==========================================
         // 主迴圈：聲音 → 船
         // ==========================================
         function tick() {
@@ -509,10 +544,13 @@
                     setEngine(true);
                     legProgress += FRAME_MS / LEG_FULL_MS;
                     if (legProgress >= 1) {
-                        // 持續發聲把本段走完：結算這次發聲（避免「說完」規則再抵港一次），直接抵港
-                        utterOpen = false;
-                        appendLog({ t: utterStart, ms: utterMs, peak: +utterPeak.toFixed(4), leg: leg });
-                        arrive(); return;
+                        if (ASR_MODE) { legProgress = 0.97; }   // 門檻模式：船停在港口前，等辨識說對了才進港
+                        else {
+                            // 持續發聲把本段走完：結算這次發聲（避免「說完」規則再抵港一次），直接抵港
+                            utterOpen = false;
+                            appendLog({ t: utterStart, ms: utterMs, peak: +utterPeak.toFixed(4), leg: leg });
+                            arrive(); return;
+                        }
                     }
                     placeShip();
                 }
@@ -527,7 +565,7 @@
                     const span = lastVoicedAt - utterStart;
                     if (utterConfirmed && (utterMs >= UTTER_MIN_MS || span >= UTTER_SPAN_MS)) {
                         appendLog({ t: utterStart, ms: utterMs, peak: +utterPeak.toFixed(4), leg: leg });
-                        arrive(); return;
+                        if (!ASR_MODE) { arrive(); return; }   // 門檻模式：抵不抵港由辨識會話決定（listenWord）
                     }
                 }
             }
@@ -536,6 +574,7 @@
         function arrive() {
             if (busy || finished || leg >= PORT_COUNT) return;   // 防重入
             busy = true;
+            if (ASR_MODE) SpeechModule.stopListening();
             const i = leg;
             legProgress = 1; placeShip(); setEngine(false);
             leg++;
@@ -555,6 +594,7 @@
                 if (leg >= PORT_COUNT) { finale(); return; }
                 placeShip(); busy = false;
                 promptWord();
+                listenWord();
             }, CARD_MS);
         }
         function showPortCard(i) {
@@ -581,6 +621,7 @@
             $('voiceHint').textContent = '說話，船就會開 🚢';
             wordIdx = 0; showWord();
             lastVoicedAt = Date.now(); lastPromptAt = 0;
+            listenWord();
         }
 
         // ==========================================
@@ -600,6 +641,7 @@
             lastVoicedAt = Date.now();
             if (loop) clearInterval(loop);
             loop = setInterval(tick, FRAME_MS);
+            listenWord();
         });
 
         // 🔊：由系統示範口令（喇叭播音期間不算人聲，家長提示請用這個）
@@ -619,9 +661,9 @@
         // ==========================================
         // 家長面板：⚓ 與起始畫面的「家長設定」都要按住 1.2 秒（共用 initParentLongPress；輕按只提示）
         // ==========================================
-        function openPanel() { renderPanel(); $('parentPanel').classList.add('show'); busy = true; }
+        function openPanel() { renderPanel(); $('parentPanel').classList.add('show'); busy = true; if (ASR_MODE) SpeechModule.stopListening(); }
         window.openPanel = openPanel;   // 給 data-parent-longpress 呼叫
-        $('closePanel').addEventListener('click', () => { $('parentPanel').classList.remove('show'); buildRoute(); busy = false; });
+        $('closePanel').addEventListener('click', () => { $('parentPanel').classList.remove('show'); buildRoute(); busy = false; listenWord(); });
         $('restart').addEventListener('click', () => { resetVoyage(); $('parentPanel').classList.remove('show'); });
 
         function renderPanel() {
@@ -701,6 +743,7 @@
             store = await MediaStore.open(MEDIA_DB);
             if (store) { await loadMedia(); await migratePhotos(); }
             buildRoute(); showWord();
+            $('modeLine').textContent = modeText(); $('modeNote').textContent = modeText();
             if (await loadManifest()) buildRoute();
             if (params.get('setup') === '1') openPanel();
         })();
