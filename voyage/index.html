@@ -416,6 +416,13 @@
             horn(1);
             showPortCard(i);
             appendLog({ t: Date.now(), arrive: i, name: data.ports[i].name });
+            // 汽笛後稱讚：「太棒了！到基隆了！」（say() 會在播音期間關閉麥克風判定）
+            setTimeout(() => {
+                if ('speechSynthesis' in window && speechSynthesis.getVoices().length) {
+                    const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！';
+                    say(praise + ' 到' + data.ports[i].name + '了！');
+                }
+            }, 1000);
             setTimeout(() => {
                 hidePortCard();
                 legProgress = 0;

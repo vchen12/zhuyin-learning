@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.2.9
+- **版本**: v5.3.0
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -96,7 +96,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 每次發聲與抵港寫入 `voyage.log`，家長面板可看今日統計與匯出。喇叭播音（汽笛／TTS）期間關閉麥克風判定。
 
 `board/index.html`（說話板，`?set=iwant` / `?set=family`）：照片卡格 → 點卡進專注畫面 → 播示範（家人錄音，否則 TTS）
-→ `startListening(say, cb, { passMode: 'voice', hud: false })` 只確認真的發聲 → 報酬（照片放大、播家人錄的回應）
+→ `startListening(say, cb, { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: 1500 })`：只確認真的發聲，且**等他說完**（靜音 1.5 秒，容許「我要…尿尿」中間停頓）才判定，不在句中回覆 → 報酬（稱讚語 TTS → 照片放大、播家人錄的回應）
 → 家長判定列（👍 說對了／🔁 再一次；發聲後才出現，只記錄不影響報酬）→ 回卡片格。
 家人組沿用設定頁 `familySettings` 的名字與 `customImage`。卡片文字存 localStorage `board.items.<set>`；
 照片／示範／回應錄音存 IndexedDB `zhuyin-board`（key `<set>/<id>/<photo|model|reply>`）；紀錄 `board.log`。
@@ -152,6 +152,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.3.0**: 說話板等使用者說完整句才判定（`waitForEnd`／`silenceEndMs` 選項），報酬先稱讚再播回應；郵輪抵港加稱讚語。實測回饋：說到「我要」就被回覆、沒有稱讚
 - **v5.2.9**: 家人改名可一併改注音（`familySettings[].zhuyin`，`suggestZhuyin()` 自動帶入）；字詞庫家人頁改名後立即重繪；移除預設名字範例「正昇」
 - **v5.2.8**: 電腦提示改為資訊性、可關閉（電腦可正常玩；觸控更順手）
 - **v5.2.7**: 第 0 關掉落注音加「慢／中／快」速度切換（localStorage `fallSpeed`）；非觸控裝置預設慢（約 29 秒落地）

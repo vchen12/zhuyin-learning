@@ -586,6 +586,9 @@
      * @param {object} [options] - 選用：
      *   passMode: 'voice' | 'hybrid' | 'speech'  強制判定模式（例如說話板由家長判定對錯，只需確認發聲 → 'voice'）
      *   hud: false  不顯示內建聲音燈（頁面自行呈現）
+     *   waitForEnd: true  voice 模式不在發聲途中即時過關，等使用者「說完」（靜音 silenceEndMs）才判定
+     *                    —— 固定句（我要尿尿）用這個，否則說到「我要」就被回覆；聲音當搖桿的遊戲不用
+     *   silenceEndMs: 數字  判定「說完」的靜音毫秒（預設 700；語速慢、字間會停頓者可設 1200–1500）
      * @returns {boolean}
      */
     function startListening(targetText, callbacks, options) {
@@ -615,6 +618,8 @@
             sens: sens,
             gate: _gate(),
             minVoicedMs: minVoicedMs(targetText),
+            waitForEnd: !!opt.waitForEnd,
+            silenceEndMs: (opt.silenceEndMs > 0) ? opt.silenceEndMs : SILENCE_END_MS,
             startTime: Date.now(),
             // 人聲追蹤
             voicedRun: 0,
@@ -710,16 +715,18 @@
         if (cb.onVoiceLevel) cb.onVoiceLevel({ level: hudLevel, voiced: voiced, voicedMs: session.voicedMs });
         if (cb.onVoiceDuration && session.voiceConfirmed) cb.onVoiceDuration(session.voicedMs);
 
-        // 鼓勵模式：發聲夠長就立即過關，不等辨識引擎
-        if (session.passMode === 'voice' && session.voiceConfirmed && session.voicedMs >= session.minVoicedMs) {
+        // 鼓勵模式：發聲夠長就立即過關，不等辨識引擎（waitForEnd 時改為說完才判定）
+        if (session.passMode === 'voice' && !session.waitForEnd && session.voiceConfirmed && session.voicedMs >= session.minVoicedMs) {
             _end(session, 'voice');
             return;
         }
 
-        // 說完了：靜音超過 SILENCE_END_MS → 叫辨識引擎收尾，最多再等 ASR_GRACE_MS
-        if (session.voiceConfirmed && !session.speechEnded && now - session.lastVoicedAt > SILENCE_END_MS) {
+        // 說完了：靜音超過 silenceEndMs → 叫辨識引擎收尾，最多再等 ASR_GRACE_MS
+        if (session.voiceConfirmed && !session.speechEnded && now - session.lastVoicedAt > session.silenceEndMs) {
             session.speechEnded = true;
             if (cb.onSpeechEnd) cb.onSpeechEnd();
+            // voice 模式由人聲決定，不必等辨識引擎收尾
+            if (session.passMode === 'voice') { _end(session, 'evaluate'); return; }
             if (recognitionSupported && recognition && !session.asrStopRequested) {
                 session.asrStopRequested = true;
                 try { recognition.stop(); } catch (e) { /* ignore */ }
