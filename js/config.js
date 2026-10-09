@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.4.0
+ * v5.4.1
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.4.0',
+    version: '5.4.1',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
