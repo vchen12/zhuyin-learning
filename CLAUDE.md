@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.3.0
+- **版本**: v5.3.1
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -25,6 +25,7 @@ js/speech-recognition.js  - 語音辨識核心（VAD、錄音回放、閃爍動�
 js/vocabulary.js          - 詞彙資料庫（8大分類、80+詞彙）
 js/sentence-generator.js  - 句型產生器（從字詞庫動態產生遊戲內容）
 js/prevent-zoom.js        - 防止雙擊放大
+js/photo-crop.js          - 共用照片裁切（PhotoCrop.open(file,{aspect,outWidth}) → dataURL；拖曳／雙指／滑桿縮放／整張使用）
 sw.js                     - Service Worker 快取策略
 settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 ```
@@ -152,6 +153,7 @@ settings.html             - 設定頁面（字詞庫管理、麥克風測試）
 
 ## 版本歷史重點
 
+- **v5.3.1**: 共用照片裁切模組 `js/photo-crop.js`；設定頁家人照片、說話板卡片、郵輪照片皆可從合照框出臉孔（並縮圖，避免整張原圖塞爆 localStorage）
 - **v5.3.0**: 說話板等使用者說完整句才判定（`waitForEnd`／`silenceEndMs` 選項），報酬先稱讚再播回應；郵輪抵港加稱讚語。實測回饋：說到「我要」就被回覆、沒有稱讚
 - **v5.2.9**: 家人改名可一併改注音（`familySettings[].zhuyin`，`suggestZhuyin()` 自動帶入）；字詞庫家人頁改名後立即重繪；移除預設名字範例「正昇」
 - **v5.2.8**: 電腦提示改為資訊性、可關閉（電腦可正常玩；觸控更順手）

@@ -1023,6 +1023,7 @@
     <!-- 載入詞彙資料庫 -->
     <script src="js/config.js"></script>
     <script src="js/vocabulary.js"></script>
+    <script src="js/photo-crop.js"></script>
     <script>
         // ==========================================
         // 通用 Modal 替代 prompt()（大輸入框，適合失語症患者）
@@ -1546,17 +1547,16 @@
                 const file = e.target.files[0];
                 if (!file) return;
 
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const member = familySettings.find(m => m.id === memberId);
-                    if (member) {
-                        member.customImage = event.target.result;
-                        localStorage.setItem('familySettings', JSON.stringify(familySettings));
-                        renderSystemWords('family');
-                        showToast(`已更新「${member.name}」的照片`, 'success');
-                    }
-                };
-                reader.readAsDataURL(file);
+                // 裁切（從合照中框出臉孔）；取消則不變更
+                const member = familySettings.find(m => m.id === memberId);
+                PhotoCrop.open(file, { aspect: 1, outWidth: 600, title: '✂️ 選出「' + (member ? member.name : '') + '」的臉', hint: '拖曳移動、滑桿或雙指縮放，把臉放進框裡' }).then(dataUrl => {
+                    if (!dataUrl || !member) return;
+                    member.customImage = dataUrl;
+                    localStorage.setItem('familySettings', JSON.stringify(familySettings));
+                    renderSystemWords('family');
+                    renderFamilyGrid();
+                    showToast(`已更新「${member.name}」的照片`, 'success');
+                });
             };
             input.click();
         }
@@ -1570,18 +1570,17 @@
                 const file = e.target.files[0];
                 if (!file) return;
 
-                const reader = new FileReader();
-                reader.onload = (event) => {
+                PhotoCrop.open(file, { aspect: 1, outWidth: 600, title: '✂️ 選出「' + memberName + '」的臉', hint: '拖曳移動、滑桿或雙指縮放，把臉放進框裡' }).then(dataUrl => {
+                    if (!dataUrl) return;
                     loadVocabularyModifications();
                     const member = (vocabularyModifications.added['family'] || []).find(m => m.text === memberName);
                     if (member) {
-                        member.customImage = event.target.result;
+                        member.customImage = dataUrl;
                         saveVocabularyModifications();
                         renderSystemWords('family');
                         showToast(`已更新「${memberName}」的照片`, 'success');
                     }
-                };
-                reader.readAsDataURL(file);
+                });
             };
             input.click();
         }
