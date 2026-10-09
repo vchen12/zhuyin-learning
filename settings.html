@@ -602,10 +602,10 @@
             <div class="section-title">👤 使用者名稱</div>
             <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
                 設定使用者的名稱，系統會在稱讚或提示時加上名字，<br>
-                例如「小乖，你好棒！」或「正昇，再試一次！」
+                例如「小乖，你好棒！」或「小明，再試一次！」
             </p>
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <input type="text" id="userName" class="modal-input" placeholder="輸入使用者名稱（例如：小乖、正昇）" style="flex: 1; min-width: 200px; margin: 0;">
+                <input type="text" id="userName" class="modal-input" placeholder="輸入使用者名稱（例如：小乖、小明）" style="flex: 1; min-width: 200px; margin: 0;">
                 <button class="save-btn" onclick="saveUserName()" style="margin: 0; padding: 15px 25px;">💾 儲存名稱</button>
             </div>
             <div id="userNamePreview" style="margin-top: 15px; padding: 15px; background: #f0f8ff; border-radius: 15px; display: none;">
@@ -984,7 +984,9 @@
     <div class="modal" id="renameModal">
         <div class="modal-content">
             <div class="modal-title">✏️ 重新命名</div>
-            <input type="text" class="modal-input" id="renameInput" placeholder="輸入新名稱">
+            <input type="text" class="modal-input" id="renameInput" placeholder="輸入新名稱（例如：阿嬤）" oninput="onRenameInput()">
+            <input type="text" class="modal-input" id="renameZhuyin" placeholder="注音（例如：ㄚ ㄇㄚˋ，音節間空一格）">
+            <div id="renameZhuyinHint" style="font-size: 0.8rem; color: #888; margin: -6px 0 8px;">改名後會自動帶入注音；查不到的字請自行輸入。</div>
             <div class="modal-buttons">
                 <button class="modal-btn cancel" onclick="closeModal()">取消</button>
                 <button class="modal-btn confirm" onclick="confirmRename()">確認</button>
@@ -1417,7 +1419,8 @@
             // 渲染系統家人卡片（帶啟用/停用和改名功能）
             const systemFamilyHtml = familySettings.map((member, index) => {
                 const vocabWord = vocab.words.find(w => DEFAULT_FAMILY[index] && w.text === DEFAULT_FAMILY[index].name);
-                const zhuyin = vocabWord ? vocabWord.zhuyin : '';
+                const renamed = DEFAULT_FAMILY[index] && member.name !== DEFAULT_FAMILY[index].name;
+                const zhuyin = member.zhuyin || (renamed && typeof suggestZhuyin === 'function' ? suggestZhuyin(member.name) : '') || (vocabWord ? vocabWord.zhuyin : '');
 
                 return `
                     <div class="word-card" style="position: relative; ${!member.enabled ? 'opacity: 0.5; border-color: #f44336; background: #ffebee;' : ''}">
@@ -3010,7 +3013,22 @@
             currentEditingId = id;
             const member = familySettings.find(m => m.id === id);
             document.getElementById('renameInput').value = member.name;
+            document.getElementById('renameZhuyin').value = member.zhuyin || defaultFamilyZhuyin(member.id);
             document.getElementById('renameModal').classList.add('show');
+        }
+        // 預設家人的原始注音（依 id 查 vocabulary.js）
+        function defaultFamilyZhuyin(id) {
+            const def = DEFAULT_FAMILY.find(m => m.id === id);
+            const w = def && typeof VOCABULARY !== 'undefined' ? VOCABULARY.family.words.find(x => x.text === def.name) : null;
+            return w ? w.zhuyin : '';
+        }
+        // 改名時自動帶入注音（查得到才帶）
+        function onRenameInput() {
+            const name = document.getElementById('renameInput').value.trim();
+            const z = typeof suggestZhuyin === 'function' ? suggestZhuyin(name) : '';
+            const hint = document.getElementById('renameZhuyinHint');
+            if (z) { document.getElementById('renameZhuyin').value = z; hint.textContent = '已自動帶入注音，可修改。'; }
+            else { hint.textContent = '查不到這些字的注音，請自行輸入（音節間空一格）。'; }
         }
 
         // 關閉 Modal
@@ -3022,13 +3040,17 @@
         // 確認重命名
         function confirmRename() {
             const newName = document.getElementById('renameInput').value.trim();
+            const newZhuyin = document.getElementById('renameZhuyin').value.trim();
             if (newName && currentEditingId) {
                 const member = familySettings.find(m => m.id === currentEditingId);
                 member.name = newName;
+                member.zhuyin = newZhuyin;   // 空字串＝沿用原始注音
                 // 自動儲存到 localStorage
                 localStorage.setItem('familySettings', JSON.stringify(familySettings));
                 renderFamilyGrid();
-                showToast(`已改名為「${newName}」`, 'success');
+                // 字詞庫頁若正顯示「家人」類別，同步重繪（之前只重繪角色設定區，這裡看起來像沒改到）
+                if (currentVocabCategory === 'family') renderSystemWords('family');
+                showToast(`已改名為「${newName}」${newZhuyin ? '（' + newZhuyin + '）' : ''}`, 'success');
             }
             closeModal();
         }
