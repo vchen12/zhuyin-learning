@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.7.0
+ * v5.7.1
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.7.0',
+    version: '5.7.1',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -389,6 +389,20 @@ function getJudgeMode() {
 }
 function setJudgeMode(v) {
     localStorage.setItem('judgeMode', v === 'asr' ? 'asr' : 'parent');
+}
+
+/**
+ * 「說完了」的判定：他停多久不出聲才算說完一句（毫秒）。說得慢、字與字之間會停頓的人要設長一點，
+ * 否則「我要…尿尿」說到一半就被稱讚或問家長（郵輪門檻 > 0 時與說話板共用）
+ */
+const SPEECH_END_OPTIONS = [1500, 2500, 4000];
+function getSpeechEndMs() {
+    const v = parseInt(localStorage.getItem('speechEndMs'), 10);
+    return SPEECH_END_OPTIONS.indexOf(v) >= 0 ? v : 1500;
+}
+function setSpeechEndMs(v) {
+    v = parseInt(v, 10);
+    if (SPEECH_END_OPTIONS.indexOf(v) >= 0) localStorage.setItem('speechEndMs', String(v));
 }
 
 function getSingleSyllableMode() {
@@ -898,7 +912,7 @@ if (typeof module !== 'undefined' && module.exports) {
         // 語音相似度追蹤系統
         getUserMode, setUserMode, getThresholdPresets, getAphasiaBonus,
         getSimilarityThreshold, setSimilarityThreshold, calculateSimilarity,
-        getVoiceSensitivity, setVoiceSensitivity, getJudgeMode, setJudgeMode, getSingleSyllableMode, setSingleSyllableMode,
+        getVoiceSensitivity, setVoiceSensitivity, getJudgeMode, setJudgeMode, getSpeechEndMs, setSpeechEndMs, SPEECH_END_OPTIONS, getSingleSyllableMode, setSingleSyllableMode,
         getShowVoiceHud, setShowVoiceHud, initParentLongPress,
         getPronunciationRecords, recordPronunciation, getPronunciationRecord,
         getPronunciationReport, clearPronunciationRecords, exportPronunciationRecords,

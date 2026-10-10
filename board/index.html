@@ -165,6 +165,7 @@
         const SETS = {
             iwant: {
                 title: '我要…', startHint: '點一張圖，聽完示範，說「我要…」。<br>說了就有回應；對不對由家長按。',
+                intro: '想要什麼，就點那張圖。聽我說一次，再跟我說一次。',
                 note: '卡片是他日常真的會說的需求。照片建議用家裡實物（他的毛巾、家裡的馬桶）。「示範」錄家長唸一次；「回應」錄家人的答覆（例如「好，我們去尿尿」），沒有錄音就用合成語音。',
                 prefix: '我要',
                 defaults: [
@@ -181,6 +182,7 @@
             },
             family: {
                 title: '叫家人', startHint: '點一個家人，聽完示範，叫他。<br>叫了，家人就會回應。',
+                intro: '想叫誰，就點那個人。聽我說一次，再跟我說一次。',
                 note: '家人照片沿用「設定」頁上傳的；也可在此另外選。「回應」請家人本人錄一句（例如媽媽錄「媽媽在這裡～」），這是這個板的核心報酬。',
                 prefix: '',
                 defaults: null   // 從 familySettings 讀取
@@ -198,7 +200,7 @@
         const THRESHOLD = typeof getSimilarityThreshold === 'function' ? getSimilarityThreshold() : 0;   // 設定頁過關門檻
         // 判定方式：voice（門檻 0：有說話就有回應）／parent（門檻 > 0 預設：說完先由家長按住 👍，才給回應）／asr（設定頁選語音辨識引擎）
         const JUDGE = THRESHOLD === 0 ? 'voice' : ((typeof getJudgeMode === 'function' ? getJudgeMode() : 'parent') === 'asr' ? 'asr' : 'parent');
-        const SILENCE_END_MS = 1500; // 說完的判定：靜音 1.5 秒（他在「我要」與「尿尿」之間會停頓，要等得夠久）
+        const SILENCE_END_MS = typeof getSpeechEndMs === 'function' ? getSpeechEndMs() : 1500;   // 說完的判定（設定頁可調 1.5／2.5／4 秒；他在「我要」與「尿尿」之間會停頓）
 
         // ==========================================
         // 資料：卡片文字（localStorage）＋ 媒體（IndexedDB）
@@ -301,6 +303,7 @@
         function setStatus(t) { $('focusStatus').textContent = t; }
 
         async function enterFocus(it) {
+            clearTimeout(idleTimer); idleIntros = 0;
             current = it; timeouts = 0; lastUtter = null; focusActive = true;
             const f = $('focus');
             f.classList.remove('reward', 'voiced', 'loud');
@@ -322,6 +325,7 @@
             SpeechModule.stopListening();
             $('focus').classList.remove('show', 'reward');
             renderGrid();
+            armIdleIntro();
         }
 
         /** 播示範：家人錄音優先，否則 TTS。播放期間喇叭閘門會排除麥克風判定。 */
@@ -463,11 +467,26 @@
         // ==========================================
         $('startBtn').addEventListener('click', async () => {
             $('startErr').textContent = '';
+            // 先用語音告訴他怎麼玩（同步、在點擊事件內：iOS 只播手勢觸發的語音，這一下也解鎖後面的示範與稱讚）
+            SpeechModule.speak(CFG.intro || '點一張圖，聽我說一次，再跟我說一次。', 0.9);
             const ok = await SpeechModule.init();
             if (!ok) { $('startErr').textContent = '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風。'; return; }
             SpeechModule.setHud(false);
             $('startOverlay').style.display = 'none';
+            armIdleIntro();
         });
+        // 卡片格放著 20 秒沒點任何圖：再說一次怎麼玩（最多兩次，不一直唸）
+        let idleTimer = null, idleIntros = 0;
+        function armIdleIntro() {
+            clearTimeout(idleTimer);
+            if (idleIntros >= 2) return;
+            idleTimer = setTimeout(() => {
+                if (focusActive || $('panel').classList.contains('show')) return;
+                idleIntros++;
+                SpeechModule.speak(CFG.intro || '點一張圖，聽我說一次，再跟我說一次。', 0.9);
+                armIdleIntro();
+            }, 20000);
+        }
 
         // ==========================================
         // 家長面板：⚓ 與「家長設定」鈕都要按住 1.2 秒（共用 initParentLongPress；輕按只提示）

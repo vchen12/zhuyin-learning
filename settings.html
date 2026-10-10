@@ -731,6 +731,12 @@
                     <button data-value="normal" onclick="setVoiceSensitivityUI('normal')" style="flex:1; min-width:100px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">🎚️ 中<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">預設</div></button>
                     <button data-value="low" onclick="setVoiceSensitivityUI('low')" style="flex:1; min-width:100px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">🔉 低<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">環境吵雜用</div></button>
                 </div>
+                <div style="color: #555; font-size: 0.9rem; margin-bottom: 8px;">說話板／郵輪：他停多久不出聲才算「說完一句」（說得慢、字間會停頓就設長一點，否則說到一半就被稱讚）</div>
+                <div id="speechEndBtns" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
+                    <button data-value="1500" onclick="setSpeechEndMsUI(1500)" style="flex:1; min-width:100px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">1.5 秒<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">預設</div></button>
+                    <button data-value="2500" onclick="setSpeechEndMsUI(2500)" style="flex:1; min-width:100px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">2.5 秒<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">說得慢</div></button>
+                    <button data-value="4000" onclick="setSpeechEndMsUI(4000)" style="flex:1; min-width:100px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">4 秒<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">字間停很久</div></button>
+                </div>
                 <div style="color: #555; font-size: 0.9rem; margin-bottom: 8px;">門檻 &gt; 0 時，郵輪與說話板「說對了沒」由誰判定</div>
                 <div id="judgeModeBtns" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
                     <button data-value="parent" onclick="setJudgeModeUI('parent')" style="flex:1; min-width:140px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">👨‍👩‍👧 家長判定<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">說完後家長按住 👍 才算對（推薦）</div></button>
@@ -1669,6 +1675,14 @@
                 btn.style.borderColor = on ? '#667eea' : '#e0e0e0';
                 btn.querySelector('div').style.color = on ? 'rgba(255,255,255,0.85)' : '#888';
             });
+            const endMs = getSpeechEndMs();
+            document.querySelectorAll('#speechEndBtns button').forEach(btn => {
+                const on = parseInt(btn.dataset.value, 10) === endMs;
+                btn.style.background = on ? '#667eea' : '#fff';
+                btn.style.color = on ? 'white' : '';
+                btn.style.borderColor = on ? '#667eea' : '#e0e0e0';
+                btn.querySelector('div').style.color = on ? 'rgba(255,255,255,0.85)' : '#888';
+            });
             const judge = getJudgeMode();
             document.querySelectorAll('#judgeModeBtns button').forEach(btn => {
                 const on = btn.dataset.value === judge;
@@ -1681,6 +1695,11 @@
             if (hud) hud.checked = getShowVoiceHud();
             const strict = document.getElementById('singleSyllableStrict');
             if (strict) strict.checked = getSingleSyllableMode() === 'strict';
+        }
+        function setSpeechEndMsUI(v) {
+            setSpeechEndMs(v);
+            renderVoiceSettings();
+            showToast('說完判定：停 ' + (v / 1000) + ' 秒不出聲才算說完', 'success');
         }
         function setJudgeModeUI(v) {
             setJudgeMode(v);
@@ -2621,6 +2640,7 @@
             localStorage.removeItem('similarityThreshold');
             localStorage.removeItem('voiceSensitivity');
             localStorage.removeItem('judgeMode');
+            localStorage.removeItem('speechEndMs');
             localStorage.removeItem('singleSyllableMode');
             localStorage.removeItem('showVoiceHud');
 
