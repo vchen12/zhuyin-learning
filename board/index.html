@@ -115,8 +115,8 @@
         <div id="voiceBar"><div id="voiceFill"></div></div>
         <div id="focusHeard"></div>
         <div id="verdict">
-            <button class="vbtn ok" data-v="ok">👍 說對了</button>
-            <button class="vbtn" data-v="again">🔁 再一次</button>
+            <button class="vbtn ok" data-parent-longpress="verdictOk" data-parent-hint="家長按住 👍 約一秒才算說對">👍 說對了（按住）</button>
+            <button class="vbtn" id="verdictAgainBtn">🔁 再一次</button>
         </div>
     </div>
 
@@ -195,7 +195,9 @@
         const REWARD_MS = 2600;      // 報酬（照片放大＋回應）之後才出現家長判定列
         const VERDICT_WAIT_MS = 7000; // 家長沒按就自動回到卡片格
         const MAX_TIMEOUTS = 3;      // 連續幾次完全沒聲音就回卡片格
-        const THRESHOLD = typeof getSimilarityThreshold === 'function' ? getSimilarityThreshold() : 0;   // 設定頁過關門檻：0 = 有說話就算；>0 = 辨識要夠像
+        const THRESHOLD = typeof getSimilarityThreshold === 'function' ? getSimilarityThreshold() : 0;   // 設定頁過關門檻
+        // 判定方式：voice（門檻 0：有說話就有回應）／parent（門檻 > 0 預設：說完先由家長按住 👍，才給回應）／asr（設定頁選語音辨識引擎）
+        const JUDGE = THRESHOLD === 0 ? 'voice' : ((typeof getJudgeMode === 'function' ? getJudgeMode() : 'parent') === 'asr' ? 'asr' : 'parent');
         const SILENCE_END_MS = 1500; // 說完的判定：靜音 1.5 秒（他在「我要」與「尿尿」之間會停頓，要等得夠久）
 
         // ==========================================
@@ -327,17 +329,15 @@
             setStatus('🔊 聽示範…');
             const url = modelUrl(it);
             if (url) return playUrl(url);
-            if (!('speechSynthesis' in window) || !speechSynthesis.getVoices().length) return Promise.resolve();
-            return SpeechModule.speak(it.say, 0.85);
+            // 不用 getVoices() 守門：iOS 常常先回空清單，守門會讓示範整個不出聲（他就只會一直按圖片）
+            return SpeechModule.speak('跟我說：' + it.say, 0.85);
         }
         function speakPraise(text) {
-            if (!('speechSynthesis' in window) || !speechSynthesis.getVoices().length) return Promise.resolve();
             return SpeechModule.speak(text, 0.95);
         }
         function playReply(it) {
             const url = replyUrl(it);
             if (url) return playUrl(url);
-            if (!('speechSynthesis' in window) || !speechSynthesis.getVoices().length) return Promise.resolve();
             return SpeechModule.speak(it.reply || '好', 0.9);
         }
         function playUrl(url) {
@@ -367,24 +367,36 @@
                 onResult: r => {
                     if (!focusActive || current !== it) return;
                     if (r.transcript) $('focusHeard').textContent = '聽到：' + r.transcript;
-                    if (r.passed) { reward(it, r); return; }
-                    // 門檻 0：不過關只會是發聲太短；門檻 > 0：辨識結果與卡片文字不夠像
-                    setStatus(THRESHOLD > 0 ? (r.transcript ? '聽到「' + r.transcript + '」，再說一次「' + it.say + '」' : '沒辨識出字，再說一次「' + it.say + '」') : '再說一次，說完整');
+                    if (r.passed) { if (JUDGE === 'parent') askVerdict(it, r); else reward(it, r); return; }
+                    // voice／parent：不過關只會是發聲太短；asr：辨識結果與卡片文字不夠像
+                    setStatus(JUDGE === 'asr' ? (r.transcript ? '聽到「' + r.transcript + '」，再說一次「' + it.say + '」' : '沒辨識出字，再說一次「' + it.say + '」') : '再說一次，說完整');
                     setTimeout(listen, 600);
                 },
-                onTimeout: info => {
+                onTimeout: async info => {
                     if (!focusActive || current !== it) return;
                     timeouts++;
                     setStatus(info.noiseOnly ? '🔊 那不是說話聲，用嘴巴說' : '沒聽到聲音');
                     if (timeouts >= MAX_TIMEOUTS) { exitFocus(); return; }
-                    setTimeout(listen, 800);
+                    await playModel(it);   // 沒聽到就再提示一次「跟我說：…」，不是只等
+                    if (focusActive && current === it) listen();
                 },
                 onError: () => { setStatus('❌ 麥克風無法使用'); }
-            }, Object.assign({ hud: false, waitForEnd: true, silenceEndMs: SILENCE_END_MS }, THRESHOLD > 0 ? {} : { passMode: 'voice' }));   // 等他說完整句才判定；門檻 > 0 交給 SpeechModule 依相似度判
+            }, Object.assign({ hud: false, waitForEnd: true, silenceEndMs: SILENCE_END_MS }, JUDGE === 'asr' ? {} : { passMode: 'voice' }));   // 等他說完整句才判定；asr 交給 SpeechModule 依相似度判
             if (!ok) setTimeout(listen, 500);
         }
 
-        async function reward(it, r) {
+        /** 家長判定模式：他說完了 → 先問家長「像嗎？」，按住 👍 才給報酬；🔁 再說一次 */
+        function askVerdict(it, r) {
+            $('focus').classList.remove('voiced', 'loud');
+            lastUtter = { t: Date.now(), set: SET, id: it.id, say: it.say, ms: r.voicedMs, basis: 'parent', transcript: r.transcript || '' };
+            appendLog(Object.assign({ verdict: 'pending' }, lastUtter));
+            setStatus('他說的像「' + it.say + '」嗎？');
+            $('verdict').classList.add('show');
+            clearTimeout(verdictTimer);
+            verdictTimer = setTimeout(() => { recordVerdict('auto'); exitFocus(); }, VERDICT_WAIT_MS);
+        }
+
+        async function reward(it, r, judged) {
             const f = $('focus');
             f.classList.remove('voiced', 'loud');
             f.classList.add('reward');
@@ -392,12 +404,15 @@
             const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！';
             setStatus('🌟 ' + praise);
             if (navigator.vibrate) navigator.vibrate([80, 40, 120]);
-            lastUtter = { t: Date.now(), set: SET, id: it.id, say: it.say, ms: r.voicedMs, basis: r.basis, transcript: r.transcript || '' };
-            appendLog(Object.assign({ verdict: 'pending' }, lastUtter));
+            if (!judged) {
+                lastUtter = { t: Date.now(), set: SET, id: it.id, say: it.say, ms: r.voicedMs, basis: r.basis, transcript: r.transcript || '' };
+                appendLog(Object.assign({ verdict: 'pending' }, lastUtter));
+            }
             await speakPraise(praise);
             if (!focusActive || current !== it) return;
             await playReply(it);
             if (!focusActive || current !== it) return;
+            if (judged) { setTimeout(exitFocus, 700); return; }   // 家長已經判過了
             // 家長判定列：發聲之後才出現，按了只是記錄，不影響已給的報酬
             $('verdict').classList.add('show');
             clearTimeout(verdictTimer);
@@ -414,17 +429,25 @@
             lastUtter = null;
         }
 
-        document.querySelectorAll('#verdict .vbtn').forEach(b => b.addEventListener('click', async e => {
-            const v = e.currentTarget.dataset.v;
+        // 👍 要按住 1.2 秒（data-parent-longpress；他亂按不會算對）；🔁 單點
+        async function onVerdict(v) {
+            if (!$('verdict').classList.contains('show')) return;
+            const it = current, judged = lastUtter && lastUtter.basis === 'parent';
+            const r = lastUtter ? { voicedMs: lastUtter.ms, basis: 'parent', transcript: lastUtter.transcript } : {};
             clearTimeout(verdictTimer);
             recordVerdict(v);
             $('verdict').classList.remove('show');
-            if (v === 'ok') { setStatus('👍'); setTimeout(exitFocus, 700); return; }
+            if (v === 'ok') {
+                if (judged) { reward(it, r, true); return; }   // 家長判定模式：此時才給報酬
+                setStatus('👍'); setTimeout(exitFocus, 700); return;
+            }
             // 再一次：重播示範再聽
-            const it = current; $('focus').classList.remove('reward');
+            $('focus').classList.remove('reward');
             await playModel(it);
             if (focusActive && current === it) listen();
-        }));
+        }
+        window.verdictOk = () => onVerdict('ok');
+        $('verdictAgainBtn').addEventListener('click', () => onVerdict('again'));
         $('exitFocus').addEventListener('click', () => { clearTimeout(verdictTimer); if (lastUtter) recordVerdict('skip'); exitFocus(); });
         // 觸碰照片＝再聽一次示範（播放期間不算人聲），然後繼續聽
         $('focusPicWrap').addEventListener('click', async () => {
@@ -573,7 +596,7 @@
             document.title = CFG.title + ' — 說話板';
             $('title').textContent = CFG.title;
             $('startTitle').textContent = CFG.title;
-            $('startHint').innerHTML = CFG.startHint + '<br><span style="opacity:.8">' + (THRESHOLD > 0 ? '過關門檻 ' + THRESHOLD + '%：要說得夠像卡片的字才有回應' : '鼓勵模式（門檻 0%）：有說話就有回應') + '（在「個人化設定」調整）</span>';
+            $('startHint').innerHTML = CFG.startHint + '<br><span style="opacity:.8">' + (JUDGE === 'voice' ? '鼓勵模式（門檻 0%）：有說話就有回應' : JUDGE === 'parent' ? '門檻 ' + THRESHOLD + '%，家長判定：他說完後家長按住 👍 才有回應' : '門檻 ' + THRESHOLD + '%，語音辨識引擎判定：要辨識出卡片的字才有回應') + '（在「個人化設定」調整）</span>';
             db = await openDb();
             await loadAllMedia();
             items = loadItems();

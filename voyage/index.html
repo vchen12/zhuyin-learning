@@ -94,6 +94,17 @@
                  pointer-events: none; z-index: 40; }
         #toast.show { opacity: 1; }
 
+        /* 家長判定列（門檻 > 0、家長判定模式：說完一個詞才出現） */
+        #verdict { position: absolute; left: 50%; bottom: 16%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center;
+                   gap: 1.5vmin; background: rgba(16,69,111,.92); color: #fff; border-radius: 3vmin; padding: 2vmin 3vmin; z-index: 15;
+                   box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+        #verdict.show { display: flex; }
+        #verdictQ { font-size: 3.6vmin; font-weight: 700; }
+        #verdict .vrow { display: flex; gap: 2vmin; }
+        .vbtn { font-size: 4vmin; padding: 2.2vmin 4vmin; border: none; border-radius: 99px; font-weight: 800; color: #10456f; background: #fff;
+                box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+        .vbtn.ok { background: #ffd86b; }
+
         /* 港口卡片（照片揭示） */
         #portCard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.6); opacity: 0; pointer-events: none;
                     width: min(70vmin, 90vw); background: #fff; border-radius: 3vmin; padding: 2vmin; box-shadow: 0 20px 60px rgba(0,0,0,.45);
@@ -179,6 +190,13 @@
         <div id="prompt"><span class="lead">說</span><span id="promptWord">郵輪</span><button id="promptPlay" title="聽示範">🔊</button></div>
         <div id="voiceHint">說話，船就會開 🚢</div>
         <div id="voiceBar"><div id="voiceFill"></div></div>
+        <div id="verdict">
+            <div id="verdictQ">他說的像「郵輪」嗎？</div>
+            <div class="vrow">
+                <button class="vbtn ok" data-parent-longpress="verdictOk" data-parent-hint="家長按住 👍 約一秒才算說對">👍 說對了（按住）</button>
+                <button class="vbtn" id="verdictAgainBtn">🔁 再一次</button>
+            </div>
+        </div>
         <div id="portCard"><div id="portMedia"></div><div class="name" id="portName"></div></div>
         <div id="finale"><h2>🎉 到了！</h2><div id="finaleStrip"></div><p style="font-size:3.6vmin;opacity:.85">等一下會再出航一次</p></div>
     </div>
@@ -265,7 +283,11 @@
         const MEDIA_DB = 'zhuyin-media', MEDIA_PREFIX = 'voyage/';   // 照片存 IndexedDB（localStorage 只有約 5MB，存四五張就滿）
         // 過關門檻（設定頁）：0 = 鼓勵模式，有說話就抵港；>0 = 要說對口令（辨識相似度 ≥ 門檻）才抵港，船照樣隨聲音前進
         const THRESHOLD = typeof getSimilarityThreshold === 'function' ? getSimilarityThreshold() : 0;
-        const ASR_MODE = THRESHOLD > 0 && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+        const HAS_SR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+        // 判定方式：voice（門檻 0，有說話就抵港）／parent（門檻 > 0 預設：說完由家長按住 👍 才進港）／asr（門檻 > 0 且設定頁選語音辨識引擎）
+        const JUDGE = THRESHOLD === 0 ? 'voice' : ((typeof getJudgeMode === 'function' ? getJudgeMode() : 'parent') === 'asr' && HAS_SR ? 'asr' : 'parent');
+        const ASR_MODE = JUDGE === 'asr', PARENT_MODE = JUDGE === 'parent';
+        const VERDICT_WAIT_MS = 12000;   // 家長判定列最多等多久（沒按＝再一次，繼續聽）
 
         // ==========================================
         // 狀態
@@ -511,9 +533,38 @@
             if (now - lastMissAt > 6000) { lastMissAt = now; say('再說一次：' + word); }
         }
         function modeText() {
-            if (!ASR_MODE) return THRESHOLD > 0 ? '門檻 ' + THRESHOLD + '%，但這個瀏覽器沒有語音辨識，改為有說話就抵港' : '鼓勵模式（門檻 0%）：有說話就抵港';
-            return '門檻 ' + THRESHOLD + '%：要說對口令才抵港（在「個人化設定」調整）';
+            if (JUDGE === 'voice') return '鼓勵模式（門檻 0%）：有說話就抵港';
+            if (JUDGE === 'parent') return '門檻 ' + THRESHOLD + '%，家長判定：他說完後，家長按住 👍 才進港（在「個人化設定」調整）';
+            return '門檻 ' + THRESHOLD + '%，語音辨識引擎判定：要辨識出口令才進港（在「個人化設定」調整）';
         }
+
+        // ==========================================
+        // 家長判定模式：說完一個詞 → 船停在港前、出現判定列；家長按住 👍 進港，🔁 再說一次
+        // ==========================================
+        let verdictTimer = null, verdictWord = '';
+        function askVerdict() {
+            busy = true; verdictWord = currentWord();
+            setEngine(false);
+            $('verdictQ').textContent = '他說的像「' + verdictWord + '」嗎？';
+            $('verdict').classList.add('show');
+            clearTimeout(verdictTimer);
+            verdictTimer = setTimeout(() => verdictAgain(true), VERDICT_WAIT_MS);
+        }
+        function hideVerdict() { clearTimeout(verdictTimer); $('verdict').classList.remove('show'); }
+        function verdictOk() {
+            if (!$('verdict').classList.contains('show')) return;
+            hideVerdict();
+            appendLog({ t: Date.now(), verdict: 'ok', word: verdictWord });
+            busy = false; arrive();
+        }
+        function verdictAgain(auto) {
+            if (!$('verdict').classList.contains('show')) return;
+            hideVerdict();
+            appendLog({ t: Date.now(), verdict: auto ? 'auto' : 'again', word: verdictWord });
+            busy = false; lastVoicedAt = Date.now();
+            if (!auto) { $('voiceHint').textContent = '再說一次：' + verdictWord + ' 🎤'; say('再說一次：' + verdictWord); }
+        }
+        window.verdictOk = verdictOk;   // 👍 以 data-parent-longpress 呼叫（按住 1.2 秒，他亂按不會進港）
 
         // ==========================================
         // 主迴圈：聲音 → 船
@@ -548,7 +599,7 @@
                     setEngine(true);
                     legProgress += FRAME_MS / LEG_FULL_MS;
                     if (legProgress >= 1) {
-                        if (ASR_MODE) { legProgress = 0.97; }   // 門檻模式：船停在港口前，等辨識說對了才進港
+                        if (JUDGE !== 'voice') { legProgress = 0.97; }   // 門檻模式：船停在港口前，等「說對了」才進港
                         else {
                             // 持續發聲把本段走完：結算這次發聲（避免「說完」規則再抵港一次），直接抵港
                             utterOpen = false;
@@ -569,7 +620,8 @@
                     const span = lastVoicedAt - utterStart;
                     if (utterConfirmed && (utterMs >= UTTER_MIN_MS || span >= UTTER_SPAN_MS)) {
                         appendLog({ t: utterStart, ms: utterMs, peak: +utterPeak.toFixed(4), leg: leg });
-                        if (!ASR_MODE) { arrive(); return; }   // 門檻模式：抵不抵港由辨識會話決定（listenWord）
+                        if (JUDGE === 'voice') { arrive(); return; }
+                        if (PARENT_MODE) { askVerdict(); return; }   // asr：抵不抵港由辨識會話決定（listenWord）
                     }
                 }
             }
@@ -622,6 +674,7 @@
             setTimeout(() => { $('finale').classList.remove('show'); resetVoyage(); }, FINALE_MS);
         }
         function resetVoyage() {
+            hideVerdict();
             leg = 0; legProgress = 0; finished = false; busy = false; utterOpen = false; voicedRun = 0;
             setEngine(false); updatePorts(); placeShip(); hidePortCard(); $('finale').classList.remove('show');
             $('voiceHint').textContent = '說話，船就會開 🚢';
@@ -669,8 +722,9 @@
         // ==========================================
         // 家長面板：⚓ 與起始畫面的「家長設定」都要按住 1.2 秒（共用 initParentLongPress；輕按只提示）
         // ==========================================
-        function openPanel() { renderPanel(); $('parentPanel').classList.add('show'); busy = true; if (ASR_MODE) SpeechModule.stopListening(); }
+        function openPanel() { hideVerdict(); renderPanel(); $('parentPanel').classList.add('show'); busy = true; if (ASR_MODE) SpeechModule.stopListening(); }
         window.openPanel = openPanel;   // 給 data-parent-longpress 呼叫
+        $('verdictAgainBtn').addEventListener('click', () => verdictAgain(false));
         $('closePanel').addEventListener('click', () => { $('parentPanel').classList.remove('show'); buildRoute(); busy = false; listenWord(); });
         $('restart').addEventListener('click', () => { resetVoyage(); $('parentPanel').classList.remove('show'); });
 
