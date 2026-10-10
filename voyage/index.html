@@ -270,7 +270,8 @@
         const ENGINE_OFF_MS = 320;       // 靜音多久引擎停
         const UTTER_MIN_MS = 150;        // 一個「詞」至少累計有聲多久（母音部分）
         const UTTER_SPAN_MS = 250;       // 或：第一聲到最後一聲的跨度（含子音與音節間的停頓）≥ 此值也算一個詞（「出發」「嘟嘟」）
-        const UTTER_END_MS = 450;        // 發聲後靜音多久算說完
+        const UTTER_END_MS = 450;        // 鼓勵模式：發聲後靜音多久算說完
+        const SPEECH_END_MS = typeof getSpeechEndMs === 'function' ? getSpeechEndMs() : 1500;   // 門檻 > 0：用設定頁的「說完」判定（說得慢的人字間會停）
         const LEG_FULL_MS = 1400;        // 持續發聲多久走完一段航程
         const CARD_MS = 3200;            // 港口照片顯示時間
         const FINALE_MS = 9000;          // 終點畫面停留時間，之後自動再出航
@@ -613,7 +614,7 @@
                 voicedRun = 0;
                 if (engineOn && now - lastVoicedAt > ENGINE_OFF_MS) setEngine(false);
                 // 說完一個詞：發聲夠長且靜音夠久
-                if (utterOpen && now - lastVoicedAt > UTTER_END_MS) {
+                if (utterOpen && now - lastVoicedAt > (JUDGE === 'voice' ? UTTER_END_MS : SPEECH_END_MS)) {
                     utterOpen = false;
                     // 核心承諾：說完一個詞就抵達下一個港口；進度只影響途中的視覺移動。
                     // 「詞」＝確認過人聲，且（累計有聲 ≥ UTTER_MIN_MS 或 首尾跨度 ≥ UTTER_SPAN_MS）——兩音節短詞的母音很短，不能只算有聲幀

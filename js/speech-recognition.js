@@ -672,7 +672,8 @@
         if (_ttsSpeaking()) session.ttsUntil = Date.now() + TTS_TAIL_MS;
 
         session.frameTimer = setInterval(() => _tick(session), FRAME_MS);
-        session.timeout = setTimeout(() => _end(session, 'timeout'), _getListenDuration(targetText));
+        // 等「說完」的會話（說話板）：總時限加上靜音等待與餘裕，說得慢的人才不會在判定前被時限切掉
+        session.timeout = setTimeout(() => _end(session, 'timeout'), _getListenDuration(targetText) + (session.waitForEnd ? session.silenceEndMs + 1500 : 0));
 
         if (recognitionSupported && recognition) {
             _startSpeechRecognition(session);
