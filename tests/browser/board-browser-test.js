@@ -32,7 +32,7 @@ const path = require('path');
   console.log(`人聲燈=${seen.voiced} 報酬=${seen.reward}（@${seen.rewardAt}ms，說完後才給=${rewardAfterSpeech}） 判定列=${seen.verdict} 狀態="${status}" 耗時=${Date.now() - t0}ms`);
   let verdictOk = false, backToGrid = false;
   if (seen.verdict) {
-    await page.click('#verdict .vbtn.ok');
+    { const bb = await (await page.$('#verdict .vbtn.ok')).boundingBox(); await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await page.mouse.down(); await page.waitForTimeout(1400); await page.mouse.up(); }   // 👍 要按住 1.2 秒
     await page.waitForTimeout(1000);
     backToGrid = await page.evaluate(() => !document.getElementById('focus').classList.contains('show'));
     const log = await page.evaluate(() => JSON.parse(localStorage.getItem('board.log') || '[]'));

@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.6.5
+ * v5.7.0
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.6.5',
+    version: '5.7.0',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -379,6 +379,18 @@ function setVoiceSensitivity(v) {
  * 'strict'：完全由辨識相似度決定（會有大量誤拒，僅供進階測試）
  * @returns {'voice'|'strict'}
  */
+/**
+ * 門檻 > 0 時「說對了沒」由誰判定（郵輪、說話板）：
+ *   parent（預設）：系統只確認真的發聲，說完後由家長按住 👍 才算對——語言障礙者的發音，語音引擎常聽不懂，家長聽得懂
+ *   asr：交給瀏覽器的語音辨識引擎（相似度 ≥ 門檻）
+ */
+function getJudgeMode() {
+    return localStorage.getItem('judgeMode') === 'asr' ? 'asr' : 'parent';
+}
+function setJudgeMode(v) {
+    localStorage.setItem('judgeMode', v === 'asr' ? 'asr' : 'parent');
+}
+
 function getSingleSyllableMode() {
     return localStorage.getItem('singleSyllableMode') === 'strict' ? 'strict' : 'voice';
 }
@@ -886,7 +898,7 @@ if (typeof module !== 'undefined' && module.exports) {
         // 語音相似度追蹤系統
         getUserMode, setUserMode, getThresholdPresets, getAphasiaBonus,
         getSimilarityThreshold, setSimilarityThreshold, calculateSimilarity,
-        getVoiceSensitivity, setVoiceSensitivity, getSingleSyllableMode, setSingleSyllableMode,
+        getVoiceSensitivity, setVoiceSensitivity, getJudgeMode, setJudgeMode, getSingleSyllableMode, setSingleSyllableMode,
         getShowVoiceHud, setShowVoiceHud, initParentLongPress,
         getPronunciationRecords, recordPronunciation, getPronunciationRecord,
         getPronunciationReport, clearPronunciationRecords, exportPronunciationRecords,

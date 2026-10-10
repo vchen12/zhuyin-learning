@@ -23,7 +23,7 @@ const FAKE_SR = () => {
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push('PAGEERROR ' + e.message));
   await page.addInitScript(FAKE_SR);
-  await page.addInitScript(() => { localStorage.setItem('similarityThreshold', '20'); });
+  await page.addInitScript(() => { localStorage.setItem('similarityThreshold', '20'); localStorage.setItem('judgeMode', 'asr'); });   // 門檻 20% 且選語音辨識引擎判定
   // ---------- 郵輪 ----------
   await page.goto(BASE + '/voyage/index.html'); await page.waitForTimeout(700);
   check('起始畫面顯示門檻', /門檻 20%/.test(await page.$eval('#modeLine', e => e.textContent)));
@@ -47,7 +47,7 @@ const FAKE_SR = () => {
   check('紀錄有 miss 與 transcript', log.some(x => x.miss === '開船' && x.transcript === '香蕉') && log.some(x => x.word === '郵輪'));
   // ---------- 說話板（門檻 20%） ----------
   await page.goto(BASE + '/board/index.html?set=iwant'); await page.waitForTimeout(700);
-  check('說話板起始畫面顯示門檻', /過關門檻 20%/.test(await page.$eval('#startHint', e => e.textContent)));
+  check('說話板起始畫面顯示門檻', /門檻 20%/.test(await page.$eval('#startHint', e => e.textContent)));
   await page.click('#startBtn'); await page.waitForTimeout(400); await page.click('.card'); await page.waitForTimeout(1500);
   const opts = await page.evaluate(() => window.__lastListenOpts || null);
   await page.evaluate(() => window.__fakeAsrEmit('我要尿尿'));
