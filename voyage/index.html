@@ -91,7 +91,7 @@
                 display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; z-index: 25; }
         #toast { position: absolute; left: 50%; top: 22vmin; transform: translateX(-50%); background: rgba(16,69,111,.92); color: #fff;
                  padding: 1.4vmin 3vmin; border-radius: 99px; font-size: 3.2vmin; white-space: nowrap; opacity: 0; transition: opacity .25s;
-                 pointer-events: none; z-index: 26; }
+                 pointer-events: none; z-index: 40; }
         #toast.show { opacity: 1; }
 
         /* 港口卡片（照片揭示） */
@@ -202,7 +202,7 @@
 
     <div id="parentPanel">
         <div class="row" style="justify-content:space-between">
-            <h2 style="margin:0">⚓ 家長設定</h2>
+            <h2 style="margin:0">⚓ 家長設定 <span style="font-size:2.4vmin;font-weight:400;color:#4a7">✓ 修改會自動儲存</span></h2>
             <button class="btn gray" id="closePanel">關閉</button>
         </div>
         <p class="note">照片存在這台 iPad 的瀏覽器裡（不上傳）。船的照片建議用他喜歡的郵輪；港口照片用那次旅行的家人合照。港口名稱可改成真實地名。<br>
@@ -325,7 +325,11 @@
             } catch (e) { return false; }
         }
         function saveData() {
-            try { localStorage.setItem('voyage.data', JSON.stringify(data)); return true; }
+            try {
+                localStorage.setItem('voyage.data', JSON.stringify(data));
+                if ($('parentPanel').classList.contains('show')) toast('✓ 已儲存');   // 家長面板的修改都自動儲存，不必另外按
+                return true;
+            }
             catch (e) { alert('瀏覽器給這個網站的儲存空間已滿（與 iPad 本身容量無關）。請刪掉幾張照片再試。'); return false; }
         }
 
@@ -613,6 +617,8 @@
             data.ports.forEach(p => { const src = imgSrc(p.imgs[0]); if (src) { const im = document.createElement('img'); im.src = src; strip.appendChild(im); } });
             $('finale').classList.add('show');
             horn(2);
+            if (ASR_MODE) SpeechModule.stopListening();
+            setTimeout(() => { const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！'; say(praise + ' 全部到了！等一下再出航一次。'); }, 2200);
             setTimeout(() => { $('finale').classList.remove('show'); resetVoyage(); }, FINALE_MS);
         }
         function resetVoyage() {
@@ -621,6 +627,8 @@
             $('voiceHint').textContent = '說話，船就會開 🚢';
             wordIdx = 0; showWord();
             lastVoicedAt = Date.now(); lastPromptAt = 0;
+            // 再出航（終點自動、或家長按「重新出航」）也要像第一次一樣先講開場口令
+            if (loop) promptWord('說話，船就會開！跟我說：');
             listenWord();
         }
 

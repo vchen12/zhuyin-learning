@@ -26,6 +26,9 @@ function check(n, c) { if (c) { pass++; console.log('  ✓', n); } else { fail++
   check('抵港後有稱讚（含港名）', tts.some(t => /到基隆了/.test(t)));
   check('稱讚後接下一個口令', tts.some(t => /跟我說：開船/.test(t)));
   console.log('  TTS 順序：', tts.join(' | '));
+  await page.evaluate(() => openPanel()); await page.click('#restart'); await page.waitForTimeout(300);
+  const after = await page.evaluate(() => window.__tts.map(x => x.text));
+  check('重新出航 → 再講開場口令', /說話，船就會開！跟我說：郵輪/.test(after[after.length - 1]));
   console.log(`\n${pass}/${pass + fail} 通過`);
   await browser.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });
