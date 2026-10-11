@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.7.1
+ * v5.7.2
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.7.1',
+    version: '5.7.2',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -187,7 +187,6 @@ function speak(text, a, b) {
         };
         if (!APP_CONFIG.enableTTS || typeof speechSynthesis === 'undefined' || !text) { finish(); return; }
         try {
-            speechSynthesis.cancel();   // 打斷上一句（上一句的 finish 會由其 onerror 觸發一次）
             const u = new SpeechSynthesisUtterance(String(text));
             u.lang = options.lang || 'zh-TW';
             u.rate = options.rate || 0.9;
@@ -198,7 +197,11 @@ function speak(text, a, b) {
             u.onend = finish;
             u.onerror = finish;
             setTimeout(finish, options.timeoutMs || 8000);
-            speechSynthesis.speak(u);
+            const go = () => { try { if (speechSynthesis.paused) speechSynthesis.resume(); speechSynthesis.speak(u); } catch (e) { finish(); } };
+            // iOS 已知問題：cancel() 之後「立刻」speak() 會被吞掉 → 前一句還在講才 cancel，並等 120ms 再講；
+            // 沒在講就同步講（頁面第一句必須在手勢內同步呼叫）
+            if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(go, 120); }   // 上一句的 finish 會由其 onerror 觸發一次
+            else go();
         } catch (e) { finish(); }
     });
 }

@@ -430,16 +430,24 @@
     function speak(text, rate) {
         return new Promise((resolve) => {
             if (!('speechSynthesis' in global) || !text) { resolve(); return; }
-            if (global.speechSynthesis.speaking || global.speechSynthesis.pending) global.speechSynthesis.cancel();   // iOS：沒在講時 cancel 後立刻 speak 偶爾會被吞掉
+            const ss = global.speechSynthesis;
             const u = new SpeechSynthesisUtterance(text);
             u.lang = 'zh-TW';
             u.rate = rate || 0.85;
             u.pitch = 1.1;
             u.volume = 1.0;
-            const timer = setTimeout(() => resolve(), 5000); // Safari 保險
+            let timer = null;
             u.onend = () => { clearTimeout(timer); resolve(); };
             u.onerror = () => { clearTimeout(timer); resolve(); };
-            global.speechSynthesis.speak(u);
+            const go = () => {
+                timer = setTimeout(() => resolve(), 6000); // Safari 保險（onend 偶爾不來）
+                try { if (ss.paused) ss.resume(); } catch (e) { /* ignore */ }
+                ss.speak(u);
+            };
+            // iOS 已知問題：cancel() 之後「立刻」speak() 會被吞掉（說話板第二張卡起示範都不出聲就是這個）。
+            // 前一句還在講才 cancel，並等 120ms 再講；沒在講就同步講（第一次必須在手勢內同步呼叫）。
+            if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(go, 120); }
+            else go();
         });
     }
 
