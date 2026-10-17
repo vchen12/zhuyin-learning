@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.7.2
+ * v5.7.3
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.7.2',
+    version: '5.7.3',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -900,8 +900,20 @@ function initBackLongPress(root) {
         if (action) wireLongPress(el, action, '按住「← 返回」約一秒才會回上一頁');
     });
 }
+/**
+ * 真實可視高度 --vh：iOS Safari 的 100vh 含被工具列／我的最愛列蓋住的部分，100dvh 在部分版本也不準；
+ * 以 innerHeight 量出來寫進 CSS 變數，頁面用 height: calc(var(--vh, 1vh) * 100)（前面保留 100vh／100dvh 後備）
+ */
+function initViewportHeight() {
+    if (typeof window === 'undefined' || !document.documentElement) return;
+    const set = () => { document.documentElement.style.setProperty('--vh', (window.innerHeight / 100) + 'px'); };
+    set();
+    window.addEventListener('resize', set);
+    window.addEventListener('orientationchange', () => setTimeout(set, 300));
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', set);
+}
 if (typeof document !== 'undefined') {
-    const _initLongPress = () => { initParentLongPress(); initBackLongPress(); };
+    const _initLongPress = () => { initParentLongPress(); initBackLongPress(); initViewportHeight(); };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initLongPress);
     else _initLongPress();
 }
