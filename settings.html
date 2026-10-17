@@ -2188,6 +2188,16 @@
         let volumeInterval = null;
         let testRecognition = null;
 
+        // 上次測試成功的紀錄（config.js getMicTestRecord）：進設定頁直接顯示，家長不必每次重測；回傳有沒有紀錄
+        function renderMicTestStatus() {
+            const statusEl = document.getElementById('micStatus');
+            const text = describeMicTestRecord();
+            if (!text) { statusEl.textContent = '尚未測試麥克風'; statusEl.style.color = '#666'; return false; }
+            statusEl.textContent = '✅ ' + text + '，可以直接去玩；想確認再測一次';
+            statusEl.style.color = '#2e7d32';
+            return true;
+        }
+
         async function testMicrophone() {
             const statusEl = document.getElementById('micStatus');
             const meterEl = document.getElementById('volumeMeter');
@@ -2211,6 +2221,7 @@
                 // 請求麥克風權限
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 microphoneStream = stream;
+                recordMicTestOk('permission');
 
                 // 建立音訊分析器
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2248,6 +2259,7 @@
 
                     if (volume > 10 && !hasDetectedSound) {
                         hasDetectedSound = true;
+                        recordMicTestOk('volume');
                         statusEl.textContent = '🎤 很好！偵測到聲音！繼續說話或按「測試語音辨識」';
                         hintTextEl.textContent = '麥克風正常運作！現在可以測試語音辨識功能。注意：這裡的授權只對本頁有效，每進一個遊戲 Safari 都會再問一次。iPad 請先到 設定 → Safari → 麥克風 改為「允許」（或在網址列 aA → 網站設定 → 麥克風 → 允許），否則每進一個遊戲都會跳出授權視窗。';
                         hintEl.style.background = '#e8f5e9';
@@ -2295,8 +2307,10 @@
 
             document.getElementById('volumeMeter').style.width = '0%';
             document.getElementById('testMicBtn').textContent = '🎤 測試麥克風';
-            document.getElementById('micStatus').textContent = '測試已停止';
-            document.getElementById('micStatus').style.color = '#666';
+            if (!renderMicTestStatus()) {
+                document.getElementById('micStatus').textContent = '測試已停止';
+                document.getElementById('micStatus').style.color = '#666';
+            }
         }
 
         function testSpeechRecognition() {
@@ -2354,6 +2368,7 @@
                 resultTextEl.textContent = transcript + (isFinal ? '' : '...');
 
                 if (isFinal) {
+                    recordMicTestOk('asr');
                     statusEl.textContent = '✅ 語音辨識成功！';
                     statusEl.style.color = '#4caf50';
                 }
@@ -2367,6 +2382,7 @@
                 if (lastTranscript) {
                     resultEl.style.display = 'block';
                     resultTextEl.textContent = lastTranscript;
+                    recordMicTestOk('asr');
                     statusEl.textContent = '✅ 語音辨識成功！';
                     statusEl.style.color = '#4caf50';
 
@@ -2506,6 +2522,7 @@
             loadVocabularyModifications();
             loadSimilarityThreshold();
             loadPronunciationRecords();
+            renderMicTestStatus();               // 上次麥克風測試成功的紀錄（config.js micTestOk）
             // renderFamilyGrid(); // 家人設定已整合到字詞庫管理
             // 預設顯示自訂字詞區
             switchVocabCategory('custom');
