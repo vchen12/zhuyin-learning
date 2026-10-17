@@ -15,8 +15,14 @@ function check(n, c) { if (c) { pass++; console.log('  ✓', n); } else { fail++
     { url: '/level0/index.html', sel: 'button.back-btn', to: '/level0/index.html', pre: '#stage1Card', after: () => document.getElementById('stageMenu').className.indexOf('hidden') < 0 },   // 階段內的返回＝goHome() 回階段選單
     { url: '/level2/index.html', sel: 'a.back-btn', to: '/index.html' },
     { url: '/board/index.html?set=iwant', sel: 'header a.back', to: '/index.html', pre: '#startBtn' },   // 起始遮罩蓋住表頭，先按開始
-    { url: '/voyage/index.html', sel: 'a.back-btn', to: '/index.html' }
+    { url: '/voyage/index.html', sel: 'a.back-btn', to: '/index.html' },
+    { url: '/settings.html', sel: 'a.back-btn', to: '/index.html' },
+    { url: '/feedback.html', sel: 'a.back', to: '/index.html' },
+    { url: '/voyage/index.html?setup=1', sel: '#parentPanel [data-back]', to: '/index.html' }   // 家長面板裡的返回也要長按
   ];
+  await page.goto(BASE + '/level2/games/speak-word.html'); await page.waitForTimeout(500);
+  const labels = await page.$$eval('a.back-btn, [data-back]', els => els.map(e => e.textContent.trim()));
+  check('遊戲頁：左上「← 返回」、結束畫面「🏠 返回選單（按住）」且已接長按', labels.includes('← 返回') && labels.includes('🏠 返回選單（按住）') && await page.$eval('[data-back]', e => !e.getAttribute('onclick') && e.title === '按住 1.2 秒'));
   for (const c of cases) {
     await page.goto(BASE + c.url); await page.waitForTimeout(600);
     if (c.pre) { await page.click(c.pre); await page.waitForTimeout(500); }

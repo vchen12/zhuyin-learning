@@ -1,11 +1,11 @@
 /**
  * 注音學習樂園 - 全域配置檔
- * v5.7.3
+ * v5.7.4
  */
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.7.3',
+    version: '5.7.4',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -892,12 +892,12 @@ function initParentLongPress(root) {
  */
 function initBackLongPress(root) {
     if (typeof document === 'undefined') return;
-    (root || document).querySelectorAll('a.back-btn, button.back-btn, a.back').forEach(el => {
+    (root || document).querySelectorAll('a.back-btn, button.back-btn, a.back, [data-back]').forEach(el => {
         if (el.__lpWired) return;
         let action = null;
         if (el.tagName === 'A' && el.getAttribute('href')) { const href = el.href; action = () => { location.href = href; }; }
         else if (el.getAttribute('onclick')) { const code = el.getAttribute('onclick'); el.removeAttribute('onclick'); action = () => { new Function(code).call(el); }; }
-        if (action) wireLongPress(el, action, '按住「← 返回」約一秒才會回上一頁');
+        if (action) wireLongPress(el, action, '按住約一秒才會離開這一頁');
     });
 }
 /**
