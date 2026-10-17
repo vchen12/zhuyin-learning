@@ -198,7 +198,7 @@
         <div class="header">
             <h1>🌟 注音符號學習樂園 🌟</h1>
             <div class="subtitle">專為失語症患者與學齡前兒童設計</div>
-            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v5.7.5</div>
+            <div class="version">作者：陳宜誠律師（Vincent Chen）及 Claude Code | v5.7.6</div>
         </div>
 
         <!-- 非觸控裝置提示：這個樂園為平板／手機觸控設計，電腦滑鼠操作不順 -->
@@ -224,7 +224,7 @@
             <ol style="margin: 10px 0 12px 22px; color: #5a4a1a; line-height: 1.75; font-size: 0.98rem;">
                 <li><b>麥克風一次允許</b>：iPad 請先到 設定 → Safari → 麥克風 改為「允許」（或在網址列 aA → 網站設定 → 麥克風 → 允許），否則每進一個遊戲都會跳出授權視窗。</li>
                 <li><b>個人化設定</b>：輸入使用者名字、上傳家人照片、選「失語症復健」或「一般兒童」模式。</li>
-                <li><b>麥克風測試</b>的第 4 項：說「ㄚ——」要亮綠燈、敲螢幕不能亮，確認裝置分得出「說話」和「敲打」。</li>
+                <li><b>麥克風測試</b>的第 4 項：說「ㄚ——」要亮綠燈、敲螢幕不能亮，確認裝置分得出「說話」和「敲打」。<span id="onbMicDone" style="color: #2e7d32; font-weight: 700;"></span></li>
                 <li><b>郵輪出航／我要…／叫家人</b>：進入後<b>長按左上角 ⚓ 約 1 秒</b>，放他喜歡的照片、錄示範與家人的回應。</li>
             </ol>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -402,6 +402,13 @@
             let dismissed = false;
             try { dismissed = localStorage.getItem('onboardingDismissed') === '1'; } catch (e) { /* ignore */ }
             if (!dismissed) document.getElementById('onboardingCard').style.display = 'block';
+            // 麥克風測試做過了就標示（config.js micTestOk）：第 4 項（人聲偵測）成功＝已完成；只測過設定頁的收音＝已測過
+            const r = getMicTestRecord();
+            if (r) {
+                document.getElementById('onbMicDone').textContent = r.items.voice
+                    ? ' ✅ 已完成（' + formatShortDateTime(r.items.voice) + '）'
+                    : ' ✅ 麥克風已測過（' + formatShortDateTime(r.at) + '），第 4 項還沒測';
+            }
         })();
 
         // 載入進度

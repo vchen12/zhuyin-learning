@@ -5,7 +5,7 @@
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.7.5',
+    version: '5.7.6',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -424,6 +424,43 @@ function getShowVoiceHud() {
 }
 function setShowVoiceHud(on) {
     localStorage.setItem('showVoiceHud', on ? '1' : '0');
+}
+
+/**
+ * 麥克風測試紀錄（v5.7.6）：設定頁與 mic-test.html 測試成功時記下來，下次進來直接顯示「上次測試成功：…」，
+ * 家長不必每次重測（實測回饋：麥克風測試不會記得測試成功過）。
+ * localStorage micTestOk = { at, items: { permission|volume|asr|voice: 該項成功時間 } }
+ */
+const MIC_TEST_KEY = 'micTestOk';
+const MIC_TEST_ITEM_NAMES = { permission: '麥克風權限', volume: '收音', asr: '語音辨識', voice: '人聲偵測' };
+function getMicTestRecord() {
+    try {
+        const r = JSON.parse(localStorage.getItem(MIC_TEST_KEY) || 'null');
+        return r && r.items && r.at ? r : null;
+    } catch (e) { return null; }
+}
+function recordMicTestOk(item) {
+    const r = getMicTestRecord() || { at: 0, items: {} };
+    r.at = Date.now();
+    r.items[item] = r.at;
+    try { localStorage.setItem(MIC_TEST_KEY, JSON.stringify(r)); } catch (e) { /* ignore */ }
+    return r;
+}
+function clearMicTestRecord() {
+    try { localStorage.removeItem(MIC_TEST_KEY); } catch (e) { /* ignore */ }
+}
+/** 時間戳 → 「10/17 14:03」（跨年才加年份） */
+function formatShortDateTime(ts) {
+    const d = new Date(ts); const p = function (n) { return (n < 10 ? '0' : '') + n; };
+    const y = d.getFullYear() !== new Date().getFullYear() ? d.getFullYear() + '/' : '';
+    return y + (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+/** 「上次測試成功：10/17 14:03（麥克風權限、收音、語音辨識）」；沒有紀錄回傳 '' */
+function describeMicTestRecord() {
+    const r = getMicTestRecord();
+    if (!r) return '';
+    const names = Object.keys(MIC_TEST_ITEM_NAMES).filter(function (k) { return r.items[k]; }).map(function (k) { return MIC_TEST_ITEM_NAMES[k]; });
+    return '上次測試成功：' + formatShortDateTime(r.at) + (names.length ? '（' + names.join('、') + '）' : '');
 }
 
 /**
@@ -929,6 +966,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getSimilarityThreshold, setSimilarityThreshold, calculateSimilarity,
         getVoiceSensitivity, setVoiceSensitivity, getJudgeMode, setJudgeMode, getSpeechEndMs, setSpeechEndMs, SPEECH_END_OPTIONS, getSingleSyllableMode, setSingleSyllableMode,
         getShowVoiceHud, setShowVoiceHud, initParentLongPress,
+        getMicTestRecord, recordMicTestOk, clearMicTestRecord, formatShortDateTime, describeMicTestRecord,
         getPronunciationRecords, recordPronunciation, getPronunciationRecord,
         getPronunciationReport, clearPronunciationRecords, exportPronunciationRecords,
         passesSimilarityThreshold, getSimilarityLevel

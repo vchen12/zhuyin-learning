@@ -170,6 +170,7 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 log('✅ 麥克風權限已授予');
+                recordMicTestOk('permission');
                 statusEl.textContent = '✅ 權限已授予';
                 statusEl.style.color = 'green';
 
@@ -224,7 +225,7 @@
                 btn.textContent = '停止偵測';
                 btn.classList.add('recording');
 
-                let maxVolume = 0;
+                let maxVolume = 0, volumeOk = false;
                 volumeInterval = setInterval(() => {
                     analyser.getByteFrequencyData(dataArray);
                     const average = dataArray.reduce((a, b) => a + b) / bufferLength;
@@ -236,6 +237,7 @@
                     }
 
                     if (volume > 10) {
+                        if (!volumeOk) { volumeOk = true; recordMicTestOk('volume'); }
                         statusEl.textContent = `🎤 偵測到聲音！音量: ${Math.round(volume)}%`;
                         statusEl.style.color = 'green';
                     } else {
@@ -337,6 +339,7 @@
                 `;
 
                 if (lastResult.isFinal) {
+                    recordMicTestOk('asr');
                     statusEl.textContent = '✅ 辨識完成';
                     statusEl.style.color = 'green';
                 }
@@ -406,6 +409,7 @@
                 detail.textContent = `音量 ${v.rms.toFixed(4)}（門檻 ${v.gate.toFixed(4)}）/ 週期清晰度 ${v.clarity.toFixed(2)} / 基頻 ${v.f0 ? v.f0.toFixed(0) : '—'} Hz / 衰減比 ${v.decay ? v.decay.toFixed(1) : '—'}`;
                 if (v.voiced) {
                     voicedFrames++;
+                    if (voicedFrames === 1) recordMicTestOk('voice');
                     lamp.style.background = '#4caf50'; lamp.style.transform = 'scale(1.15)'; lamp.textContent = '🗣️';
                     statusEl.textContent = '✅ 這是人聲'; statusEl.style.color = 'green';
                 } else if (loud) {
@@ -421,7 +425,22 @@
         }
 
         // 頁面載入時顯示瀏覽器資訊
+        // 上次成功的紀錄（config.js micTestOk）：各項狀態列直接顯示，不必每次重測
+        function showLastMicTest() {
+            const r = getMicTestRecord();
+            if (!r) return;
+            const ids = { permission: 'permissionStatus', volume: 'volumeStatus', asr: 'speechStatus', voice: 'voiceStatus' };
+            Object.keys(ids).forEach(k => {
+                if (!r.items[k]) return;
+                const el = document.getElementById(ids[k]);
+                el.textContent = '✅ 上次成功：' + formatShortDateTime(r.items[k]) + '（可再測一次）';
+                el.style.color = 'green';
+            });
+            log('✅ ' + describeMicTestRecord());
+        }
+
         window.onload = () => {
+            showLastMicTest();
             log('=== 麥克風診斷工具 ===');
             log(`瀏覽器: ${navigator.userAgent}`);
             log(`Web Speech API: ${('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) ? '支援' : '不支援'}`);
