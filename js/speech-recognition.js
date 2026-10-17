@@ -92,6 +92,7 @@
     const NOISE_HISTORY_LEN = 40;        // 背景噪音樣本數（約 4 秒）
     const NOISE_SAMPLE_MS = 100;
     const TTS_TAIL_MS = 250;             // TTS 結束後再忽略的尾音時間
+    const WAIT_END_MAX_MS = 60000;       // 等說完的會話最長多久（說得再慢也有個底）
     const TTS_STUCK_MS = 15000;          // speaking 旗標連續為真超過此時間視為卡住（iOS 偶發），不再當成喇叭在響
 
     // 靈敏度預設（可由 config.js getVoiceSensitivity() 切換）
@@ -651,6 +652,7 @@
             voicedMs: 0,
             loudMs: 0,
             lastVoicedAt: 0,
+            lastSustainedAt: 0,   // 最後一次「持續」人聲（連續 confirmFrames 幀）的時間：說完判定只看這個，背景零星一兩幀不會把計時器重置
             lastF0: 0,
             voiceConfirmed: false,
             speechEnded: false,
@@ -721,6 +723,14 @@
             session.voicedMs += FRAME_MS;
             session.lastVoicedAt = now;
             session.lastF0 = a.f0;
+            if (session.voicedRun >= sens.confirmFrames) {
+                session.lastSustainedAt = now;
+                // 等說完的會話（說話板）：他還在說就把時限往後推，說得慢也不會被切掉；總上限 WAIT_END_MAX_MS
+                if (session.waitForEnd) {
+                    const left = session.startTime + WAIT_END_MAX_MS - now;
+                    if (left > 0) { clearTimeout(session.timeout); session.timeout = setTimeout(() => _end(session, 'timeout'), Math.min(left, session.silenceEndMs + 3000)); }
+                }
+            }
             if (!session.voiceConfirmed && session.voicedRun >= sens.confirmFrames) {
                 session.voiceConfirmed = true;
                 _hudSetText('👂 聽到你的聲音了！');
@@ -748,7 +758,7 @@
         }
 
         // 說完了：靜音超過 silenceEndMs → 叫辨識引擎收尾，最多再等 ASR_GRACE_MS
-        if (session.voiceConfirmed && !session.speechEnded && now - session.lastVoicedAt > session.silenceEndMs) {
+        if (session.voiceConfirmed && !session.speechEnded && now - session.lastSustainedAt > session.silenceEndMs) {
             session.speechEnded = true;
             if (cb.onSpeechEnd) cb.onSpeechEnd();
             // voice 模式由人聲決定，不必等辨識引擎收尾

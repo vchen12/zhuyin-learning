@@ -19,7 +19,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100%; }
         body {
-            min-height: 100vh; min-height: 100dvh;
+            min-height: 100vh; min-height: 100dvh; min-height: calc(var(--vh, 1vh) * 100);
             font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
             background: #eef3f8; color: #1d2b3a; -webkit-user-select: none; user-select: none;
         }
@@ -467,8 +467,9 @@
         // ==========================================
         $('startBtn').addEventListener('click', async () => {
             $('startErr').textContent = '';
-            // 先用語音告訴他怎麼玩（同步、在點擊事件內：iOS 只播手勢觸發的語音，這一下也解鎖後面的示範與稱讚）
-            SpeechModule.speak(CFG.intro || '點一張圖，聽我說一次，再跟我說一次。', 0.9);
+            // 先用語音告訴他怎麼玩（同步、在點擊事件內：iOS 只播手勢觸發的語音，這一下也解鎖後面的示範與稱讚）。
+            // 講完再開麥克風：iOS 開麥克風會切換音訊路徑，會把還在講的這句打斷
+            await SpeechModule.speak(CFG.intro || '點一張圖，聽我說一次，再跟我說一次。', 0.9);
             const ok = await SpeechModule.init();
             if (!ok) { $('startErr').textContent = '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風。'; return; }
             SpeechModule.setHud(false);

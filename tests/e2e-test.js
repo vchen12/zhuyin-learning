@@ -144,6 +144,17 @@ function run(name, { threshold, target, timeline, sr, expect, setup, options }) 
         { threshold: 0, target: '我要尿尿', timeline: [[300, 800, V]], options: { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: 1500 },
           expect: (k, p, el) => k === 'onResult' && p.passed === false && p.hadVoice === true && el > 2200 && el < 3000 }));
 
+    // P：背景零星的單幀「人聲」不得把說完計時器重置（v5.7.3：說完判定只看持續的人聲）
+    results.push(await run('P waitForEnd：說完後背景每 0.5 秒冒出 1 幀人聲 → 仍在 1.5 秒後判定，不被拖長',
+        { threshold: 0, target: '我要尿尿', timeline: [[300, 1100, V], [1600, 1630, V], [2100, 2130, V], [2600, 2630, V], [3100, 3130, V], [3600, 3630, V]],
+          options: { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: 1500 },
+          expect: (k, p, el) => k === 'onResult' && p.passed && el > 2500 && el < 3400 }));
+    // Q：說得很慢（三段發聲、各停 2 秒，總長超過原本 8 秒的時限）→ 時限隨人聲延後，說完 1.5 秒才判定、不被切掉
+    results.push(await run('Q waitForEnd：慢速四段發聲（各停 2 秒）到 14.3s、說完判定 2.5 秒 → 16.8s 才判定（不在原本 8+2.5+1.5=12 秒時限被切）',
+        { threshold: 0, target: '我要尿尿', timeline: [[300, 2300, V], [4300, 6300, V], [8300, 10300, V], [12300, 14300, V]],
+          options: { passMode: 'voice', hud: false, waitForEnd: true, silenceEndMs: 2500 },
+          expect: (k, p, el) => k === 'onResult' && p.passed && el > 16500 && el < 17700 }));
+
     const n = results.filter(Boolean).length;
     out(`\n${n}/${results.length} 情境通過`);
     process.exit(n === results.length ? 0 : 1);

@@ -16,7 +16,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100%; overflow: hidden; }
         body {
-            height: 100vh; height: 100dvh;
+            height: 100vh; height: 100dvh; height: calc(var(--vh, 1vh) * 100);   /* --vh 由 config.js 以 innerHeight 量出：Safari 的工具列／我的最愛列都扣掉 */
             font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
             background: linear-gradient(180deg, #8fd3ff 0%, #d6f0ff 48%, #2f7fc4 48%, #1b5f9e 100%);
             color: #fff; position: relative; -webkit-user-select: none; user-select: none;
@@ -692,8 +692,9 @@
         $('startBtn').addEventListener('click', async () => {
             $('startErr').textContent = '';
             ensureAudio();
-            // 先講口令（同步、在手勢內）：iOS 的 TTS 要由這一下點擊「解鎖」，之後抵港稱讚、閒置提示才播得出來
-            promptWord('說話，船就會開！跟我說：');
+            // 先講口令（同步、在手勢內）：iOS 的 TTS 要由這一下點擊「解鎖」，之後抵港稱讚、閒置提示才播得出來。
+            // 講完再開麥克風：iOS 開麥克風會切換音訊路徑，會把還在講的這句打斷（實測：開場提示斷斷續續）
+            await promptWord('說話，船就會開！跟我說：');
             const ok = await SpeechModule.init();
             if (!ok) { $('startErr').textContent = '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風；若從主畫面圖示開啟，請改用 Safari。'; return; }
             SpeechModule.setHud(false);
