@@ -74,6 +74,9 @@ function check(n, c) { if (c) { pass++; console.log('  ✓', n); } else { fail++
   check('恢復後 edited 清空', !((await page.evaluate(() => JSON.parse(localStorage.getItem('vocabularyModifications')))).edited.fruits || {})['蘋果']);
   await page.click('#systemWordsContainer .word-card:has-text("香蕉") >> text=刪除'); await page.waitForTimeout(300);
   check('刪系統詞 → 卡片消失', !(await page.$$eval('#systemWordsContainer .word-card', c => c.map(x => x.textContent))).some(t => /香蕉/.test(t)));
+  console.log('名稱自動儲存');
+  await page.fill('#userName', '小寶'); await page.waitForTimeout(900);
+  check('打完字 0.6 秒自動存、沒有儲存鈕', (await page.evaluate(() => localStorage.getItem('userName'))) === '小寶' && !(await page.content()).includes('saveSettings()') && !(await page.content()).includes('儲存名稱'));
   console.log('還原預設');
   await page.click('text=↩️ 還原預設值'); await page.waitForTimeout(500);
   const after = await page.evaluate(() => ({ fam: JSON.parse(localStorage.getItem('familySettings') || '[]'), mods: localStorage.getItem('vocabularyModifications') }));
