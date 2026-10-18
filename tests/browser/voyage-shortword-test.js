@@ -8,7 +8,7 @@ const BASE = process.env.BASE || 'http://127.0.0.1:8123';
   const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 }, permissions: ['microphone'] });
   const page = await ctx.newPage();
   await page.goto(BASE + '/voyage/index.html'); await page.waitForTimeout(600);
-  await page.click('#startBtn'); await page.waitForTimeout(10000);
+  await page.click('#startBtn'); await page.waitForTimeout(12000);
   const log = await page.evaluate(() => JSON.parse(localStorage.getItem('voyage.log') || '[]'));
   const utter = log.filter(x => x.ms), arrivals = log.filter(x => x.arrive !== undefined);
   console.log(`發聲 ${utter.length} 次 [${utter.map(x => x.ms).join(', ')}] ms；抵港 ${arrivals.length} 次`);

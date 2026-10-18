@@ -30,17 +30,17 @@ const FAKE_SR = () => {
   await page.click('#startBtn');
   await page.waitForTimeout(1900);                                     // WAV 詞 1 在 1.5–1.95s：說「郵輪」
   check('辨識會話已開（假引擎 start）', await page.evaluate(() => window.__fakeAsrEmit('郵輪')));
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1800);                                     // 航行動畫 ≈0.85s 後抵港
   const s1 = await page.evaluate(() => ({ done: document.querySelectorAll('.port.done').length, card: document.getElementById('portCard').classList.contains('show') }));
   check('說對「郵輪」→ 抵第 1 港', s1.done === 1 && s1.card);
-  await page.waitForTimeout(5300);                                     // 卡片 3.2s 結束 → 口令換「開船」；WAV 詞 2 在 8.2–8.7s，趁說話中送出辨識結果
+  await page.waitForTimeout(5900);                                     // 卡片 3.2s 結束 → 口令換「開船」；WAV 詞 2 在 9.4–9.9s，趁說話中送出辨識結果
   check('詞 2 期間辨識會話開著', await page.evaluate(() => window.__fakeAsrEmit('香蕉')));   // 說錯
   await page.waitForTimeout(3000);
   const s2 = await page.evaluate(() => ({ done: document.querySelectorAll('.port.done').length, hint: document.getElementById('voiceHint').textContent, left: parseFloat(document.getElementById('ship').style.left) }));
   check('說錯「香蕉」→ 不抵港、提示再說一次', s2.done === 1 && /聽到「香蕉」/.test(s2.hint) && /開船/.test(s2.hint));
-  await page.waitForTimeout(2200);                                     // WAV 詞 3 在 13.5–14.1s
+  await page.waitForTimeout(3300);                                     // WAV 詞 3 在 15.7–16.3s
   await page.evaluate(() => window.__fakeAsrEmit('開船'));
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1800);
   const s3 = await page.evaluate(() => document.querySelectorAll('.port.done').length);
   check('再說對「開船」→ 抵第 2 港', s3 === 2);
   const log = await page.evaluate(() => JSON.parse(localStorage.getItem('voyage.log') || '[]'));
