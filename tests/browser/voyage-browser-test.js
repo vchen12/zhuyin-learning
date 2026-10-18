@@ -19,7 +19,7 @@ const path = require('path');
   const t0abs = await page.evaluate(() => Date.now());
   const samples = [];
   let cardShot = 0;
-  while (Date.now() - t0 < 29000) {
+  while (Date.now() - t0 < 36000) {
     const s = await page.evaluate(() => ({
       left: parseFloat(document.getElementById('ship').style.left) || 0,
       engine: document.body.classList.contains('engine'),
