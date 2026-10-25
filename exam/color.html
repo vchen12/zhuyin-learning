@@ -11,7 +11,7 @@
         /*
          * 體檢練習：色盲圖卡（v5.9.0）
          * 體檢時檢查員指著點狀色塊圖問「這是幾？」。這裡的圖卡由程式隨機產生（點狀色塊＋ 1～2 位數字），
-         * 家長指著圖問，他說出數字後家長按住 👍；看不出來按「看答案」。不用麥克風，對不對由家長判定。
+         * 家長指著圖問，他說出數字後家長按 👍（單點即可，家長拿著 iPad 問）；看不出來按「看答案」。不用麥克風，對不對由家長判定。
          */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100%; overflow: hidden; }
@@ -80,7 +80,7 @@
         </div>
     </main>
     <div id="verdict">
-        <button class="vbtn ok" data-parent-longpress="verdictOk" data-parent-hint="家長按住 👍 約一秒才算答對">👍 答對了（按住）</button>
+        <button class="vbtn ok" id="okBtn">👍 答對了</button>
         <button class="vbtn" id="againBtn">🔁 再一次</button>
         <button class="vbtn" id="revealBtn">👁 看答案</button>
         <button class="vbtn" id="nextBtn">⏭ 下一張</button>
@@ -89,7 +89,7 @@
 
     <div id="startOverlay">
         <h1 style="font-size:7vmin">🎨 色盲圖卡練習</h1>
-        <p>家長指著圖問：「<b>這是幾？</b>」<br>他說出數字後，家長<b>按住 👍</b>；看不出來就按「👁 看答案」。</p>
+        <p>家長指著圖問：「<b>這是幾？</b>」<br>他說出數字後，家長<b>按 👍</b>；看不出來就按「👁 看答案」。</p>
         <button id="startBtn">開始練習</button>
         <p class="small">圖卡由程式隨機產生，數字以體檢常用的為主。<br>右上角可切換 1 位／2 位數、清楚／標準色塊。</p>
     </div>
@@ -228,7 +228,7 @@
                 speak('是 ' + target);
             }
         }
-        window.verdictOk = () => { if (started && !busy) reveal(true); };   // 👍 以 data-parent-longpress 呼叫（按住 1.2 秒）
+        $('okBtn').addEventListener('click', () => { if (started && !busy) reveal(true); });   // 👍 單點即回饋（v5.9.2：家長拿著 iPad，不必長按）
         $('revealBtn').addEventListener('click', () => { if (started && !busy) reveal(false); });
         $('nextBtn').addEventListener('click', () => { if (started && !busy) newPlate(); });
         $('againBtn').addEventListener('click', () => {
