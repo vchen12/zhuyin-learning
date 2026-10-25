@@ -5,7 +5,7 @@
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.9.6',
+    version: '5.9.7',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -398,7 +398,7 @@ function setVoiceSensitivity(v) {
  */
 /**
  * 門檻 > 0 時「說對了沒」由誰判定（郵輪、說話板）：
- *   parent（預設）：系統只確認真的發聲，說完後由家長按住 👍 才算對——語言障礙者的發音，語音引擎常聽不懂，家長聽得懂
+ *   parent（預設）：系統只確認真的發聲，說完後由家長按 👍 才算對——語言障礙者的發音，語音引擎常聽不懂，家長聽得懂
  *   asr：交給瀏覽器的語音辨識引擎（相似度 ≥ 門檻）
  */
 function getJudgeMode() {
@@ -879,9 +879,9 @@ function getSimilarityLevel(similarity) {
 }
 
 /**
- * 家長長按按鈕（v5.2.1）
- * 標記 data-parent-longpress="函數名" 的按鈕要按住 1.2 秒才執行，短按無效。
- * 用於「我會唸」這類不需發聲就計分的家長判定功能——使用者敲一下不會過關。
+ * 家長按鍵（v5.2.1 長按；v5.9.7 起改為單點，實測回饋：家長拿著 iPad 按，長按很擾人）
+ * 標記 data-parent-longpress="函數名" 的按鈕按一下就執行 window[函數名]（屬性名沿用，不改 26 頁的標記）。
+ * 會離開頁面的按鈕（← 返回、🏠 返回選單、data-back）仍由 initBackLongPress 接成長按。
  */
 /** 家長提示（輕按長按鈕時顯示）：共用的小浮動提示，不需頁面準備標記 */
 function showParentHint(msg) {
@@ -925,15 +925,15 @@ function wireLongPress(el, action, hint) {
 }
 
 /**
- * 家長長按：`data-parent-longpress="fnName"` 的元素按住 1.2 秒才呼叫 window[fnName]；
- * 輕按只顯示提示（`data-parent-hint` 文字），孩子亂按不會觸發。
+ * 家長按鍵：`data-parent-longpress="fnName"` 的元素按一下就呼叫 window[fnName]（v5.9.7 起單點；`data-parent-hint` 不再使用）。
  */
 function initParentLongPress(root) {
     if (typeof document === 'undefined') return;
     (root || document).querySelectorAll('[data-parent-longpress]').forEach(el => {
+        if (el.__parentWired) return;
+        el.__parentWired = true;
         const fnName = el.getAttribute('data-parent-longpress');
-        const hint = el.getAttribute('data-parent-hint') || '按住約一秒才會生效（家長用）';
-        wireLongPress(el, () => { const fn = window[fnName]; if (typeof fn === 'function') fn(); }, hint);
+        el.addEventListener('click', e => { e.preventDefault(); const fn = window[fnName]; if (typeof fn === 'function') fn(); });
     });
 }
 

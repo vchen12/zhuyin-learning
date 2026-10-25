@@ -77,10 +77,10 @@ const fire = (k, a) => { listening = false; pending.cb[k](a); };
 
     console.log('manualConfirm / skip');
     calls.length = 0; global.__confirm = true; let yes = 0;
-    SpeechGame.manualConfirm('蘋果', () => yes++, { status: 'msg' }); await new Promise(r => setTimeout(r, 10));
+    SpeechGame.manualConfirm('蘋果', () => yes++, { status: 'msg', confirm: true }); await new Promise(r => setTimeout(r, 10));
     check('確定 → onYes（先播示範）', yes === 1 && calls[0] === 'stop' && calls[1] === 'speak:蘋果');
     calls.length = 0; global.__confirm = false; let no = 0;
-    SpeechGame.manualConfirm('蘋果', () => yes++, { status: 'msg', onNo: () => no++ }); await new Promise(r => setTimeout(r, 10));
+    SpeechGame.manualConfirm('蘋果', () => yes++, { status: 'msg', onNo: () => no++, confirm: true }); await new Promise(r => setTimeout(r, 10));
     check('取消 → 沒關係再聽一次', yes === 1 && no === 1 && els.msg.textContent === SpeechGame.MSG.noWorries);
     calls.length = 0; let next = 0;
     SpeechGame.skip('蘋果', () => next++, { status: 'msg', delay: 0 }); await new Promise(r => setTimeout(r, 20));

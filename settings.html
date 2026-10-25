@@ -739,7 +739,7 @@
                 </div>
                 <div style="color: #555; font-size: 0.9rem; margin-bottom: 8px;">門檻 &gt; 0 時，郵輪與說話板「說對了沒」由誰判定</div>
                 <div id="judgeModeBtns" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
-                    <button data-value="parent" onclick="setJudgeModeUI('parent')" style="flex:1; min-width:140px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">👨‍👩‍👧 家長判定<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">說完後家長按 👍 才算對（推薦；郵輪的 👍 要按住一秒）</div></button>
+                    <button data-value="parent" onclick="setJudgeModeUI('parent')" style="flex:1; min-width:140px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">👨‍👩‍👧 家長判定<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">說完後家長按 👍 才算對（推薦）</div></button>
                     <button data-value="asr" onclick="setJudgeModeUI('asr')" style="flex:1; min-width:140px; padding:12px; border-radius:12px; border:3px solid #e0e0e0; background:#fff; cursor:pointer; font-weight:bold;">🤖 語音辨識引擎<div style="font-size:0.75rem;font-weight:normal;color:#888;margin-top:3px;">辨識相似度 ≥ 門檻；發音不清常聽不懂</div></button>
                 </div>
                 <label style="display:flex; align-items:center; gap:10px; padding:8px 0; cursor:pointer; color:#444;">
@@ -941,7 +941,7 @@
         <div class="settings-section">
             <div class="section-title">🚢 說話旅行：照片與錄音設定</div>
             <p style="color: #666; font-size: 0.9rem; line-height: 1.6; margin-bottom: 12px;">
-                郵輪的船與港口照片、說話板的卡片照片與家人錄音，是在各遊戲的「家長設定」裡放的（遊戲中長按右上角 ⚓ 也能開啟）。
+                郵輪的船與港口照片、說話板的卡片照片與家人錄音，是在各遊戲的「家長設定」裡放的（遊戲中按右上角 ⚓ 也能開啟）。
                 這裡直接連過去；「叫家人」的名字與照片則用上面字詞庫的「家人」。
             </p>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -1710,7 +1710,7 @@
         function setJudgeModeUI(v) {
             setJudgeMode(v);
             renderVoiceSettings();
-            showToast(v === 'asr' ? '門檻 > 0 時交給語音辨識引擎判定' : '門檻 > 0 時由家長判定（按住 👍 才算對）', 'success');
+            showToast(v === 'asr' ? '門檻 > 0 時交給語音辨識引擎判定' : '門檻 > 0 時由家長判定（按 👍 才算對）', 'success');
         }
         function setVoiceSensitivityUI(v) {
             setVoiceSensitivity(v);

@@ -11,7 +11,7 @@
         /*
          * 郵輪出航（原型）
          * 原則：聲音就是搖桿。他一出聲船就動；說滿一個詞就抵達一個港口，港口出現家人合照。
-         * 螢幕觸碰不推進任何進度（只有水面小漣漪），家長功能以長按開啟。
+         * 螢幕觸碰不推進任何進度（只有水面小漣漪），家長功能由家長按 ⚓ 開啟。
          */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100%; overflow: hidden; }
@@ -159,7 +159,7 @@
         #startOverlay p { font-size: 3.6vmin; opacity: .9; line-height: 1.5; }
         #startOverlay .err { color: #ffb4b4; font-size: 3vmin; }
 
-        /* 家長列（長按左上角錨點開啟） */
+        /* 家長列（按 ⚓ 開啟） */
         #anchor { position: absolute; right: 1.5vmin; top: 1.5vmin; width: 9vmin; height: 9vmin; border-radius: 50%; background: rgba(255,255,255,.18);
                   display: flex; align-items: center; justify-content: center; font-size: 4.5vmin; z-index: 25; } /* 在起始遮罩(20)之上，家長可先設定 */
         /* 左上「← 返回」：與各關卡相同的介面 */
@@ -224,7 +224,7 @@
         <div id="verdict">
             <div id="verdictQ">他說的像「郵輪」嗎？</div>
             <div class="vrow">
-                <button class="vbtn ok" data-parent-longpress="verdictOk" data-parent-hint="家長按住 👍 約一秒才算說對">👍 說對了（按住）</button>
+                <button class="vbtn ok" data-parent-longpress="verdictOk">👍 說對了</button>
                 <button class="vbtn" id="verdictAgainBtn">🔁 再一次</button>
             </div>
         </div>
@@ -239,7 +239,7 @@
     </div>
 
     <a class="back-btn" href="../index.html">← 返回</a>
-    <div id="anchor" data-parent-longpress="openPanel" data-parent-hint="按住 ⚓ 約一秒，開啟家長設定">⚓</div>
+    <div id="anchor" data-parent-longpress="openPanel" title="家長設定">⚓</div>
     <div id="toast"></div>
 
     <div id="startOverlay">
@@ -248,10 +248,10 @@
         <button id="startBtn">出航</button>
         <p class="err" id="startErr"></p>
         <div class="row" style="justify-content:center;margin:0">
-            <button class="btn" id="setupBtn" data-parent-longpress="openPanel" data-parent-hint="按住約一秒才會開啟（家長用）">⚓ 家長設定：船與每一站的照片、口令（按住一秒）</button>
+            <button class="btn" id="setupBtn" data-parent-longpress="openPanel">⚓ 家長設定：船與每一站的照片、口令</button>
             <a class="btn gray" href="../settings.html" style="text-decoration:none">👤 個人化設定</a>
         </div>
-        <p style="font-size:2.8vmin;opacity:.8">第一次玩請家長先按住「⚓ 家長設定」約一秒，放入他喜歡的郵輪與家人合照（輕按只會提示）。<br>遊戲中按住右上角 ⚓ 也能開啟；名字、家人照片、靈敏度在「個人化設定」。</p>
+        <p style="font-size:2.8vmin;opacity:.8">第一次玩請家長先按「⚓ 家長設定」，放入他喜歡的郵輪與家人合照。<br>遊戲中按右上角 ⚓ 也能開啟；名字、家人照片、靈敏度在「個人化設定」。</p>
         <p style="font-size:2.6vmin;opacity:.7"><span id="modeLine"></span><br>出航後 Safari 若再問麥克風，按「允許」；不想每次被問，到 設定 → Safari → 麥克風 改為「允許」。<br>系統分不出是誰在說話：家長要提示時，請按畫面上的 🔊 讓系統示範。</p>
     </div>
 
@@ -324,7 +324,7 @@
         // 過關門檻（設定頁）：0 = 鼓勵模式，有說話就抵港；>0 = 要說對口令（辨識相似度 ≥ 門檻）才抵港，船照樣隨聲音前進
         const THRESHOLD = typeof getSimilarityThreshold === 'function' ? getSimilarityThreshold() : 0;
         const HAS_SR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-        // 判定方式：voice（門檻 0，有說話就抵港）／parent（門檻 > 0 預設：說完由家長按住 👍 才進港）／asr（門檻 > 0 且設定頁選語音辨識引擎）
+        // 判定方式：voice（門檻 0，有說話就抵港）／parent（門檻 > 0 預設：說完由家長按 👍 才進港）／asr（門檻 > 0 且設定頁選語音辨識引擎）
         const JUDGE = THRESHOLD === 0 ? 'voice' : ((typeof getJudgeMode === 'function' ? getJudgeMode() : 'parent') === 'asr' && HAS_SR ? 'asr' : 'parent');
         const ASR_MODE = JUDGE === 'asr', PARENT_MODE = JUDGE === 'parent';
         const VERDICT_SHOW_MS = 900;     // 家長判定：他停多久不出聲就先出判定列（麥克風繼續聽，他再說就繼續累計；對不對、說完沒由家長決定）
@@ -590,12 +590,12 @@
         }
         function modeText() {
             if (JUDGE === 'voice') return '鼓勵模式（門檻 0%）：有說話就抵港';
-            if (JUDGE === 'parent') return '門檻 ' + THRESHOLD + '%，家長判定：他說完後，家長按住 👍 才進港（在「個人化設定」調整）';
+            if (JUDGE === 'parent') return '門檻 ' + THRESHOLD + '%，家長判定：他說完後，家長按 👍 才進港（在「個人化設定」調整）';
             return '門檻 ' + THRESHOLD + '%，語音辨識引擎判定：要辨識出口令才進港（在「個人化設定」調整）';
         }
 
         // ==========================================
-        // 家長判定模式：說完一個詞 → 船停在港前、出現判定列；家長按住 👍 進港，🔁 再說一次
+        // 家長判定模式：說完一個詞 → 船停在港前、出現判定列；家長按 👍 進港，🔁 再說一次
         // ==========================================
         // v5.9.6：判定列不再等「說完判定」秒數（中等太早出現、長的等太久）——他停 VERDICT_SHOW_MS 就先出現，但不關麥克風（不設 busy）：
         // 他再說，船照樣動、判定列留著；家長聽到對了就按 👍。「說完判定」設定只用於語音引擎判定與說話板。
@@ -620,9 +620,10 @@
             hideVerdict();
             appendLog({ t: Date.now(), verdict: auto ? 'auto' : 'again', word: verdictWord });
             utterOpen = false; busy = false; lastVoicedAt = Date.now();
+            setEngine(false);   // 先把引擎關掉（它關掉時會改提示文字），再寫「再說一次」才不會被蓋掉
             if (!auto) { $('voiceHint').textContent = '再說一次：' + verdictWord + ' 🎤'; say('再說一次：' + verdictWord); }
         }
-        window.verdictOk = verdictOk;   // 👍 以 data-parent-longpress 呼叫（按住 1.2 秒，他亂按不會進港）
+        window.verdictOk = verdictOk;   // 👍 以 data-parent-longpress 呼叫（v5.9.7 起單點）
 
         // ==========================================
         // 主迴圈：聲音 → 船
@@ -837,7 +838,7 @@
 
 
         // ==========================================
-        // 家長面板：⚓ 與起始畫面的「家長設定」都要按住 1.2 秒（共用 initParentLongPress；輕按只提示）
+        // 家長面板：⚓ 與起始畫面的「家長設定」按一下就開（共用 initParentLongPress，v5.9.7 起單點）
         // ==========================================
         function openPanel() { hideVerdict(); renderPanel(); $('parentPanel').classList.add('show'); busy = true; if (ASR_MODE) SpeechModule.stopListening(); }
         window.openPanel = openPanel;   // 給 data-parent-longpress 呼叫
