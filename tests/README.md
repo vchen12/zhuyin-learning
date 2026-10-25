@@ -8,7 +8,7 @@ node tests/user-data-test.js     # 使用者資料層 UserData：遷移、家人
 ```
 
 瀏覽器測試（Playwright + Chromium，先在專案根目錄 `python3 -m http.server 8123`）：
-`tests/browser/voyage-browser-test.js`（郵輪）、`voyage-ports-test.js`（v5.8.0：站數 1～12、每站口令、航行動畫、抵港煙火彩帶、稱讚句型、舊資料遷移）、`voyage-photos-test.js`（郵輪照片：IndexedDB、舊資料搬移、?setup=1）、`back-longpress-test.js`（返回鈕長按：輕按只提示、按住才回上一頁）、`voyage-tts-test.js`（出航時口令在手勢內同步 speak、抵港稱讚）、`voyage-shortword-test.js`（`node make-wav.js dudu`；兩音節短詞算一個詞）、`threshold-test.js`（門檻 20% 且 judgeMode=asr：假辨識引擎，郵輪說對才抵港／說錯提示、說話板說對才回應）、`parent-judge-test.js`（門檻 20% 家長判定：說完出判定列，按住 👍 才進港／才給報酬，🔁 再一次）、`viewport-test.js`（9 頁全螢幕高度＝實際可視高度）、`board-browser-test.js`（說話板）、`settings-browser-test.js`（設定頁：遷移、家人、照片裁切、字詞圖片、還原）、`exam-test.js`（體檢練習：色盲圖卡出題／👍／看答案／選項、視力表十列／放大／C／大圖）、`mic-memory-test.js`（麥克風測試紀錄：設定頁／診斷頁成功後記住、重進顯示上次成功、指引卡第 3 步標示）。
+`tests/browser/voyage-browser-test.js`（郵輪）、`voyage-ports-test.js`（v5.8.0：站數 1～12、每站口令、航行動畫、抵港煙火彩帶、稱讚句型、舊資料遷移）、`voyage-photos-test.js`（郵輪照片：IndexedDB、舊資料搬移、?setup=1）、`back-longpress-test.js`（返回鈕長按：輕按只提示、按住才回上一頁）、`voyage-tts-test.js`（出航時口令在手勢內同步 speak、抵港稱讚）、`voyage-shortword-test.js`（`node make-wav.js dudu`；兩音節短詞算一個詞）、`threshold-test.js`（門檻 20% 且 judgeMode=asr：假辨識引擎，郵輪說對才抵港／說錯提示、說話板說對才回應）、`parent-judge-test.js`（門檻 20% 家長判定：說完出判定列，按住 👍 才進港／才給報酬，🔁 再一次）、`viewport-test.js`（9 頁全螢幕高度＝實際可視高度）、`board-browser-test.js`（說話板）、`settings-browser-test.js`（設定頁：遷移、家人、照片裁切、字詞圖片、還原）、`number-practice-test.js`（數字練習三關共用：牌卡、模式立即切換、自動發音、按牌卡重唸、看數唸出自動聽、我會唸單點；第 0 關掉落速度／一碰就算／發音排隊）、`exam-test.js`（體檢練習：色盲圖卡出題／👍／看答案／選項、視力表十列／放大／C／大圖）、`mic-memory-test.js`（麥克風測試紀錄：設定頁／診斷頁成功後記住、重進顯示上次成功、指引卡第 3 步標示）。
 
 `js/speech-recognition.js` 頂層不觸碰瀏覽器 API，可直接 `require()`；
 純函數由 `SpeechModule.__dsp` 匯出。改動人聲偵測參數後務必重跑兩者。

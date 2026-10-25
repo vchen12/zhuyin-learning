@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.9.3
+- **版本**: v5.9.4
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -26,6 +26,7 @@ js/speech-game.js         - 語音遊戲共用流程（聽一次／沒過關回�
 js/vocabulary.js          - 詞彙資料庫（8大分類、80+詞彙）
 js/sentence-generator.js  - 句型產生器（從字詞庫動態產生遊戲內容）
 js/prevent-zoom.js        - 防止雙擊放大
+js/number-practice.js     - 數字練習共用（第 1／2／3 關 0–9／0–30／0–99 同一個遊戲換資料；頁面只留版面、主題色、資料）
 js/media-store.js         - 照片／錄音的 IndexedDB 共用存取（MediaStore.open(db) → put/get/del/each；localStorage 只有約 5MB，照片一律存這裡）
 js/photo-crop.js          - 共用照片裁切（PhotoCrop.open(file,{aspect,outWidth}) → dataURL；拖曳／雙指／滑桿縮放／整張使用）
 sw.js                     - Service Worker 快取策略
@@ -159,6 +160,13 @@ exam/eye.html             - 體檢練習：視力表（E／缺角圓圈 C，10 �
   `celebrate({ status, fireworks })` 過關稱讚（含名字、震動、煙火、TTS）、`manualConfirm(target, onYes, opts)` 家長長按「我會唸」、`skip(target, next, opts)`。
   12 個語音遊戲不得再直接呼叫 `SpeechModule.startListening`（說話板 `board/` 與郵輪 `voyage/` 例外：它們是 passMode voice 的獨立流程）。
   **各遊戲何時開聽（按麥克風才聽、示範音播完自動聽、老鷹飛行中連續聽）是遊戲規則，留在頁面，不得為了統一而改掉。**
+  `manualConfirm(target, onYes, { confirm: false })` 不跳對話框（示範播完直接算會唸）。
+- 數字練習三關共用 `js/number-practice.js`（`NumberPractice.start({ numbers, storageKey, columns, rounds })`，v5.9.4）：大牌卡（數字＋注音／國字）；
+  模式切換立即開始、無對話框；📚 學習出現就唸、點格子唸；👂 聽音選數自動唸題；🎤 看數唸出**自動開始聽**（不必按麥克風）、沒過關示範後自動再聽、
+  沒人聲最多自動重聽 3 次；按牌卡／？／螢幕空白處＝再唸一次（看數唸出：先示範再自動聽）；「✅ 我會唸」家長按一下即算（`confirm:false`）、不長按。
+  實測回饋（v5.9.4）：數字太小、沒牌卡、沒自動發音、選模式還要按確定、按？應重唸、看數唸出應自動聽、我會唸不必長按。
+- 第 0 關掉落遊戲（v5.9.4）：他按得很快——「中」改為落得慢（26 秒）、出得密（1.3 秒）、畫面最多 12 個；一碰就算（`pointerdown`）；
+  發音排隊（`queueSound`，按一個唸一個不互相切斷；按得比唸得快只留最近兩個，mp3 每個約 0.83 秒）。
 - 版本號更新在 `js/config.js`（`APP_CONFIG.version`）、`sw.js`（`CACHE_VERSION`，觸發快取更新）與 `index.html` 頁尾；`manifest.json` 無版本欄位
 
 ### UI 設計原則
@@ -208,6 +216,7 @@ exam/eye.html             - 體檢練習：視力表（E／缺角圓圈 C，10 �
 
 ## 版本歷史重點
 
+- **v5.9.4**: 數字練習三關改為共用 `js/number-practice.js`：大牌卡、模式立即切換（拿掉確定對話框與長篇說明）、出現就唸、按牌卡／？／螢幕再唸、看數唸出自動聽（示範後自動再聽）、我會唸單點；第 0 關掉落遊戲落得慢、出得密、一碰就算、發音排隊。實測回饋：掉落太快、發音跟不上他按的速度；數字太小、沒牌卡、沒自動發音、選模式要按確定、按？應重唸
 - **v5.9.3**: 色盲圖卡配色擴成完整類型：紅綠型三種、灰底雙色（紫字與紅字）、藍黃型兩種，每張隨機或指定只練某一型；實測回饋：原本只有紅綠型一種配色
 - **v5.9.2**: 體檢練習的 👍 改為單點即回饋（兩頁；家長拿著 iPad 問，不必長按）
 - **v5.9.1**: 體檢練習實測修正：「繼續加油」不是稱讚（拿掉）；色盲圖卡每張自動問「這是幾？」、他按圖卡也問；視力表縮小、最下面多一列 1.0、同列相鄰方向不重複（實測 0.3 列全朝上）；新增「C 八方向」（含斜角）
