@@ -13,7 +13,7 @@
          * 流程：點一張卡 → 聽示範（家人錄音，沒有就 TTS）→ 他說 → 系統確認真的發聲 → 立即報酬
          *      （照片放大、播家人錄的回應）→ 家長一鍵判定（說對了／再一次／換一張）並記錄。
          * 判定只用人聲偵測（passMode: 'voice'）；對不對由家長決定，系統不評分。
-         * 觸碰照片＝再聽一次示範（喇叭播放期間不算人聲）；家長設定以長按 ⚓ 開啟。
+         * 觸碰照片＝再聽一次示範（喇叭播放期間不算人聲）；家長設定按 ⚓ 開啟。
          * 媒體（照片、示範錄音、回應錄音）存 IndexedDB；卡片文字存 localStorage。
          */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -98,10 +98,10 @@
     <header>
         <a class="back" href="../index.html">← 返回</a>
         <h1 id="title">說話板</h1>
-        <div id="anchor" data-parent-longpress="openPanel" data-parent-hint="按住 ⚓ 約一秒，開啟家長設定">⚓</div>
+        <div id="anchor" data-parent-longpress="openPanel" title="家長設定">⚓</div>
     </header>
     <div id="grid"></div>
-    <div id="empty" style="display:none">還沒有卡片。長按右上角 ⚓ 新增，或到「設定」頁上傳家人照片。</div>
+    <div id="empty" style="display:none">還沒有卡片。按右上角 ⚓ 新增，或到「設定」頁上傳家人照片。</div>
 
     <div id="focus">
         <button id="exitFocus">⏭ 換一張</button>
@@ -126,10 +126,10 @@
         <button id="startBtn">開始</button>
         <p id="startErr"></p>
         <div style="display:flex;gap:2vmin;flex-wrap:wrap;justify-content:center">
-            <button class="btn" id="setupBtn" data-parent-longpress="openPanel" data-parent-hint="按住約一秒才會開啟（家長用）">⚓ 家長設定：卡片照片與錄音（按住一秒）</button>
+            <button class="btn" id="setupBtn" data-parent-longpress="openPanel">⚓ 家長設定：卡片照片與錄音</button>
             <a class="btn gray" href="../settings.html" style="text-decoration:none">👤 個人化設定</a>
         </div>
-        <p style="font-size:2.8vmin;opacity:.75">第一次玩請家長先按住「⚓ 家長設定」約一秒放照片（輕按只會提示）；遊戲中按住右上角 ⚓ 也能開啟。<br>開始後 Safari 若再問麥克風，按「允許」；不想每次被問，到 設定 → Safari → 麥克風 改為「允許」。</p>
+        <p style="font-size:2.8vmin;opacity:.75">第一次玩請家長先按「⚓ 家長設定」放照片；遊戲中按右上角 ⚓ 也能開啟。<br>開始後 Safari 若再問麥克風，按「允許」；不想每次被問，到 設定 → Safari → 麥克風 改為「允許」。</p>
     </div>
 
     <div id="panel">
@@ -491,7 +491,7 @@
         }
 
         // ==========================================
-        // 家長面板：⚓ 與「家長設定」鈕都要按住 1.2 秒（共用 initParentLongPress；輕按只提示）
+        // 家長面板：⚓ 與「家長設定」鈕按一下就開（共用 initParentLongPress，v5.9.7 起單點）
         function openPanel() { if (focusActive) exitFocus(); renderPanel(); $('panel').classList.add('show'); }
         window.openPanel = openPanel;   // 給 data-parent-longpress 呼叫
         $('closePanel').addEventListener('click', () => { $('panel').classList.remove('show'); renderGrid(); });

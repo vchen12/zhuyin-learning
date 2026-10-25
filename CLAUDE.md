@@ -4,7 +4,7 @@
 
 這是一個為**失語症患者**與**學齡前兒童**設計的注音符號學習 Progressive Web App (PWA)。
 
-- **版本**: v5.9.6
+- **版本**: v5.9.7
 - **開發者**: 陳宜誠律師 & Claude Code
 - **技術棧**: 純 HTML/CSS/JavaScript（無框架、無建置工具）
 - **授權**: MIT License（音檔為教育部創用 CC）
@@ -92,7 +92,7 @@ exam/eye.html             - 體檢練習：視力表（E／缺角圓圈 C，10 �
 - `showVoiceHud`：`1` / `0`
 - `speechEndMs`：`1500`（預設）/ `2500` / `4000`——他停多久不出聲才算「說完一句」；說話板的 `silenceEndMs` 與郵輪**語音引擎判定**的辨識會話用它（說得慢、字間停頓長的人設長一點，否則說到一半就被稱讚）。
   郵輪**家長判定**自 v5.9.6 起不用它：他停 0.9 秒就出判定列但麥克風不關（他再說就繼續、船照樣動、30 秒計時重來），說完沒、對不對都由家長按 👍 決定（實測：2.5 秒太早出、4 秒等太久又再催）
-- `judgeMode`：`parent`（預設）/ `asr`——門檻 > 0 時郵輪與說話板「說對了沒」由誰判定：家長按住 👍（語言障礙者的發音，語音引擎常聽不懂，家長聽得懂）或語音辨識引擎
+- `judgeMode`：`parent`（預設）/ `asr`——門檻 > 0 時郵輪與說話板「說對了沒」由誰判定：家長按 👍（語言障礙者的發音，語音引擎常聽不懂，家長聽得懂）或語音辨識引擎
 - `micTestOk`：`{ at, items: { permission|volume|asr|voice: 成功時間 } }`——麥克風測試紀錄（`config.js` 的 `recordMicTestOk／getMicTestRecord／describeMicTestRecord`）；設定頁與 `mic-test.html` 成功時寫入、載入時顯示「上次測試成功：…」，主選單指引卡第 3 步據此標示已完成；「還原預設值」不清它（是裝置事實，不是偏好）
 
 ### 錄音回放
@@ -114,15 +114,15 @@ exam/eye.html             - 體檢練習：視力表（E／缺角圓圈 C，10 �
 - 注音退為構音輔助層（附掛在已會說的詞的首音），不是入口。
 
 `voyage/index.html`（郵輪出航）：持續發聲船前進；說完一個詞（確認人聲，且累計有聲 ≥150ms 或首尾跨度 ≥250ms；「嘟嘟」「出發」這種母音很短的兩音節詞靠跨度）→ `depart()` 航行動畫（短鳴、尾浪、黑煙、海豚、海鷗，船開進港口，剩的距離再短也至少 0.8 秒；期間忽略麥克風）→ `arrive()` 抵港：港口揭示家人合照＋長鳴汽笛＋卡片外四區煙火（共用 `createFireworks`）與彩帶＋稱讚（稱讚語 × 5 種句型，每種都含「到○○了」）；
-站數由家長決定（v5.8.0：`voyage.data` v2 `{ v:2, ship, ports:[{ name, word, imgs, next }] }`，1～12 站，家長面板「➕ 加一站」／每站「🗑 刪除」；**每站有自己的口令 `word`**，空白＝站名；舊資料固定 5 站、口令清單 `words` 依序分到各站後存回）；> 6 站時航線標籤上下交錯、> 8 站圓點縮小。最後一站後終點（煙火、稱讚＋結尾句型）。**過關門檻（設定頁）也適用**：0% 有說話就抵港；>0% 時船仍隨聲音前進但停在港前，由 `judgeMode` 決定誰判「說對了」：`parent`（預設）他停 0.9 秒就出現判定列「他說的像「郵輪」嗎？」且繼續聽（v5.9.6），家長按住 👍（1.2 秒）才進港、🔁 再一次（30 秒沒按也沒再說＝收起繼續聽；判定列掛著時不催口令）；`asr` 交給 `SpeechModule` 辨識會話（相似度 ≥ 門檻），說錯顯示「聽到「X」，再說一次：郵輪」。照片由家長在 iPad 上從「照片」選取，裁切縮至 900px 後存 IndexedDB `zhuyin-media`（key `voyage/ship`、`voyage/p<i>/<id>`），
+站數由家長決定（v5.8.0：`voyage.data` v2 `{ v:2, ship, ports:[{ name, word, imgs, next }] }`，1～12 站，家長面板「➕ 加一站」／每站「🗑 刪除」；**每站有自己的口令 `word`**，空白＝站名；舊資料固定 5 站、口令清單 `words` 依序分到各站後存回）；> 6 站時航線標籤上下交錯、> 8 站圓點縮小。最後一站後終點（煙火、稱讚＋結尾句型）。**過關門檻（設定頁）也適用**：0% 有說話就抵港；>0% 時船仍隨聲音前進但停在港前，由 `judgeMode` 決定誰判「說對了」：`parent`（預設）他停 0.9 秒就出現判定列「他說的像「郵輪」嗎？」且繼續聽（v5.9.6），家長按 👍（單點）才進港、🔁 再一次（30 秒沒按也沒再說＝收起繼續聽；判定列掛著時不催口令）；`asr` 交給 `SpeechModule` 辨識會話（相似度 ≥ 門檻），說錯顯示「聽到「X」，再說一次：郵輪」。照片由家長在 iPad 上從「照片」選取，裁切縮至 900px 後存 IndexedDB `zhuyin-media`（key `voyage/ship`、`voyage/p<i>/<id>`），
 `voyage.data`（localStorage）只存參照 `idb:voyage/…` 與港名、口令；舊版塞在 localStorage 的 dataURL 第一次載入時自動搬移
 （iOS Safari localStorage 約 5MB，四、五張照片就會「儲存空間不足」，與 iPad 容量無關）。
-起始畫面有「⚓ 家長設定」鈕（與 ⚓ 一樣要按住 1.2 秒，輕按只顯示提示；共用 `initParentLongPress` 的 `data-parent-longpress`／`data-parent-hint`）與「個人化設定」連結；`?setup=1` 直接開家長面板（設定頁「說話旅行」區由此連入）；左上「← 返回」與各關卡一致；
+起始畫面有「⚓ 家長設定」鈕（與 ⚓ 一樣按一下就開，v5.9.7；共用 `initParentLongPress` 的 `data-parent-longpress`）與「個人化設定」連結；`?setup=1` 直接開家長面板（設定頁「說話旅行」區由此連入）；左上「← 返回」與各關卡一致；
 每次發聲與抵港寫入 `voyage.log`，家長面板可看今日統計與匯出。喇叭播音（汽笛／TTS）期間關閉麥克風判定。
 
 `board/index.html`（說話板，`?set=iwant` / `?set=family`）：照片卡格 → 點卡進專注畫面 → 播示範（家人錄音，否則 TTS）
 → `startListening(say, cb, { hud: false, waitForEnd: true, silenceEndMs: 1500 })`（門檻 0% 時加 `passMode: 'voice'`，>0% 交給 SpeechModule 依相似度判定）：**等他說完**（靜音 1.5 秒，容許「我要…尿尿」中間停頓）才判定，不在句中回覆 → 報酬（稱讚語 TTS → 照片放大、播家人錄的回應）
-→ 家長判定列（👍 與 🔁 都單點，v5.9.5 起不長按；門檻 0% 或 asr：報酬之後才出現，只記錄；門檻 > 0 且 `judgeMode=parent`：說完先出現判定列，家長按 👍 才給報酬）→ 回卡片格。郵輪的 👍 仍為按住 1.2 秒（未被要求改）。
+→ 家長判定列（👍 與 🔁 都單點，v5.9.5 起不長按；門檻 0% 或 asr：報酬之後才出現，只記錄；門檻 > 0 且 `judgeMode=parent`：說完先出現判定列，家長按 👍 才給報酬）→ 回卡片格。郵輪的 👍 自 v5.9.7 起也是單點。
 家人組沿用設定頁 `familySettings` 的名字與 `customImage`。卡片文字存 localStorage `board.items.<set>`；
 照片／示範／回應錄音存 IndexedDB `zhuyin-board`（key `<set>/<id>/<photo|model|reply>`）；紀錄 `board.log`。
 觸碰照片＝重播示範（`guardAudio` 保護）。無 MediaRecorder 的裝置（iOS < 14.5）隱藏錄音鈕、改 TTS。
@@ -158,7 +158,7 @@ exam/eye.html             - 體檢練習：視力表（E／缺角圓圈 C，10 �
 - 語音遊戲流程在 `js/speech-game.js`（`SpeechGame`，v5.5.0 起）：`listen({ target, button, status, heard, manualButton,
   onPass, onFail, onNoVoice, … })` 聽一次（按鈕狀態、「正在聽／聽到了／沒聽到／那不是說話聲」文案、`你說：…` 統一在此）、
   `review({ target, status, retryCount, manualButton, playTarget, playback })` 沒過關回饋（回放錄音 → 正確示範 → 再試／第 3 次起提示家長「我會唸」）、
-  `celebrate({ status, fireworks })` 過關稱讚（含名字、震動、煙火、TTS）、`manualConfirm(target, onYes, opts)` 家長長按「我會唸」、`skip(target, next, opts)`。
+  `celebrate({ status, fireworks })` 過關稱讚（含名字、震動、煙火、TTS）、`manualConfirm(target, onYes, opts)` 家長按「我會唸」（預設不問，`confirm:true` 才問）、`skip(target, next, opts)`。
   12 個語音遊戲不得再直接呼叫 `SpeechModule.startListening`（說話板 `board/` 與郵輪 `voyage/` 例外：它們是 passMode voice 的獨立流程）。
   **各遊戲何時開聽（按麥克風才聽、示範音播完自動聽、老鷹飛行中連續聽）是遊戲規則，留在頁面，不得為了統一而改掉。**
   `manualConfirm(target, onYes, { confirm: false })` 不跳對話框（示範播完直接算會唸）。
@@ -176,7 +176,8 @@ exam/eye.html             - 體檢練習：視力表（E／缺角圓圈 C，10 �
 - 固定高度佈局，無需捲動
 - 放大的互動按鈕（適合兒童與長者）
 - 麥克風按鈕有閃爍動畫引導
-- **會離開遊戲或改設定的按鈕一律長按 1.2 秒**（返回、家長設定、我會唸、遊戲結束畫面的「🏠 返回選單」），輕按只顯示提示；`config.js` 自動接上 `a.back-btn`／`button.back-btn`／`a.back`／`[data-back]` 與 `[data-parent-longpress]`
+- **會離開頁面的按鈕一律長按 1.2 秒**（← 返回、遊戲結束畫面的「🏠 返回選單」、`data-back`），輕按只顯示提示；`config.js` 自動接上 `a.back-btn`／`button.back-btn`／`a.back`／`[data-back]`
+- **家長按鍵一律單點**（👍 說對了、⚓ 家長設定、✅ 我會唸、體檢練習的 👍；v5.9.7 實測回饋：家長拿著 iPad 按，長按很擾人）：`[data-parent-longpress]` 由 `initParentLongPress` 接成單點（屬性名沿用）；`SpeechGame.manualConfirm` 預設不跳「你會唸嗎？」對話框
 - **回上一頁的控制全站統一**：左上角「← 返回」（不寫「返回首頁」「回主選單」等變體）；其他會離開頁面的按鈕加 `data-back` 並標「（按住）」
 - **設定一律改了就存**：設定頁沒有「儲存」按鈕（名稱輸入停 0.6 秒即存）；郵輪／說話板家長面板標示「修改會自動儲存」
 
@@ -219,6 +220,7 @@ exam/eye.html             - 體檢練習：視力表（E／缺角圓圈 C，10 �
 
 ## 版本歷史重點
 
+- **v5.9.7**: 家長按鍵一律單點：郵輪 👍、郵輪／說話板 ⚓ 與「家長設定」鈕、11 個語音遊戲的「✅ 我會唸」（`initParentLongPress` 改接單點、`manualConfirm` 預設不問）；會離開頁面的按鈕維持長按
 - **v5.9.6**: 郵輪／說話板出航卡住修正（`SpeechModule.prepareAudio()` 在手勢內先建 AudioContext；init 的 resume 與頁面的 init 都加時限）；郵輪家長判定列改為「停 0.9 秒就出、繼續聽、家長決定」，不再用說完判定秒數（實測：中等太早結束、長的等太久又再催）；郵輪語音引擎判定的會話補上 waitForEnd／silenceEndMs（之前 0.7 秒就收音）
 - **v5.9.5**: 說話板（我要…／叫家人）的「👍 說對了」改為單點（實測回饋）；郵輪維持按住
 - **v5.9.4**: 數字練習三關改為共用 `js/number-practice.js`：大牌卡、模式立即切換（拿掉確定對話框與長篇說明）、出現就唸、按牌卡／？／螢幕再唸、看數唸出自動聽（示範後自動再聽）、我會唸單點；第 0 關掉落遊戲落得慢、出得密、一碰就算、發音排隊。實測回饋：掉落太快、發音跟不上他按的速度；數字太小、沒牌卡、沒自動發音、選模式要按確定、按？應重唸

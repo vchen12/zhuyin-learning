@@ -21,11 +21,9 @@ async function run(wavName, fn) {
     await page.click('#startBtn'); await page.waitForTimeout(4200);               // 詞 1 在 1.5–1.95s，門檻 > 0 時「說完」要等 1.5s（speechEndMs）→ ≈3.5s 出判定列
     const v1 = await page.evaluate(() => ({ show: document.getElementById('verdict').classList.contains('show'), q: document.getElementById('verdictQ').textContent, done: document.querySelectorAll('.port.done').length, left: parseFloat(document.getElementById('ship').style.left) }));
     check('說完 → 判定列出現、問「郵輪」、尚未抵港', v1.show && /郵輪/.test(v1.q) && v1.done === 0);
-    await page.click('#verdict .vbtn.ok'); await page.waitForTimeout(300);
-    check('輕按 👍 不進港（只提示）', (await page.evaluate(() => document.querySelectorAll('.port.done').length)) === 0 && await page.$eval('#parentHintToast', e => e.style.opacity === '1'));
-    await hold(page, '#verdict .vbtn.ok', 1400); await page.waitForTimeout(1500);   // 👍 之後先有 ≈0.8s 航行動畫才進港
+    await page.click('#verdict .vbtn.ok'); await page.waitForTimeout(1500);   // v5.9.7：👍 單點；之後先有 ≈0.8s 航行動畫才進港
     const v2 = await page.evaluate(() => ({ show: document.getElementById('verdict').classList.contains('show'), done: document.querySelectorAll('.port.done').length, card: document.getElementById('portCard').classList.contains('show') }));
-    check('按住 👍 → 進港、照片', !v2.show && v2.done === 1 && v2.card);
+    check('按 👍 → 進港、照片', !v2.show && v2.done === 1 && v2.card);
     await page.waitForTimeout(10500);                                                // 詞 2（9.4–9.9s）落在卡片期間被忽略；詞 3 在 15.7–16.3s → ≈17.8s 出判定列
     const v3 = await page.evaluate(() => ({ show: document.getElementById('verdict').classList.contains('show'), q: document.getElementById('verdictQ').textContent }));
     check('第 2 個詞 → 判定列問「開船」', v3.show && /開船/.test(v3.q));
