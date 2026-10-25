@@ -334,13 +334,14 @@
         }
         .falling-item {
             position: absolute;
-            font-size: 2.5rem;
+            font-size: 3rem;
             background: white;
-            padding: 12px 18px;
-            border-radius: 12px;
+            padding: 14px 24px;
+            border-radius: 14px;
             cursor: pointer;
             box-shadow: 0 3px 6px rgba(0,0,0,0.2);
             transition: transform 0.2s;
+            -webkit-user-select: none; user-select: none; touch-action: manipulation;
         }
         .falling-item:hover {
             transform: scale(1.15);
@@ -754,11 +755,26 @@
         }
 
         // 掉落速度：慢／中／快。滑鼠（非觸控裝置）操控較慢，預設「慢」；觸控裝置預設「中」。
+        // v5.9.4 實測：他按得很快，舊的「中」（11.5 秒落地、2 秒出一個）太快又供不應求——改成落得慢、出得密，畫面最多 MAX_ITEMS 個
         const FALL_SPEEDS = {
-            slow:   { step: 0.2, spawnMs: 3500 },   // 一個符號約 29 秒落地
-            normal: { step: 0.5, spawnMs: 2000 },   // 約 11.5 秒
-            fast:   { step: 0.8, spawnMs: 1400 }    // 約 7 秒
+            slow:   { step: 0.12, spawnMs: 2200 },  // 一個符號約 48 秒落地
+            normal: { step: 0.22, spawnMs: 1300 },  // 約 26 秒
+            fast:   { step: 0.45, spawnMs: 900 }    // 約 13 秒
         };
+        const MAX_ITEMS = 12;                       // 畫面上最多同時幾個（沒按掉就不再出）
+        // 發音排隊：按一個唸一個，不互相切斷；他按得比唸得快時只留最近兩個，不然越唸越落後
+        const soundQueue = []; let soundPlaying = false;
+        function queueSound(symbol) {
+            soundQueue.push(symbol);
+            while (soundQueue.length > 2) soundQueue.shift();
+            pumpSounds();
+        }
+        function pumpSounds() {
+            if (soundPlaying) return;
+            const s = soundQueue.shift(); if (!s) return;
+            soundPlaying = true;
+            playZhuyinSound(s, () => { soundPlaying = false; pumpSounds(); });
+        }
         let fallSpeed = 'normal';
         (function () {
             const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
@@ -787,6 +803,7 @@
             currentGameSymbols = [...STAGES[1].symbols, ...STAGES[2].symbols];
             setFallSpeed(fallSpeed);
             if (gameInterval) clearInterval(gameInterval);
+            createFallingItem(currentGameSymbols);   // 一開始就出第一個，不用等一個間隔
             gameInterval = setInterval(() => {
                 createFallingItem(currentGameSymbols);
             }, FALL_SPEEDS[fallSpeed].spawnMs);
@@ -794,23 +811,30 @@
 
         function createFallingItem(symbols) {
             const gameArea = document.getElementById('gameArea');
+            if (gameArea.querySelectorAll('.falling-item').length >= MAX_ITEMS) return;
             const item = document.createElement('div');
             const symbol = symbols[Math.floor(Math.random() * symbols.length)];
 
             item.className = 'falling-item';
             item.textContent = symbol;
             item.style.left = (Math.random() * 80 + 10) + '%';
-            item.style.top = '-15%';
+            item.style.top = '-8%';                  // 從貼近頂端出現（落得慢，-15% 要三秒多才看得到）
 
-            item.onclick = () => {
-                playSound(symbol);
+            // 一碰就算（pointerdown，不等 click）：按掉立刻消失、發音排隊唸、放煙火
+            let hit = false;
+            const onHit = e => {
+                if (hit) return; hit = true;
+                if (e && e.preventDefault) e.preventDefault();
                 item.remove();
+                queueSound(symbol);
                 celebrate();
             };
+            item.addEventListener('pointerdown', onHit);
+            item.addEventListener('click', onHit);
 
             gameArea.appendChild(item);
 
-            let position = -15;
+            let position = -8;
             const fall = setInterval(() => {
                 position += FALL_SPEEDS[fallSpeed].step;   // 依目前速度設定
                 item.style.top = position + '%';

@@ -165,15 +165,15 @@ const SpeechGame = (function () {
     }
 
     /**
-     * 家長長按「我會唸」：先播示範再 confirm；確定 → onYes()，取消 → 「沒關係，再聽一次」
-     * opts: { status, playTarget, onNo }
+     * 家長「我會唸」：先播示範再 confirm；確定 → onYes()，取消 → 「沒關係，再聽一次」
+     * opts: { status, playTarget, onNo, confirm }——confirm: false 不跳對話框，示範播完直接算會唸（v5.9.4 數字練習：家長按一下就好）
      */
     function manualConfirm(target, onYes, opts) {
         opts = opts || {};
         const m = msgs(opts);
         SpeechModule.stopListening();
         playTarget(Object.assign({ target: target }, opts)).then(function () {
-            if (confirm('你會唸「' + target + '」嗎？\n\n點「確定」表示會唸，點「取消」再練習一下')) { onYes(); return; }
+            if (opts.confirm === false || confirm('你會唸「' + target + '」嗎？\n\n點「確定」表示會唸，點「取消」再練習一下')) { onYes(); return; }
             setText(opts.status, m.noWorries);
             SpeechModule.speak(m.noWorries);
             if (opts.onNo) opts.onNo();
