@@ -24,6 +24,11 @@ const TTS_STUB = () => {
   await page.click('#startBtn'); await page.waitForTimeout(300);
   const t0 = await page.evaluate(() => window.__tts[0]);
   check('開始：在點擊內同步講開場（iOS 解鎖語音）', t0 && /這是幾/.test(t0.text) && t0.active === true);
+  check('開始後這張不重複問（開場已含「這是幾」）', (await page.evaluate(() => window.__tts.length)) === 1);
+  await page.waitForTimeout(1600); await page.click('#plateWrap'); await page.waitForTimeout(150);
+  check('按到圖卡 → 系統問「這是幾？」', (await page.evaluate(() => window.__tts[window.__tts.length - 1].text)) === '這是幾？');
+  await page.click('#plateWrap'); await page.waitForTimeout(150);
+  check('1.5 秒內再按不重複問', (await page.evaluate(() => window.__tts.length)) === 2);
   const p1 = await page.evaluate(() => window.__plate);
   check('圖卡：數字為體檢常見數字、點 ≥ 500、數字區有點', [12, 8, 6, 29, 57, 5, 3, 15, 74, 2, 97, 45, 7, 16, 73, 26, 42, 35, 96].indexOf(p1.n) >= 0 && p1.dots >= 500 && p1.fig >= 60);
   check('畫布有畫（非空白）', await page.evaluate(() => { const c = document.getElementById('plate'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let colored = 0; for (let i = 0; i < d.length; i += 64) { if (d[i + 3] > 0 && Math.abs(d[i] - d[i + 1]) > 40) colored++; } return colored > 200; }));
@@ -37,12 +42,13 @@ const TTS_STUB = () => {
   check('紀錄：答對 1 題', /答對 1 題/.test(await page.$eval('#stats', e => e.textContent)) && (await page.evaluate(() => JSON.parse(localStorage.getItem('exam.color.log')))).some(x => x.n === n1 && x.ok));
   await page.waitForTimeout(3000);
   const p2 = await page.evaluate(() => window.__plate);
-  check('稱讚後自動換下一張（數字不同、答案收起）', p2.n !== n1 && !(await page.$eval('#answer', e => e.classList.contains('show'))));
+  check('稱讚後自動換下一張（數字不同、答案收起）、並自動問「這是幾？」', p2.n !== n1 && !(await page.$eval('#answer', e => e.classList.contains('show'))) && (await page.evaluate(() => window.__tts[window.__tts.length - 1].text)) === '這是幾？');
   await page.click('#revealBtn'); await page.waitForTimeout(200);
   const tts2 = await page.evaluate(() => window.__tts.map(x => x.text));
   check('看答案：顯示數字、只唸「是 N」、不稱讚、記為看答案', (await page.$eval('#answer', e => e.textContent)) === String(p2.n) && tts2[tts2.length - 1] === '是 ' + p2.n && /看答案 1 題/.test(await page.$eval('#stats', e => e.textContent)));
   await page.click('#nextBtn'); await page.waitForTimeout(200);
-  check('下一張：換題、答案收起', (await page.evaluate(() => window.__plate.n)) !== p2.n && !(await page.$eval('#answer', e => e.classList.contains('show'))));
+  check('下一張：換題、答案收起、自動問', (await page.evaluate(() => window.__plate.n)) !== p2.n && !(await page.$eval('#answer', e => e.classList.contains('show'))) && (await page.evaluate(() => window.__tts[window.__tts.length - 1].text)) === '這是幾？');
+  check('稱讚語沒有「繼續加油」', await page.evaluate(() => APP_CONFIG.encouragements.correct.indexOf('繼續加油！') < 0 && APP_CONFIG.encouragements.correct.length >= 24));
   await page.click('.seg[data-opt=digits] button[data-v="1"]'); await page.waitForTimeout(200);
   let all1 = true; for (let i = 0; i < 6; i++) { await page.click('#nextBtn'); await page.waitForTimeout(120); if ((await page.evaluate(() => window.__plate.n)) >= 10) all1 = false; }
   check('選「1 位數」→ 都是個位數，選項有存', all1 && (await page.evaluate(() => JSON.parse(localStorage.getItem('exam.color.opts')).digits)) === '1');
@@ -56,7 +62,8 @@ const TTS_STUB = () => {
   console.log('視力表');
   await page.goto(BASE + '/exam/eye.html'); await page.waitForTimeout(500);
   const rows = await page.$$eval('#chart .row', r => r.map(x => x.querySelectorAll('.sym').length));
-  check('10 列、每列 1,2,3,4,5,6,7,8,8,8 個符號', rows.join(',') === '1,2,3,4,5,6,7,8,8,8');
+  check('11 列（最後兩列都是 1.0）、每列 1,2,3,4,5,6,7,8,8,8,8 個符號', rows.join(',') === '1,2,3,4,5,6,7,8,8,8,8' && (await page.$$eval('#chart .row .va', v => v.map(x => x.textContent).slice(-2).join(','))) === '1.0,1.0');
+  check('同一列相鄰方向不重複', await page.$$eval('#chart .row', rs => rs.every(r => { const d = Array.from(r.querySelectorAll('.sym')).map(x => x.dataset.dir); return d.every((x, i) => i === 0 || x !== d[i - 1]); })));
   const sizes = await page.$$eval('#chart .row svg', s => s.map(x => parseInt(x.getAttribute('width'), 10)));
   check('由大到小、最小仍 ≥ 12px、表不溢出', sizes[0] > sizes[sizes.length - 1] * 5 && sizes[sizes.length - 1] >= 12 && await page.evaluate(() => { const c = document.getElementById('chart'); return c.scrollHeight <= c.clientHeight + 2; }));
   check('方向隨機（不只一種）', new Set(await page.$$eval('#chart .sym', s => s.map(x => x.dataset.dir))).size >= 2);
@@ -64,7 +71,7 @@ const TTS_STUB = () => {
   check('開始：在點擊內同步講開場', await page.evaluate(() => window.__tts[0] && /開口朝哪邊/.test(window.__tts[0].text) && window.__tts[0].active === true));
   const target = await page.$eval('.row:nth-child(4) .sym:nth-child(2)', e => e.dataset.dir);
   await page.click('.row:nth-child(4) .sym:nth-child(2)'); await page.waitForTimeout(300);
-  check('點符號 → 放大、同方向、判定列出現', await page.$eval('#focus', e => e.classList.contains('show')) && (await page.$eval('#focusSym svg', e => e.dataset.dir)) === target && await page.$eval('#verdict', e => e.classList.contains('show')) && await page.$eval('.row:nth-child(4) .sym:nth-child(2)', e => e.classList.contains('cur')));
+  check('點符號 → 放大、同方向、判定列出現、自動問', await page.$eval('#focus', e => e.classList.contains('show')) && (await page.$eval('#focusSym svg', e => e.dataset.dir)) === target && await page.$eval('#verdict', e => e.classList.contains('show')) && await page.$eval('.row:nth-child(4) .sym:nth-child(2)', e => e.classList.contains('cur')) && (await page.evaluate(() => window.__tts[window.__tts.length - 1].text)) === '開口朝哪邊？');
   const NAME = { up: '上', down: '下', left: '左', right: '右' };
   await hold(page, '#verdict .vbtn.ok', 1400); await page.waitForTimeout(300);
   const tts3 = await page.evaluate(() => window.__tts.map(x => x.text));
@@ -79,6 +86,12 @@ const TTS_STUB = () => {
   check('看答案：「缺口朝X」、不稱讚', /^缺口朝[上下左右]$/.test(await page.$eval('#arrowText', e => e.textContent)) && /^缺口朝[上下左右]$/.test((await page.evaluate(() => window.__tts[window.__tts.length - 1].text))));
   await page.click('#closeFocus'); await page.waitForTimeout(200);
   check('✕ 回視力表', !(await page.$eval('#focus', e => e.classList.contains('show'))) && !(await page.$eval('#verdict', e => e.classList.contains('show'))));
+  await page.click('.seg[data-opt=type] button[data-v=C8]'); await page.waitForTimeout(300);
+  const dirs8 = new Set(await page.$$eval('#chart .sym', s => s.map(x => x.dataset.dir)));
+  check('C 八方向：表上出現斜角方向、相鄰不重複', ['ul', 'ur', 'dl', 'dr'].some(d => dirs8.has(d)) && await page.$$eval('#chart .row', rs => rs.every(r => { const d = Array.from(r.querySelectorAll('.sym')).map(x => x.dataset.dir); return d.every((x, i) => i === 0 || x !== d[i - 1]); })));
+  await page.evaluate(() => showFocus('ul', null)); await page.click('#revealBtn'); await page.waitForTimeout(200);
+  check('斜角答案：「缺口朝左上」、箭頭 ↖、旋轉 225°', (await page.$eval('#arrowText', e => e.textContent)) === '缺口朝左上' && (await page.$eval('#arrow', e => e.textContent)) === '↖' && /225deg/.test(await page.$eval('#focusSym svg', e => e.style.transform)));
+  await page.click('#closeFocus'); await page.click('.seg[data-opt=type] button[data-v=C]'); await page.waitForTimeout(200);
   const before = await page.$$eval('#chart .sym', s => s.map(x => x.dataset.dir).join(''));
   await page.click('#shuffleBtn'); await page.waitForTimeout(200);
   check('換一張表 → 方向重抽', (await page.$$eval('#chart .sym', s => s.map(x => x.dataset.dir).join(''))) !== before);
