@@ -39,6 +39,7 @@
                   justify-content: center; font-size: 17vmin; font-weight: 900; color: #10456f; letter-spacing: .5vmin; visibility: hidden; transform: scale(.7); transition: transform .3s; }
         #answer.show { visibility: visible; transform: scale(1); }
         #stats { font-size: 2.6vmin; color: #667; }
+        #schemeLabel { font-size: 2.3vmin; color: #99a; }
         @media (orientation: portrait) { main { flex-direction: column; gap: 2vmin; } #side { flex-direction: row; flex-wrap: wrap; justify-content: center; } #answer { width: 22vmin; height: 16vmin; font-size: 11vmin; } }
 
         /* 家長判定列 */
@@ -68,7 +69,7 @@
         <div class="opts">
             <div class="seg" data-opt="digits"><button data-v="1">1 位數</button><button data-v="2">2 位數</button><button data-v="mix">混合</button></div>
             <div class="seg" data-opt="source"><button data-v="common">體檢常見數字</button><button data-v="random">隨機</button></div>
-            <div class="seg" data-opt="contrast"><button data-v="clear">清楚</button><button data-v="std">標準</button></div>
+            <div class="seg" data-opt="scheme"><button data-v="all">全部配色</button><button data-v="rg">紅綠型</button><button data-v="by">藍黃型</button><button data-v="grey">灰底雙色</button><button data-v="clear">清楚</button></div>
         </div>
     </header>
     <main>
@@ -77,6 +78,7 @@
             <div id="question"><span>這是幾？</span><button id="askBtn" title="由系統問">🔊</button></div>
             <div id="answer"></div>
             <div id="stats"></div>
+            <div id="schemeLabel"></div>
         </div>
     </main>
     <div id="verdict">
@@ -91,7 +93,7 @@
         <h1 style="font-size:7vmin">🎨 色盲圖卡練習</h1>
         <p>家長指著圖問：「<b>這是幾？</b>」<br>他說出數字後，家長<b>按 👍</b>；看不出來就按「👁 看答案」。</p>
         <button id="startBtn">開始練習</button>
-        <p class="small">圖卡由程式隨機產生，數字以體檢常用的為主。<br>右上角可切換 1 位／2 位數、清楚／標準色塊。</p>
+        <p class="small">圖卡由程式隨機產生，數字以體檢常用的為主；配色涵蓋體檢圖卡的各種類型：<br>紅綠型（橘紅字綠底、綠字橘粉底、紅字灰綠底）、灰底雙色（紫字與紅字）、藍黃型（藍紫字黃綠底、黃字藍灰底）。<br>右上角可切換 1 位／2 位數、只練某一型，或「清楚」高對比。</p>
     </div>
 
     <script src="../js/config.js"></script>
@@ -102,13 +104,15 @@
         const COMMON = [12, 8, 6, 29, 57, 5, 3, 15, 74, 2, 97, 45, 7, 16, 73, 26, 42, 35, 96];
         const NEXT_DELAY_MS = 2800;      // 答對 → 稱讚、顯示數字，至少多久後換下一張（稱讚講完才換）
         const ASK_GAP_MS = 1500;         // 他一直按圖卡：最多每 1.5 秒問一次「這是幾？」
-        const DEFAULT_OPTS = { digits: 'mix', source: 'common', contrast: 'std' };
+        const DEFAULT_OPTS = { digits: 'mix', source: 'common', scheme: 'all' };
         let opts = loadOpts();
         let target = null, last = null, revealed = false, busy = false, started = false, lastAskAt = 0;
 
         function loadOpts() {
             let o = null; try { o = JSON.parse(localStorage.getItem('exam.color.opts') || 'null'); } catch (e) { /* ignore */ }
-            const r = {}; Object.keys(DEFAULT_OPTS).forEach(k => { r[k] = o && o[k] ? o[k] : DEFAULT_OPTS[k]; }); return r;
+            const r = {}; Object.keys(DEFAULT_OPTS).forEach(k => { r[k] = o && o[k] ? o[k] : DEFAULT_OPTS[k]; });
+            if (o && o.contrast === 'clear' && !(o && o.scheme)) r.scheme = 'clear';   // v5.9.2 以前的「清楚／標準」選項
+            return r;
         }
         function saveOpts() { try { localStorage.setItem('exam.color.opts', JSON.stringify(opts)); } catch (e) { /* ignore */ } }
         function renderOpts() {
@@ -148,28 +152,55 @@
         // ---------- 圖卡產生：圓形區域塞滿大小不一的圓點，落在數字筆畫內的用一組顏色、其餘用另一組 ----------
         const rand = (a, b) => a + Math.random() * (b - a);
         const hsl = (h, s, l) => 'hsl(' + h.toFixed(0) + ',' + s.toFixed(0) + '%,' + l.toFixed(0) + '%)';
-        const PALETTES = {
-            // 標準：仿色盲圖卡——數字橘紅系、背景黃綠系，兩組的明暗範圍重疊，只能靠色相分辨
-            std: { fig: () => hsl(rand(8, 32), rand(58, 78), rand(42, 58)), bg: () => hsl(rand(62, 112), rand(28, 46), rand(48, 66)), base: '#f3eddc' },
+        // 配色（v5.9.3 完整圖卡類型）：每組 [色相下限, 色相上限, 飽和下限, 飽和上限, 明度下限, 明度上限]，一個圓點隨機抽一組再抽數值。
+        // 數字與背景的明度範圍刻意重疊，只能靠色相分辨——這是色盲圖卡的原理；多組背景色相讓底色像真的圖卡一樣雜。
+        const SCHEMES = {
+            // 紅綠型：石原氏圖卡 1～17 號常見的三種配色
+            rg1: { group: 'rg', name: '橘紅字・綠底', fig: [[8, 32, 58, 78, 42, 58]], bg: [[62, 112, 28, 46, 48, 66]], base: '#f3eddc' },
+            rg2: { group: 'rg', name: '綠字・橘粉底', fig: [[70, 110, 40, 60, 40, 56]], bg: [[10, 30, 55, 75, 55, 70], [340, 360, 40, 62, 60, 74], [25, 42, 60, 80, 60, 72]], base: '#f6ede0' },
+            rg3: { group: 'rg', name: '紅字・灰綠底', fig: [[0, 20, 55, 80, 45, 60], [345, 360, 50, 70, 50, 62]], bg: [[60, 100, 10, 25, 50, 68], [40, 60, 6, 18, 55, 70]], base: '#efeadd' },
+            // 灰底雙色：石原氏 22～25 號（分類圖）——灰底上兩個數字一紫一紅
+            grey: { group: 'grey', name: '灰底・紫字與紅字', fig: [[262, 292, 35, 55, 42, 58]], fig2: [[0, 18, 55, 75, 45, 58]], bg: [[0, 360, 0, 7, 50, 70]], base: '#ece9e2' },
+            // 藍黃型（第三型色盲，HRR 式圖卡）
+            by1: { group: 'by', name: '藍紫字・黃綠底', fig: [[225, 265, 45, 65, 42, 58]], bg: [[55, 95, 30, 50, 50, 66]], base: '#f1efe0' },
+            by2: { group: 'by', name: '黃字・藍灰底', fig: [[45, 60, 65, 85, 50, 62]], bg: [[200, 230, 15, 30, 50, 66]], base: '#e8ecef' },
             // 清楚：深藍數字、淺黃背景，第一次練習先學會「看點點裡的數字」
-            clear: { fig: () => hsl(rand(212, 228), rand(55, 70), rand(26, 38)), bg: () => hsl(rand(42, 54), rand(55, 75), rand(80, 90)), base: '#fbf7e6' }
+            clear: { group: 'clear', name: '清楚（深藍字・淺黃底）', fig: [[212, 228, 55, 70, 26, 38]], bg: [[42, 54, 55, 75, 80, 90]], base: '#fbf7e6' }
         };
+        const GROUPS = { all: ['rg1', 'rg2', 'rg3', 'grey', 'by1', 'by2'], rg: ['rg1', 'rg2', 'rg3'], by: ['by1', 'by2'], grey: ['grey'], clear: ['clear'] };
+        const GROUP_NAME = { rg: '紅綠型', grey: '灰底雙色', by: '藍黃型', clear: '清楚' };
+        const colorFrom = ranges => { const c = ranges[Math.floor(Math.random() * ranges.length)]; return hsl(rand(c[0], c[1]), rand(c[2], c[3]), rand(c[4], c[5])); };
+        let lastScheme = null, curScheme = 'rg1';
+        function pickScheme() {
+            if (window.__forceScheme) { curScheme = window.__forceScheme; return curScheme; }   // 測試／截圖用
+            const list = GROUPS[opts.scheme] || GROUPS.all;
+            let k = list[Math.floor(Math.random() * list.length)];
+            if (list.length > 1 && k === lastScheme) k = list[(list.indexOf(k) + 1) % list.length];   // 連兩張不同配色
+            lastScheme = curScheme = k; return k;
+        }
         function renderPlate(n) {
             const wrap = $('plateWrap'), size = wrap.clientWidth; if (!size) return;
             const cv = $('plate'), dpr = Math.min(2, window.devicePixelRatio || 1);
             cv.width = Math.round(size * dpr); cv.height = Math.round(size * dpr);
             const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-            const S = size, R = S / 2, pal = PALETTES[opts.contrast] || PALETTES.std;
-            // 數字遮罩：粗體數字畫在離屏畫布，之後查每個圓點的中心與邊緣落在筆畫內或外
-            const mk = document.createElement('canvas'); mk.width = S; mk.height = S;
-            const mc = mk.getContext('2d'); const text = String(n);
+            const S = size, R = S / 2, pal = SCHEMES[pickScheme()];
+            // 數字遮罩：每個數字各畫一張離屏遮罩（灰底雙色要兩個數字不同顏色），之後查每個圓點的中心與邊緣落在哪個數字內或外
+            const text = String(n), chars = text.split('');
+            const mk = document.createElement('canvas'); mk.width = S; mk.height = S; const mc = mk.getContext('2d');
             let fs = text.length > 1 ? S * 0.56 : S * 0.66;
             const font = px => '900 ' + px + 'px "Arial Black", "Helvetica Neue", Arial, "PingFang TC", sans-serif';
-            mc.font = font(fs); const w = mc.measureText(text).width;
-            if (w > S * 0.76) { fs *= S * 0.76 / w; mc.font = font(fs); }
-            mc.fillStyle = '#000'; mc.textAlign = 'center'; mc.textBaseline = 'middle'; mc.fillText(text, R, R + fs * 0.05);
-            const mask = mc.getImageData(0, 0, S, S).data;
-            const inside = (x, y) => { x = x | 0; y = y | 0; if (x < 0 || y < 0 || x >= S || y >= S) return false; return mask[(y * S + x) * 4 + 3] > 128; };
+            mc.font = font(fs); let w = mc.measureText(text).width;
+            if (w > S * 0.76) { fs *= S * 0.76 / w; mc.font = font(fs); w = mc.measureText(text).width; }
+            const masks = []; let x0 = R - w / 2;
+            chars.forEach(ch => {
+                const c = document.createElement('canvas'); c.width = S; c.height = S; const g = c.getContext('2d');
+                g.font = font(fs); g.fillStyle = '#000'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(ch, x0, R + fs * 0.05);
+                masks.push(g.getImageData(0, 0, S, S).data); x0 += mc.measureText(ch).width;
+            });
+            // 0＝背景、1＝第一個數字、2＝第二個數字（只有雙色配色才分；其他配色兩個數字同色）
+            const twoTone = !!pal.fig2;
+            const soloTone = twoTone && chars.length === 1 && Math.random() < 0.5 ? 2 : 1;   // 雙色配色但只有 1 位數：整個數字隨機用紫或紅
+            const inside = (x, y) => { x = x | 0; y = y | 0; if (x < 0 || y < 0 || x >= S || y >= S) return 0; const p = (y * S + x) * 4 + 3; for (let i = 0; i < masks.length; i++) if (masks[i][p] > 128) return twoTone ? (chars.length === 1 ? soloTone : i + 1) : 1; return 0; };
             const rimUniform = (x, y, r, fig) => { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; if (inside(x + Math.cos(a) * r, y + Math.sin(a) * r) !== fig) return false; } return true; };
             // 底色
             ctx.fillStyle = pal.base; ctx.beginPath(); ctx.arc(R, R, R, 0, Math.PI * 2); ctx.fill();
@@ -193,8 +224,9 @@
                 if (hit) continue;
                 const dot = { x: x, y: y, r: r, fig: fig }; dots.push(dot); grid[cy * cols + cx].push(dot);
             }
-            dots.forEach(dot => { ctx.fillStyle = dot.fig ? pal.fig() : pal.bg(); ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2); ctx.fill(); });
-            window.__plate = { n: n, dots: dots.length, fig: dots.filter(d => d.fig).length };   // 測試用
+            dots.forEach(dot => { ctx.fillStyle = dot.fig === 0 ? colorFrom(pal.bg) : colorFrom(dot.fig === 2 ? pal.fig2 : pal.fig); ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2); ctx.fill(); });
+            $('schemeLabel').textContent = '配色：' + pal.name + '（' + GROUP_NAME[pal.group] + '）';
+            window.__plate = { n: n, dots: dots.length, fig: dots.filter(d => d.fig === 1).length, fig2: dots.filter(d => d.fig === 2).length, scheme: curScheme };   // 測試用
         }
         function layout() {
             const main = document.querySelector('main'), wrap = $('plateWrap');

@@ -31,7 +31,7 @@ const TTS_STUB = () => {
   check('1.5 秒內再按不重複問', (await page.evaluate(() => window.__tts.length)) === 2);
   const p1 = await page.evaluate(() => window.__plate);
   check('圖卡：數字為體檢常見數字、點 ≥ 500、數字區有點', [12, 8, 6, 29, 57, 5, 3, 15, 74, 2, 97, 45, 7, 16, 73, 26, 42, 35, 96].indexOf(p1.n) >= 0 && p1.dots >= 500 && p1.fig >= 60);
-  check('畫布有畫（非空白）', await page.evaluate(() => { const c = document.getElementById('plate'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let colored = 0; for (let i = 0; i < d.length; i += 64) { if (d[i + 3] > 0 && Math.abs(d[i] - d[i + 1]) > 40) colored++; } return colored > 200; }));
+  check('畫布有畫（非空白：有彩度的像素，任何配色都成立）', await page.evaluate(() => { const c = document.getElementById('plate'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let colored = 0; for (let i = 0; i < d.length; i += 64) { if (d[i + 3] > 0 && Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) > 25) colored++; } return colored > 200; }));
   check('答案未揭示', !(await page.$eval('#answer', e => e.classList.contains('show'))));
   const n1 = p1.n;
   await page.click('#okBtn'); await page.waitForTimeout(300);   // v5.9.2：單點即回饋，不必長按
@@ -53,7 +53,16 @@ const TTS_STUB = () => {
   await page.click('.seg[data-opt=source] button[data-v=random]'); await page.click('.seg[data-opt=digits] button[data-v="2"]'); await page.waitForTimeout(200);
   let all2 = true; for (let i = 0; i < 6; i++) { await page.click('#nextBtn'); await page.waitForTimeout(120); const n = await page.evaluate(() => window.__plate.n); if (n < 10 || n > 99) all2 = false; }
   check('隨機＋2 位數 → 都是 10～99', all2);
-  await page.click('.seg[data-opt=contrast] button[data-v=clear]'); await page.waitForTimeout(200);
+  const seen = new Set(); for (let i = 0; i < 10; i++) { await page.click('#nextBtn'); await page.waitForTimeout(120); seen.add(await page.evaluate(() => window.__plate.scheme)); }
+  check('全部配色：10 張至少 4 種配色、含紅綠／灰底／藍黃', seen.size >= 4 && [...seen].some(k => /^rg/.test(k)) && seen.has('grey') && [...seen].some(k => /^by/.test(k)));
+  await page.click('.seg[data-opt=scheme] button[data-v=by]'); await page.waitForTimeout(200);
+  let allBy = true; for (let i = 0; i < 5; i++) { await page.click('#nextBtn'); await page.waitForTimeout(120); if (!/^by/.test(await page.evaluate(() => window.__plate.scheme))) allBy = false; }
+  check('只練藍黃型 → 都是藍黃配色', allBy && /藍黃型/.test(await page.$eval('#schemeLabel', e => e.textContent)));
+  await page.click('.seg[data-opt=scheme] button[data-v=grey]'); await page.waitForTimeout(200);
+  const g = await page.evaluate(() => window.__plate);
+  check('灰底雙色（2 位數）：兩個數字各一組顏色', g.scheme === 'grey' && g.fig > 20 && g.fig2 > 20);
+  check('灰底雙色畫面：有紫點也有紅點、底是灰的', await page.evaluate(() => { const c = document.getElementById('plate'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let purple = 0, red = 0, grey = 0; for (let i = 0; i < d.length; i += 64) { if (d[i + 3] === 0) continue; const r = d[i], g = d[i + 1], b = d[i + 2]; if (b > r && b > g + 30) purple++; else if (r > g + 60 && r > b + 60) red++; else if (Math.abs(r - g) < 14 && Math.abs(g - b) < 14) grey++; } return purple > 30 && red > 30 && grey > 300; }));
+  await page.click('.seg[data-opt=scheme] button[data-v=clear]'); await page.waitForTimeout(200);
   check('清楚模式有畫（深色數字點）', await page.evaluate(() => { const c = document.getElementById('plate'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let dark = 0; for (let i = 0; i < d.length; i += 64) { if (d[i + 3] > 0 && d[i] < 90 && d[i + 2] > 110) dark++; } return dark > 100; }));
   check('左上「← 返回」長按接線；👍 不是長按', await page.$eval('a.back', e => e.__lpWired === true) && await page.$eval('#okBtn', e => !e.__lpWired && !e.hasAttribute('data-parent-longpress')));
 
