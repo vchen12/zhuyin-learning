@@ -5,7 +5,7 @@
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.9.5',
+    version: '5.9.6',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',

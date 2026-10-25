@@ -247,10 +247,23 @@
      * 初始化（麥克風 + 分析器 + 錄音器 + 辨識引擎），可重複呼叫
      * @returns {Promise<boolean>}
      */
+    /**
+     * 在使用者手勢內「同步」先建立並喚醒 AudioContext（v5.9.6）。
+     * iOS：AudioContext 要在手勢內建立／resume 才會跑；郵輪與說話板是「開場提示講完才開麥克風」，
+     * 等到 init() 時早已離開手勢，context 停在 suspended、resume() 永遠不回來 → 起始遮罩收不掉（實測：提示語講完畫面沒出來）。
+     * 起始鈕的點擊事件裡先呼叫這個，init() 之後直接沿用。
+     */
+    function prepareAudio() {
+        try {
+            if (!audioContext) audioContext = new (global.AudioContext || global.webkitAudioContext)();
+            if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+        } catch (e) { /* ignore */ }
+    }
+
     async function init() {
         if (!audioContext || !micStream) {
             try {
-                audioContext = new (global.AudioContext || global.webkitAudioContext)();
+                if (!audioContext) audioContext = new (global.AudioContext || global.webkitAudioContext)();
                 micStream = await navigator.mediaDevices.getUserMedia({
                     audio: {
                         echoCancellation: true,   // 避免收到自己播放的 TTS
@@ -278,7 +291,8 @@
             }
         }
         if (audioContext && audioContext.state === 'suspended') {
-            try { await audioContext.resume(); } catch (e) { /* ignore */ }
+            // resume() 在手勢外可能永遠不回來：最多等 1.5 秒，之後照樣往下（prepareAudio 已在手勢內喚醒過，通常早就 running）
+            try { await Promise.race([audioContext.resume(), new Promise(r => setTimeout(r, 1500))]); } catch (e) { /* ignore */ }
         }
 
         if (!recognition) {
@@ -1016,7 +1030,8 @@
     // 公開 API（與 v4 相容）
     // ==========================================
     global.SpeechModule = {
-        init: init,
+        init,
+        prepareAudio,
         startListening: startListening,
         stopListening: stopListening,
         resetState: resetState,
