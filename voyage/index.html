@@ -327,7 +327,8 @@
         // 判定方式：voice（門檻 0，有說話就抵港）／parent（門檻 > 0 預設：說完由家長按住 👍 才進港）／asr（門檻 > 0 且設定頁選語音辨識引擎）
         const JUDGE = THRESHOLD === 0 ? 'voice' : ((typeof getJudgeMode === 'function' ? getJudgeMode() : 'parent') === 'asr' && HAS_SR ? 'asr' : 'parent');
         const ASR_MODE = JUDGE === 'asr', PARENT_MODE = JUDGE === 'parent';
-        const VERDICT_WAIT_MS = 12000;   // 家長判定列最多等多久（沒按＝再一次，繼續聽）
+        const VERDICT_SHOW_MS = 900;     // 家長判定：他停多久不出聲就先出判定列（麥克風繼續聽，他再說就繼續累計；對不對、說完沒由家長決定）
+        const VERDICT_WAIT_MS = 30000;   // 判定列最多掛多久（家長沒按、他也沒再說）→ 收起，繼續聽；他一出聲就重新計時
 
         // ==========================================
         // 狀態
@@ -578,7 +579,7 @@
                 },
                 onTimeout: again,
                 onError: again
-            }, { hud: false });
+            }, { hud: false, waitForEnd: true, silenceEndMs: SPEECH_END_MS });   // 等他說完（設定頁「說完判定」），不然 0.7 秒就收音
         }
         function missWord(word, r) {
             const heard = r.transcript ? '聽到「' + r.transcript + '」，' : '';
@@ -596,27 +597,29 @@
         // ==========================================
         // 家長判定模式：說完一個詞 → 船停在港前、出現判定列；家長按住 👍 進港，🔁 再說一次
         // ==========================================
+        // v5.9.6：判定列不再等「說完判定」秒數（中等太早出現、長的等太久）——他停 VERDICT_SHOW_MS 就先出現，但不關麥克風（不設 busy）：
+        // 他再說，船照樣動、判定列留著；家長聽到對了就按 👍。「說完判定」設定只用於語音引擎判定與說話板。
         let verdictTimer = null, verdictWord = '';
+        const verdictShown = () => $('verdict').classList.contains('show');
+        function armVerdictTimer() { clearTimeout(verdictTimer); verdictTimer = setTimeout(() => verdictAgain(true), VERDICT_WAIT_MS); }
         function askVerdict() {
-            busy = true; verdictWord = currentWord();
-            setEngine(false);
+            verdictWord = currentWord();
             $('verdictQ').textContent = '他說的像「' + verdictWord + '」嗎？';
             $('verdict').classList.add('show');
-            clearTimeout(verdictTimer);
-            verdictTimer = setTimeout(() => verdictAgain(true), VERDICT_WAIT_MS);
+            armVerdictTimer();
         }
         function hideVerdict() { clearTimeout(verdictTimer); $('verdict').classList.remove('show'); }
         function verdictOk() {
             if (!$('verdict').classList.contains('show')) return;
             hideVerdict();
             appendLog({ t: Date.now(), verdict: 'ok', word: verdictWord });
-            busy = false; depart();
+            utterOpen = false; busy = false; depart();
         }
         function verdictAgain(auto) {
             if (!$('verdict').classList.contains('show')) return;
             hideVerdict();
             appendLog({ t: Date.now(), verdict: auto ? 'auto' : 'again', word: verdictWord });
-            busy = false; lastVoicedAt = Date.now();
+            utterOpen = false; busy = false; lastVoicedAt = Date.now();
             if (!auto) { $('voiceHint').textContent = '再說一次：' + verdictWord + ' 🎤'; say('再說一次：' + verdictWord); }
         }
         window.verdictOk = verdictOk;   // 👍 以 data-parent-longpress 呼叫（按住 1.2 秒，他亂按不會進港）
@@ -635,8 +638,8 @@
             // 門檻：他在說話時不更新（避免背景校準被自己的聲音拉高）
             if (now > gateFrozenUntil) gate = v.gate;
 
-            // 一陣子沒人聲：再唸一次口令（不佔用進度，只是提醒）
-            if (!muted && !utterOpen && now - lastVoicedAt > IDLE_PROMPT_MS && now - lastPromptAt > IDLE_PROMPT_MS) promptWord();
+            // 一陣子沒人聲：再唸一次口令（不佔用進度，只是提醒）；判定列掛著時不催（由家長決定）
+            if (!muted && !utterOpen && !verdictShown() && now - lastVoicedAt > IDLE_PROMPT_MS && now - lastPromptAt > IDLE_PROMPT_MS) promptWord();
 
             const loud = v.rms > gate;
             const voiced = !muted && loud && v.voiced;
@@ -651,6 +654,7 @@
                 utterMs += FRAME_MS; utterPeak = Math.max(utterPeak, v.rms);
                 if (voicedRun >= CONFIRM_FRAMES) {
                     utterConfirmed = true;
+                    if (voicedRun === CONFIRM_FRAMES && verdictShown()) armVerdictTimer();   // 判定列掛著他又開口：重新計時
                     setEngine(true);
                     legProgress += FRAME_MS / LEG_FULL_MS;
                     if (legProgress >= 1) {
@@ -668,7 +672,7 @@
                 voicedRun = 0;
                 if (engineOn && now - lastVoicedAt > ENGINE_OFF_MS) setEngine(false);
                 // 說完一個詞：發聲夠長且靜音夠久
-                if (utterOpen && now - lastVoicedAt > (JUDGE === 'voice' ? UTTER_END_MS : SPEECH_END_MS)) {
+                if (utterOpen && now - lastVoicedAt > (JUDGE === 'voice' ? UTTER_END_MS : PARENT_MODE ? VERDICT_SHOW_MS : SPEECH_END_MS)) {
                     utterOpen = false;
                     // 核心承諾：說完一個詞就抵達下一個港口；進度只影響途中的視覺移動。
                     // 「詞」＝確認過人聲，且（累計有聲 ≥ UTTER_MIN_MS 或 首尾跨度 ≥ UTTER_SPAN_MS）——兩音節短詞的母音很短，不能只算有聲幀
@@ -802,11 +806,12 @@
         $('startBtn').addEventListener('click', async () => {
             $('startErr').textContent = '';
             ensureAudio();
+            SpeechModule.prepareAudio();   // 在手勢內先建好、喚醒麥克風用的 AudioContext（iOS 離開手勢後 resume 不會回來 → 遮罩收不掉）
             // 先講口令（同步、在手勢內）：iOS 的 TTS 要由這一下點擊「解鎖」，之後抵港稱讚、閒置提示才播得出來。
             // 講完再開麥克風：iOS 開麥克風會切換音訊路徑，會把還在講的這句打斷（實測：開場提示斷斷續續）
             await promptWord('說話，船就會開！跟我說：');
-            const ok = await SpeechModule.init();
-            if (!ok) { $('startErr').textContent = '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風；若從主畫面圖示開啟，請改用 Safari。'; return; }
+            const ok = await Promise.race([SpeechModule.init(), new Promise(r => setTimeout(() => r('timeout'), 10000))]);
+            if (ok !== true) { $('startErr').textContent = ok === 'timeout' ? '麥克風一直沒有回應。請重新整理頁面再試；或到 設定 → Safari → 麥克風 改為「允許」。' : '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風；若從主畫面圖示開啟，請改用 Safari。'; return; }
             SpeechModule.setHud(false);
             $('startOverlay').style.display = 'none';
             await new Promise(r => setTimeout(r, 500)); // 讓背景噪音校準累積幾個樣本
