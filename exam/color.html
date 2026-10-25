@@ -100,10 +100,11 @@
         const $ = id => document.getElementById(id);
         // 體檢常用色盲圖卡（石原氏圖卡）上出現的數字
         const COMMON = [12, 8, 6, 29, 57, 5, 3, 15, 74, 2, 97, 45, 7, 16, 73, 26, 42, 35, 96];
-        const NEXT_DELAY_MS = 2800;      // 答對 → 稱讚、顯示數字，多久後換下一張
+        const NEXT_DELAY_MS = 2800;      // 答對 → 稱讚、顯示數字，至少多久後換下一張（稱讚講完才換）
+        const ASK_GAP_MS = 1500;         // 他一直按圖卡：最多每 1.5 秒問一次「這是幾？」
         const DEFAULT_OPTS = { digits: 'mix', source: 'common', contrast: 'std' };
         let opts = loadOpts();
-        let target = null, last = null, revealed = false, busy = false, started = false;
+        let target = null, last = null, revealed = false, busy = false, started = false, lastAskAt = 0;
 
         function loadOpts() {
             let o = null; try { o = JSON.parse(localStorage.getItem('exam.color.opts') || 'null'); } catch (e) { /* ignore */ }
@@ -203,10 +204,13 @@
         }
 
         // ---------- 流程：出題 → 家長 👍（答對）／👁 看答案／🔁／⏭ ----------
-        function newPlate() {
+        // 系統問「這是幾？」（每張新圖自動問；他按到圖卡也問，不必家長按 🔊）
+        function ask() { if (!started) return; lastAskAt = Date.now(); speak('這是幾？'); }
+        function newPlate(quiet) {
             revealed = false; busy = false;
             target = pickNumber(); layout(); renderPlate(target);
             $('answer').classList.remove('show'); $('answer').textContent = '';
+            if (!quiet) ask();
         }
         function reveal(correct) {
             if (revealed || busy) return;
@@ -216,10 +220,10 @@
             if (correct) {
                 busy = true;
                 const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！';
-                speak(praise + ' 是 ' + target + '！');
+                // 稱讚講完、且至少 NEXT_DELAY_MS 之後才換下一張（下一張會再問「這是幾？」，不能把稱讚切掉）
+                Promise.all([speak(praise + ' 是 ' + target + '！'), new Promise(r => setTimeout(r, NEXT_DELAY_MS))]).then(() => newPlate());
                 if (typeof createFireworks === 'function') { createFireworks(18, $('fx')); setTimeout(() => createFireworks(14, $('fx')), 900); }
                 if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
-                setTimeout(newPlate, NEXT_DELAY_MS);
             } else {
                 speak('是 ' + target);
             }
@@ -232,11 +236,13 @@
             const w = $('plateWrap'); w.classList.remove('pulse'); void w.offsetWidth; w.classList.add('pulse');
             speak('再看一次，這是幾？');
         });
-        $('askBtn').addEventListener('click', () => { if (started) speak('這是幾？'); });
+        $('askBtn').addEventListener('click', ask);
+        // 他按到圖卡（任何地方）：系統問「這是幾？」，不推進任何進度
+        $('plateWrap').addEventListener('pointerdown', () => { if (started && !busy && Date.now() - lastAskAt > ASK_GAP_MS) ask(); });
         $('startBtn').addEventListener('click', () => {
             speak('我們來練習看數字。這是幾？');   // 同步、在點擊內：iOS 之後的稱讚才播得出來
-            started = true; $('startOverlay').style.display = 'none';
-            newPlate();
+            started = true; lastAskAt = Date.now(); $('startOverlay').style.display = 'none';
+            newPlate(true);                      // 開場已經問過，這張不再問
         });
         window.addEventListener('resize', () => { if (target !== null) { layout(); renderPlate(target); } });
 

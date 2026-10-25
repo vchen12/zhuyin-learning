@@ -5,7 +5,7 @@
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.9.0',
+    version: '5.9.1',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -57,7 +57,6 @@ const APP_CONFIG = {
             '答對了！',
             '真聰明！',
             '很棒喔！',
-            '繼續加油！',
             '你好棒！',
             '太聰明了！',
             '完美！',
