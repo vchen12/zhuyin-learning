@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../icons/icon-96.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>視力表練習 — 體檢練習</title>
+    <script src="../js/prevent-zoom.js" defer></script>
+    <style>
+        /*
+         * 體檢練習：視力表（v5.9.0）
+         * 體檢時檢查員指著視力表上的 E（或缺角圓圈 C）問「開口朝哪邊？」，受檢者說出並用手比出上下左右。
+         * 這裡畫一張 10 列、由大到小的視力表，家長點一個符號就放大顯示；他說出／比出方向後家長按住 👍；
+         * 看不出來按「看答案」（顯示箭頭並唸方向）。另有「大圖練習」：一次一個大符號。不用麥克風。
+         */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; overflow: hidden; }
+        body { height: 100vh; height: 100dvh; height: calc(var(--vh, 1vh) * 100);
+               font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; background: #eef2f5; color: #223;
+               display: flex; flex-direction: column; position: relative; -webkit-user-select: none; user-select: none; }
+        header { display: flex; align-items: center; gap: 2vmin; padding: 1.5vmin 2vmin; flex-wrap: wrap; }
+        .back { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 1.6vmin 2.8vmin; border-radius: 99px;
+                font-size: 3.2vmin; font-weight: 700; text-decoration: none; box-shadow: 0 4px 14px rgba(0,0,0,.25); white-space: nowrap; }
+        header h1 { font-size: 3.6vmin; color: #10456f; flex: 1; white-space: nowrap; }
+        .opts { display: flex; gap: 1.2vmin; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+        .seg { display: flex; background: #dfe4ea; border-radius: 99px; padding: .4vmin; }
+        .seg button { font-size: 2.3vmin; padding: .9vmin 1.6vmin; border: none; border-radius: 99px; background: transparent; color: #556; font-weight: 700; white-space: nowrap; }
+        .seg button.on { background: #fff; color: #10456f; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+        .tbtn { font-size: 2.3vmin; padding: 1.2vmin 2vmin; border: none; border-radius: 99px; background: #667eea; color: #fff; font-weight: 700; white-space: nowrap; }
+
+        main { flex: 1; min-height: 0; position: relative; padding: 0 2vmin 1vmin; }
+        /* 視力表：白底、10 列由大到小，左側標視力值 */
+        #chart { height: 100%; background: #fff; border-radius: 2vmin; box-shadow: 0 6px 20px rgba(0,0,0,.1); display: flex; flex-direction: column; justify-content: space-between; padding: 1vmin 2vmin; overflow: hidden; }
+        .row { display: flex; align-items: center; gap: 1vmin; }
+        .row .va { width: 6vmin; font-size: 2.2vmin; color: #889; font-weight: 700; flex: none; }
+        .row .syms { flex: 1; display: flex; justify-content: space-evenly; align-items: center; }
+        .sym { display: flex; align-items: center; justify-content: center; border-radius: 1vmin; color: #111; position: relative; background: transparent; border: none; padding: 0; font: inherit; }
+        .sym svg { display: block; fill: currentColor; stroke: currentColor; }
+        .sym.done::after { content: "✓"; position: absolute; right: -1.2vmin; top: -1.4vmin; font-size: 2.6vmin; color: #2e9e5b; font-weight: 900; }
+        .sym.cur { box-shadow: 0 0 0 .5vmin #ffd86b; }
+
+        /* 放大檢視（點一個符號、或大圖練習） */
+        #focus { position: absolute; top: 0; left: 2vmin; right: 2vmin; bottom: 1vmin; background: #fff; border-radius: 2vmin; box-shadow: 0 6px 20px rgba(0,0,0,.1);
+                 display: none; align-items: center; justify-content: center; gap: 5vmin; }
+        #focus.show { display: flex; }
+        #focusSym { color: #111; }
+        #focusSide { display: flex; flex-direction: column; align-items: center; gap: 2.5vmin; min-width: 34vmin; }
+        #fq { font-size: 5.5vmin; font-weight: 900; color: #10456f; display: flex; align-items: center; gap: 1.5vmin; white-space: nowrap; }
+        #askBtn { width: 8vmin; height: 8vmin; border-radius: 50%; border: none; background: #ffd86b; color: #10456f; font-size: 4vmin; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
+        #arrowBox { width: 30vmin; height: 24vmin; border-radius: 3vmin; background: #eef4fa; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    visibility: hidden; transform: scale(.7); transition: transform .3s; }
+        #arrowBox.show { visibility: visible; transform: scale(1); }
+        #arrow { font-size: 13vmin; line-height: 1; color: #e05c2b; }
+        #arrowText { font-size: 4.5vmin; font-weight: 900; color: #10456f; }
+        #closeFocus { position: absolute; top: 2vmin; right: 2vmin; font-size: 2.8vmin; padding: 1.2vmin 2.4vmin; border-radius: 99px; border: none; background: #e3e6ec; color: #10456f; font-weight: 700; }
+        #stats { font-size: 2.6vmin; color: #667; }
+        @media (orientation: portrait) { #focus { flex-direction: column; gap: 2vmin; } #focusSide { flex-direction: row; flex-wrap: wrap; justify-content: center; } }
+
+        /* 家長判定列（放大檢視時才有） */
+        #verdict { display: none; gap: 2vmin; justify-content: center; flex-wrap: wrap; padding: 1.5vmin 2vmin 2.5vmin; }
+        #verdict.show { display: flex; }
+        .vbtn { font-size: 3.6vmin; padding: 2vmin 3.6vmin; border: none; border-radius: 99px; font-weight: 800; color: #10456f; background: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.18); white-space: nowrap; }
+        .vbtn.ok { background: #ffd86b; }
+        .vbtn:active { transform: scale(.96); }
+        #hintLine { text-align: center; font-size: 2.8vmin; color: #667; padding: 1.5vmin 2vmin 2.5vmin; }
+        #hintLine.hide { display: none; }
+
+        #fx { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+        .firework { position: absolute; animation: fwpop 1.6s ease-out forwards; }
+        @keyframes fwpop { 0% { transform: scale(0) rotate(0); opacity: 1; } 60% { transform: scale(1.5) rotate(160deg); opacity: 1; } 100% { transform: scale(.4) rotate(360deg); opacity: 0; } }
+
+        #startOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(16,69,111,.92); color: #fff; display: flex; flex-direction: column;
+                        align-items: center; justify-content: center; gap: 3vmin; z-index: 20; padding: 5vmin; text-align: center; }
+        #startBtn { font-size: 7vmin; padding: 3.5vmin 8vmin; border: none; border-radius: 99px; background: #ffd86b; color: #10456f; font-weight: 900; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+        #startBtn:active { transform: scale(.96); }
+        #startOverlay p { font-size: 3.4vmin; opacity: .92; line-height: 1.6; }
+        #startOverlay p.small { font-size: 2.7vmin; opacity: .8; }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="back" href="../index.html">← 返回</a>
+        <h1>👁 視力表練習</h1>
+        <div class="opts">
+            <div class="seg" data-opt="type"><button data-v="E">E</button><button data-v="C">缺角圓圈 C</button></div>
+            <div class="seg" data-opt="mode"><button data-v="chart">📋 視力表</button><button data-v="big">🔍 大圖練習</button></div>
+            <button class="tbtn" id="shuffleBtn">🔀 換一張表</button>
+        </div>
+    </header>
+    <main>
+        <div id="chart"></div>
+        <div id="focus">
+            <button id="closeFocus">✕ 回視力表</button>
+            <div id="focusSym"></div>
+            <div id="focusSide">
+                <div id="fq"><span id="fqText">開口朝哪邊？</span><button id="askBtn" title="由系統問">🔊</button></div>
+                <div id="arrowBox"><div id="arrow"></div><div id="arrowText"></div></div>
+                <div id="stats"></div>
+            </div>
+        </div>
+    </main>
+    <div id="hintLine">家長點視力表上的一個符號，會放大顯示；問他「開口朝哪邊？」</div>
+    <div id="verdict">
+        <button class="vbtn ok" data-parent-longpress="verdictOk" data-parent-hint="家長按住 👍 約一秒才算答對">👍 答對了（按住）</button>
+        <button class="vbtn" id="againBtn">🔁 再一次</button>
+        <button class="vbtn" id="revealBtn">👁 看答案</button>
+        <button class="vbtn" id="nextBtn">⏭ 下一個</button>
+    </div>
+    <div id="fx"></div>
+
+    <div id="startOverlay">
+        <h1 style="font-size:7vmin">👁 視力表練習</h1>
+        <p>家長點視力表上的一個 E（或缺角圓圈），問：「<b>開口朝哪邊？</b>」<br>他說出、比出「上、下、左、右」後，家長<b>按住 👍</b>；看不出來就按「👁 看答案」。</p>
+        <button id="startBtn">開始練習</button>
+        <p class="small">右上角可切換 E／缺角圓圈 C；「大圖練習」一次只出一個大符號。</p>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script>
+        'use strict';
+        const $ = id => document.getElementById(id);
+        const ROWS = [1, 2, 3, 4, 5, 6, 7, 8, 8, 8];                 // 每列符號數（視力表由大到小）
+        const VA = ['0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0'];
+        const DIRS = ['up', 'down', 'left', 'right'];
+        const ROT = { right: 0, down: 90, left: 180, up: 270 };     // 開口方向 → 旋轉角（E 的三橫朝右＝0°）
+        const NAME = { up: '上', down: '下', left: '左', right: '右' };
+        const ARROW = { up: '⬆', down: '⬇', left: '⬅', right: '➡' };
+        const NEXT_DELAY_MS = 2600;
+        const DEFAULT_OPTS = { type: 'E', mode: 'chart' };
+        let opts = loadOpts();
+        let cur = null, revealed = false, busy = false, started = false;   // cur = { dir, cell }
+
+        function loadOpts() {
+            let o = null; try { o = JSON.parse(localStorage.getItem('exam.eye.opts') || 'null'); } catch (e) { /* ignore */ }
+            const r = {}; Object.keys(DEFAULT_OPTS).forEach(k => { r[k] = o && o[k] ? o[k] : DEFAULT_OPTS[k]; }); return r;
+        }
+        function saveOpts() { try { localStorage.setItem('exam.eye.opts', JSON.stringify(opts)); } catch (e) { /* ignore */ } }
+        function renderOpts() {
+            document.querySelectorAll('.seg').forEach(seg => { const k = seg.dataset.opt; seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === opts[k])); });
+            $('fqText').textContent = (opts.type === 'E' ? '開口' : '缺口') + '朝哪邊？';
+            $('shuffleBtn').style.display = opts.mode === 'chart' ? '' : 'none';
+        }
+        document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+            const k = b.parentElement.dataset.opt; if (opts[k] === b.dataset.v) return;
+            opts[k] = b.dataset.v; saveOpts(); renderOpts();
+            if (k === 'type') { buildChart(); if (cur) showFocus(cur.dir, cur.cell); }
+            else { if (opts.mode === 'big') nextBig(); else closeFocus(); }
+        }));
+
+        function loadLog() { try { return JSON.parse(localStorage.getItem('exam.eye.log') || '[]'); } catch (e) { return []; } }
+        function appendLog(entry) { const log = loadLog(); log.push(entry); while (log.length > 2000) log.shift(); try { localStorage.setItem('exam.eye.log', JSON.stringify(log)); } catch (e) { /* ignore */ } }
+        function renderStats() {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const t = loadLog().filter(x => x.t >= today.getTime());
+            const ok = t.filter(x => x.ok).length, seen = t.length - ok;
+            $('stats').textContent = '今天：答對 ' + ok + ' 題' + (seen ? '、看答案 ' + seen + ' 題' : '');
+        }
+
+        // ---------- 符號：E（Snellen E，5×5、筆畫 1）／缺角圓圈 C（Landolt C，外徑 5、環寬 1、缺口 1） ----------
+        function symSvg(type, dir, px) {
+            const inner = type === 'E'
+                ? '<path d="M0 0h5v1h-4v1h3v1h-3v1h4v1h-5z" fill="currentColor" stroke="none"/>'
+                : '<path d="M1.938 0.495 A2 2 0 1 1 1.938 -0.495" fill="none" stroke="currentColor" stroke-width="1"/>';   // 缺口在右（0°）；顏色寫在屬性上，放大檢視（非 .sym）也看得到
+            const vb = type === 'E' ? '0 0 5 5' : '-2.5 -2.5 5 5';
+            return '<svg viewBox="' + vb + '" width="' + px + '" height="' + px + '" style="transform:rotate(' + ROT[dir] + 'deg)" data-dir="' + dir + '">' + inner + '</svg>';
+        }
+        const randDir = () => DIRS[Math.floor(Math.random() * DIRS.length)];
+
+        // ---------- 視力表 ----------
+        function buildChart() {
+            const chart = $('chart'); chart.innerHTML = '';
+            // 10 列高度比 10:5:3.3:…:1（視力 0.1～1.0），小的列至少要有一個指尖大小（m）好點；反覆調整單位高度讓總高剛好塞進表裡
+            const H = chart.clientHeight || 600, avail = H - 24, m = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.05);
+            let unit = avail / 29.3;
+            for (let it = 0; it < 8; it++) { let total = 0; for (let i = 0; i < ROWS.length; i++) total += Math.max(unit * 10 / (i + 1), m); unit *= avail / total; }
+            ROWS.forEach((cnt, i) => {
+                const row = document.createElement('div'); row.className = 'row';
+                row.innerHTML = '<div class="va">' + VA[i] + '</div><div class="syms"></div>';
+                const syms = row.querySelector('.syms'), px = Math.round(unit * 10 / (i + 1));
+                for (let k = 0; k < cnt; k++) {
+                    const dir = randDir();
+                    const cell = document.createElement('button'); cell.className = 'sym'; cell.dataset.dir = dir; cell.innerHTML = symSvg(opts.type, dir, px);
+                    cell.style.minWidth = cell.style.minHeight = m + 'px';
+                    cell.addEventListener('click', () => { if (started && !busy) showFocus(dir, cell); });
+                    syms.appendChild(cell);
+                }
+                chart.appendChild(row);
+            });
+        }
+
+        // ---------- 放大檢視 → 家長判定 ----------
+        function showFocus(dir, cell) {
+            document.querySelectorAll('.sym.cur').forEach(e => e.classList.remove('cur'));
+            if (cell) cell.classList.add('cur');
+            cur = { dir: dir, cell: cell || null }; revealed = false; busy = false;
+            const px = Math.round(Math.min(window.innerWidth * 0.36, window.innerHeight * 0.5));
+            $('focusSym').innerHTML = symSvg(opts.type, dir, px);
+            $('arrowBox').classList.remove('show');
+            $('closeFocus').style.display = opts.mode === 'chart' ? '' : 'none';
+            $('focus').classList.add('show'); $('verdict').classList.add('show'); $('hintLine').classList.add('hide');
+        }
+        function closeFocus() {
+            cur = null; busy = false;
+            document.querySelectorAll('.sym.cur').forEach(e => e.classList.remove('cur'));
+            $('focus').classList.remove('show'); $('verdict').classList.remove('show'); $('hintLine').classList.remove('hide');
+        }
+        function nextBig() { showFocus(randDir(), null); }
+        function reveal(correct) {
+            if (!cur || revealed || busy) return;
+            revealed = true;
+            const dir = cur.dir, word = (opts.type === 'E' ? '開口' : '缺口') + '朝' + NAME[dir];
+            $('arrow').textContent = ARROW[dir]; $('arrowText').textContent = word; $('arrowBox').classList.add('show');
+            appendLog({ t: Date.now(), type: opts.type, dir: dir, ok: !!correct }); renderStats();
+            if (correct) {
+                busy = true;
+                if (cur.cell) cur.cell.classList.add('done');
+                const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！';
+                speak(praise + ' ' + word + '！');
+                if (typeof createFireworks === 'function') { createFireworks(18, $('fx')); setTimeout(() => createFireworks(14, $('fx')), 900); }
+                if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+                setTimeout(() => { if (opts.mode === 'big') nextBig(); else closeFocus(); }, NEXT_DELAY_MS);
+            } else {
+                speak(word);
+            }
+        }
+        window.verdictOk = () => { if (started) reveal(true); };
+        $('revealBtn').addEventListener('click', () => { if (started) reveal(false); });
+        $('nextBtn').addEventListener('click', () => { if (!started || busy) return; if (opts.mode === 'big') nextBig(); else closeFocus(); });
+        $('againBtn').addEventListener('click', () => { if (started && cur && !busy) speak('再看一次，' + $('fqText').textContent); });
+        $('askBtn').addEventListener('click', () => { if (started) speak($('fqText').textContent); });
+        $('closeFocus').addEventListener('click', closeFocus);
+        $('shuffleBtn').addEventListener('click', () => { if (!busy) { closeFocus(); buildChart(); } });
+        $('startBtn').addEventListener('click', () => {
+            speak('我們來練習看視力表。' + $('fqText').textContent);   // 同步、在點擊內：iOS 之後的稱讚才播得出來
+            started = true; $('startOverlay').style.display = 'none';
+            if (opts.mode === 'big') nextBig();
+        });
+        let resizeTimer = null;
+        window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!cur || opts.mode === 'big') buildChart(); }, 250); });
+
+        renderOpts(); renderStats(); buildChart();
+    </script>
+</body>
+</html>

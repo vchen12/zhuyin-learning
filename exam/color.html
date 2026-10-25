@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../icons/icon-96.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>色盲圖卡練習 — 體檢練習</title>
+    <script src="../js/prevent-zoom.js" defer></script>
+    <style>
+        /*
+         * 體檢練習：色盲圖卡（v5.9.0）
+         * 體檢時檢查員指著點狀色塊圖問「這是幾？」。這裡的圖卡由程式隨機產生（點狀色塊＋ 1～2 位數字），
+         * 家長指著圖問，他說出數字後家長按住 👍；看不出來按「看答案」。不用麥克風，對不對由家長判定。
+         */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; overflow: hidden; }
+        body { height: 100vh; height: 100dvh; height: calc(var(--vh, 1vh) * 100);
+               font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; background: #f4f1e8; color: #223;
+               display: flex; flex-direction: column; position: relative; -webkit-user-select: none; user-select: none; }
+        header { display: flex; align-items: center; gap: 2vmin; padding: 1.5vmin 2vmin; flex-wrap: wrap; }
+        .back { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 1.6vmin 2.8vmin; border-radius: 99px;
+                font-size: 3.2vmin; font-weight: 700; text-decoration: none; box-shadow: 0 4px 14px rgba(0,0,0,.25); white-space: nowrap; }
+        header h1 { font-size: 3.6vmin; color: #10456f; flex: 1; white-space: nowrap; }
+        .opts { display: flex; gap: 1.2vmin; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+        .seg { display: flex; background: #e3e6ec; border-radius: 99px; padding: .4vmin; }
+        .seg button { font-size: 2.3vmin; padding: .9vmin 1.6vmin; border: none; border-radius: 99px; background: transparent; color: #556; font-weight: 700; white-space: nowrap; }
+        .seg button.on { background: #fff; color: #10456f; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+        main { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4vmin; padding: 1vmin 3vmin; min-height: 0; }
+        #plateWrap { position: relative; flex: none; }
+        #plate { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 10px 30px rgba(0,0,0,.18); background: #fff; display: block; }
+        #plateWrap.pulse { animation: pulse .6s ease-in-out 2; }
+        @keyframes pulse { 50% { transform: scale(1.04); } }
+        #side { display: flex; flex-direction: column; align-items: center; gap: 2.5vmin; min-width: 30vmin; }
+        #question { font-size: 6vmin; font-weight: 900; color: #10456f; display: flex; align-items: center; gap: 1.5vmin; }
+        #askBtn { width: 8vmin; height: 8vmin; border-radius: 50%; border: none; background: #ffd86b; color: #10456f; font-size: 4vmin; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
+        #askBtn:active { transform: scale(.94); }
+        #answer { width: 30vmin; height: 24vmin; border-radius: 3vmin; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.15); display: flex; align-items: center;
+                  justify-content: center; font-size: 17vmin; font-weight: 900; color: #10456f; letter-spacing: .5vmin; visibility: hidden; transform: scale(.7); transition: transform .3s; }
+        #answer.show { visibility: visible; transform: scale(1); }
+        #stats { font-size: 2.6vmin; color: #667; }
+        @media (orientation: portrait) { main { flex-direction: column; gap: 2vmin; } #side { flex-direction: row; flex-wrap: wrap; justify-content: center; } #answer { width: 22vmin; height: 16vmin; font-size: 11vmin; } }
+
+        /* 家長判定列 */
+        #verdict { display: flex; gap: 2vmin; justify-content: center; flex-wrap: wrap; padding: 1.5vmin 2vmin 2.5vmin; }
+        .vbtn { font-size: 3.6vmin; padding: 2vmin 3.6vmin; border: none; border-radius: 99px; font-weight: 800; color: #10456f; background: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.18); white-space: nowrap; }
+        .vbtn.ok { background: #ffd86b; }
+        .vbtn:active { transform: scale(.96); }
+
+        /* 煙火（config.js createFireworks） */
+        #fx { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+        .firework { position: absolute; animation: fwpop 1.6s ease-out forwards; }
+        @keyframes fwpop { 0% { transform: scale(0) rotate(0); opacity: 1; } 60% { transform: scale(1.5) rotate(160deg); opacity: 1; } 100% { transform: scale(.4) rotate(360deg); opacity: 0; } }
+
+        /* 開始遮罩（iOS 的語音要由一次點擊解鎖） */
+        #startOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(16,69,111,.92); color: #fff; display: flex; flex-direction: column;
+                        align-items: center; justify-content: center; gap: 3vmin; z-index: 20; padding: 5vmin; text-align: center; }
+        #startBtn { font-size: 7vmin; padding: 3.5vmin 8vmin; border: none; border-radius: 99px; background: #ffd86b; color: #10456f; font-weight: 900; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+        #startBtn:active { transform: scale(.96); }
+        #startOverlay p { font-size: 3.4vmin; opacity: .92; line-height: 1.6; }
+        #startOverlay p.small { font-size: 2.7vmin; opacity: .8; }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="back" href="../index.html">← 返回</a>
+        <h1>🎨 色盲圖卡練習</h1>
+        <div class="opts">
+            <div class="seg" data-opt="digits"><button data-v="1">1 位數</button><button data-v="2">2 位數</button><button data-v="mix">混合</button></div>
+            <div class="seg" data-opt="source"><button data-v="common">體檢常見數字</button><button data-v="random">隨機</button></div>
+            <div class="seg" data-opt="contrast"><button data-v="clear">清楚</button><button data-v="std">標準</button></div>
+        </div>
+    </header>
+    <main>
+        <div id="plateWrap"><canvas id="plate"></canvas></div>
+        <div id="side">
+            <div id="question"><span>這是幾？</span><button id="askBtn" title="由系統問">🔊</button></div>
+            <div id="answer"></div>
+            <div id="stats"></div>
+        </div>
+    </main>
+    <div id="verdict">
+        <button class="vbtn ok" data-parent-longpress="verdictOk" data-parent-hint="家長按住 👍 約一秒才算答對">👍 答對了（按住）</button>
+        <button class="vbtn" id="againBtn">🔁 再一次</button>
+        <button class="vbtn" id="revealBtn">👁 看答案</button>
+        <button class="vbtn" id="nextBtn">⏭ 下一張</button>
+    </div>
+    <div id="fx"></div>
+
+    <div id="startOverlay">
+        <h1 style="font-size:7vmin">🎨 色盲圖卡練習</h1>
+        <p>家長指著圖問：「<b>這是幾？</b>」<br>他說出數字後，家長<b>按住 👍</b>；看不出來就按「👁 看答案」。</p>
+        <button id="startBtn">開始練習</button>
+        <p class="small">圖卡由程式隨機產生，數字以體檢常用的為主。<br>右上角可切換 1 位／2 位數、清楚／標準色塊。</p>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script>
+        'use strict';
+        const $ = id => document.getElementById(id);
+        // 體檢常用色盲圖卡（石原氏圖卡）上出現的數字
+        const COMMON = [12, 8, 6, 29, 57, 5, 3, 15, 74, 2, 97, 45, 7, 16, 73, 26, 42, 35, 96];
+        const NEXT_DELAY_MS = 2800;      // 答對 → 稱讚、顯示數字，多久後換下一張
+        const DEFAULT_OPTS = { digits: 'mix', source: 'common', contrast: 'std' };
+        let opts = loadOpts();
+        let target = null, last = null, revealed = false, busy = false, started = false;
+
+        function loadOpts() {
+            let o = null; try { o = JSON.parse(localStorage.getItem('exam.color.opts') || 'null'); } catch (e) { /* ignore */ }
+            const r = {}; Object.keys(DEFAULT_OPTS).forEach(k => { r[k] = o && o[k] ? o[k] : DEFAULT_OPTS[k]; }); return r;
+        }
+        function saveOpts() { try { localStorage.setItem('exam.color.opts', JSON.stringify(opts)); } catch (e) { /* ignore */ } }
+        function renderOpts() {
+            document.querySelectorAll('.seg').forEach(seg => { const k = seg.dataset.opt; seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === opts[k])); });
+        }
+        document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+            const k = b.parentElement.dataset.opt; if (opts[k] === b.dataset.v) return;
+            opts[k] = b.dataset.v; saveOpts(); renderOpts(); newPlate();
+        }));
+
+        // ---------- 紀錄（今天答對／看答案幾題） ----------
+        function loadLog() { try { return JSON.parse(localStorage.getItem('exam.color.log') || '[]'); } catch (e) { return []; } }
+        function appendLog(entry) { const log = loadLog(); log.push(entry); while (log.length > 2000) log.shift(); try { localStorage.setItem('exam.color.log', JSON.stringify(log)); } catch (e) { /* ignore */ } }
+        function renderStats() {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const t = loadLog().filter(x => x.t >= today.getTime());
+            const ok = t.filter(x => x.ok).length, seen = t.length - ok;
+            $('stats').textContent = '今天：答對 ' + ok + ' 題' + (seen ? '、看答案 ' + seen + ' 題' : '');
+        }
+
+        // ---------- 出題 ----------
+        function pickNumber() {
+            let pool = null;
+            if (opts.source === 'common') pool = COMMON.filter(n => opts.digits === 'mix' || (opts.digits === '1' ? n < 10 : n >= 10));
+            let n = null;
+            for (let tries = 0; tries < 12; tries++) {
+                if (pool && pool.length) n = pool[Math.floor(Math.random() * pool.length)];
+                else {
+                    const two = opts.digits === '2' || (opts.digits === 'mix' && Math.random() < 0.5);
+                    n = two ? 10 + Math.floor(Math.random() * 90) : 1 + Math.floor(Math.random() * 9);
+                }
+                if (n !== last) break;
+            }
+            last = n; return n;
+        }
+
+        // ---------- 圖卡產生：圓形區域塞滿大小不一的圓點，落在數字筆畫內的用一組顏色、其餘用另一組 ----------
+        const rand = (a, b) => a + Math.random() * (b - a);
+        const hsl = (h, s, l) => 'hsl(' + h.toFixed(0) + ',' + s.toFixed(0) + '%,' + l.toFixed(0) + '%)';
+        const PALETTES = {
+            // 標準：仿色盲圖卡——數字橘紅系、背景黃綠系，兩組的明暗範圍重疊，只能靠色相分辨
+            std: { fig: () => hsl(rand(8, 32), rand(58, 78), rand(42, 58)), bg: () => hsl(rand(62, 112), rand(28, 46), rand(48, 66)), base: '#f3eddc' },
+            // 清楚：深藍數字、淺黃背景，第一次練習先學會「看點點裡的數字」
+            clear: { fig: () => hsl(rand(212, 228), rand(55, 70), rand(26, 38)), bg: () => hsl(rand(42, 54), rand(55, 75), rand(80, 90)), base: '#fbf7e6' }
+        };
+        function renderPlate(n) {
+            const wrap = $('plateWrap'), size = wrap.clientWidth; if (!size) return;
+            const cv = $('plate'), dpr = Math.min(2, window.devicePixelRatio || 1);
+            cv.width = Math.round(size * dpr); cv.height = Math.round(size * dpr);
+            const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+            const S = size, R = S / 2, pal = PALETTES[opts.contrast] || PALETTES.std;
+            // 數字遮罩：粗體數字畫在離屏畫布，之後查每個圓點的中心與邊緣落在筆畫內或外
+            const mk = document.createElement('canvas'); mk.width = S; mk.height = S;
+            const mc = mk.getContext('2d'); const text = String(n);
+            let fs = text.length > 1 ? S * 0.56 : S * 0.66;
+            const font = px => '900 ' + px + 'px "Arial Black", "Helvetica Neue", Arial, "PingFang TC", sans-serif';
+            mc.font = font(fs); const w = mc.measureText(text).width;
+            if (w > S * 0.76) { fs *= S * 0.76 / w; mc.font = font(fs); }
+            mc.fillStyle = '#000'; mc.textAlign = 'center'; mc.textBaseline = 'middle'; mc.fillText(text, R, R + fs * 0.05);
+            const mask = mc.getImageData(0, 0, S, S).data;
+            const inside = (x, y) => { x = x | 0; y = y | 0; if (x < 0 || y < 0 || x >= S || y >= S) return false; return mask[(y * S + x) * 4 + 3] > 128; };
+            const rimUniform = (x, y, r, fig) => { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; if (inside(x + Math.cos(a) * r, y + Math.sin(a) * r) !== fig) return false; } return true; };
+            // 底色
+            ctx.fillStyle = pal.base; ctx.beginPath(); ctx.arc(R, R, R, 0, Math.PI * 2); ctx.fill();
+            // 隨機塞圓點（不重疊；跨到筆畫邊緣的點縮小，邊緣才清楚）
+            const rmin = S * 0.008, rmax = S * 0.03, gap = S * 0.0035, cell = (rmax + gap) * 2, cols = Math.ceil(S / cell);
+            const grid = []; for (let i = 0; i < cols * cols; i++) grid.push([]);
+            const dots = [], ATTEMPTS = 22000;
+            for (let a = 0; a < ATTEMPTS; a++) {
+                let r = rand(rmin, rmax * (1 - 0.75 * a / ATTEMPTS));   // 先放大點，後段用小點填縫，密度才像真的圖卡
+                const ang = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * (R - rmax - 2);
+                const x = R + Math.cos(ang) * d, y = R + Math.sin(ang) * d;
+                const fig = inside(x, y); let ok = false;
+                for (let k = 0; k < 4; k++) { if (rimUniform(x, y, r, fig)) { ok = true; break; } r *= 0.7; if (r < rmin * 0.55) break; }
+                if (!ok) continue;
+                const cx = Math.min(cols - 1, (x / cell) | 0), cy = Math.min(cols - 1, (y / cell) | 0); let hit = false;
+                for (let gy = cy - 1; gy <= cy + 1 && !hit; gy++) for (let gx = cx - 1; gx <= cx + 1 && !hit; gx++) {
+                    if (gx < 0 || gy < 0 || gx >= cols || gy >= cols) continue;
+                    const list = grid[gy * cols + gx];
+                    for (let i = 0; i < list.length; i++) { const o = list[i], dx = o.x - x, dy = o.y - y, m = o.r + r + gap; if (dx * dx + dy * dy < m * m) { hit = true; break; } }
+                }
+                if (hit) continue;
+                const dot = { x: x, y: y, r: r, fig: fig }; dots.push(dot); grid[cy * cols + cx].push(dot);
+            }
+            dots.forEach(dot => { ctx.fillStyle = dot.fig ? pal.fig() : pal.bg(); ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2); ctx.fill(); });
+            window.__plate = { n: n, dots: dots.length, fig: dots.filter(d => d.fig).length };   // 測試用
+        }
+        function layout() {
+            const main = document.querySelector('main'), wrap = $('plateWrap');
+            const portrait = window.innerHeight > window.innerWidth;
+            const s = portrait ? Math.min(main.clientWidth * 0.9, main.clientHeight * 0.64) : Math.min(main.clientHeight * 0.96, main.clientWidth * 0.6);
+            wrap.style.width = wrap.style.height = Math.floor(s) + 'px';
+        }
+
+        // ---------- 流程：出題 → 家長 👍（答對）／👁 看答案／🔁／⏭ ----------
+        function newPlate() {
+            revealed = false; busy = false;
+            target = pickNumber(); layout(); renderPlate(target);
+            $('answer').classList.remove('show'); $('answer').textContent = '';
+        }
+        function reveal(correct) {
+            if (revealed || busy) return;
+            revealed = true;
+            $('answer').textContent = target; $('answer').classList.add('show');
+            appendLog({ t: Date.now(), n: target, ok: !!correct }); renderStats();
+            if (correct) {
+                busy = true;
+                const praise = typeof getEncouragement === 'function' ? getEncouragement('correct') : '太棒了！';
+                speak(praise + ' 是 ' + target + '！');
+                if (typeof createFireworks === 'function') { createFireworks(18, $('fx')); setTimeout(() => createFireworks(14, $('fx')), 900); }
+                if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+                setTimeout(newPlate, NEXT_DELAY_MS);
+            } else {
+                speak('是 ' + target);
+            }
+        }
+        window.verdictOk = () => { if (started && !busy) reveal(true); };   // 👍 以 data-parent-longpress 呼叫（按住 1.2 秒）
+        $('revealBtn').addEventListener('click', () => { if (started && !busy) reveal(false); });
+        $('nextBtn').addEventListener('click', () => { if (started && !busy) newPlate(); });
+        $('againBtn').addEventListener('click', () => {
+            if (!started || busy) return;
+            const w = $('plateWrap'); w.classList.remove('pulse'); void w.offsetWidth; w.classList.add('pulse');
+            speak('再看一次，這是幾？');
+        });
+        $('askBtn').addEventListener('click', () => { if (started) speak('這是幾？'); });
+        $('startBtn').addEventListener('click', () => {
+            speak('我們來練習看數字。這是幾？');   // 同步、在點擊內：iOS 之後的稱讚才播得出來
+            started = true; $('startOverlay').style.display = 'none';
+            newPlate();
+        });
+        window.addEventListener('resize', () => { if (target !== null) { layout(); renderPlate(target); } });
+
+        renderOpts(); renderStats(); layout();
+        target = pickNumber(); renderPlate(target);   // 遮罩後面先畫好一張
+    </script>
+</body>
+</html>
