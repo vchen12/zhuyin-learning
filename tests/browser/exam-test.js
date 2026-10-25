@@ -33,12 +33,10 @@ const TTS_STUB = () => {
   check('圖卡：數字為體檢常見數字、點 ≥ 500、數字區有點', [12, 8, 6, 29, 57, 5, 3, 15, 74, 2, 97, 45, 7, 16, 73, 26, 42, 35, 96].indexOf(p1.n) >= 0 && p1.dots >= 500 && p1.fig >= 60);
   check('畫布有畫（非空白）', await page.evaluate(() => { const c = document.getElementById('plate'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let colored = 0; for (let i = 0; i < d.length; i += 64) { if (d[i + 3] > 0 && Math.abs(d[i] - d[i + 1]) > 40) colored++; } return colored > 200; }));
   check('答案未揭示', !(await page.$eval('#answer', e => e.classList.contains('show'))));
-  await page.click('#verdict .vbtn.ok'); await page.waitForTimeout(300);
-  check('輕按 👍 不算（只提示）', !(await page.$eval('#answer', e => e.classList.contains('show'))) && await page.$eval('#parentHintToast', e => e.style.opacity === '1'));
   const n1 = p1.n;
-  await hold(page, '#verdict .vbtn.ok', 1400); await page.waitForTimeout(300);
+  await page.click('#okBtn'); await page.waitForTimeout(300);   // v5.9.2：單點即回饋，不必長按
   const tts1 = await page.evaluate(() => window.__tts.map(x => x.text));
-  check('按住 👍 → 顯示數字、稱讚＋「是 N」、煙火', (await page.$eval('#answer', e => e.classList.contains('show') && e.textContent)) === String(n1) && tts1.some(t => new RegExp('是 ' + n1).test(t) && t.length > ('是 ' + n1).length + 2) && (await page.$$eval('#fx .firework', f => f.length)) > 0);
+  check('按 👍 → 顯示數字、稱讚＋「是 N」、煙火', (await page.$eval('#answer', e => e.classList.contains('show') && e.textContent)) === String(n1) && tts1.some(t => new RegExp('是 ' + n1).test(t) && t.length > ('是 ' + n1).length + 2) && (await page.$$eval('#fx .firework', f => f.length)) > 0);
   check('紀錄：答對 1 題', /答對 1 題/.test(await page.$eval('#stats', e => e.textContent)) && (await page.evaluate(() => JSON.parse(localStorage.getItem('exam.color.log')))).some(x => x.n === n1 && x.ok));
   await page.waitForTimeout(3000);
   const p2 = await page.evaluate(() => window.__plate);
@@ -57,7 +55,7 @@ const TTS_STUB = () => {
   check('隨機＋2 位數 → 都是 10～99', all2);
   await page.click('.seg[data-opt=contrast] button[data-v=clear]'); await page.waitForTimeout(200);
   check('清楚模式有畫（深色數字點）', await page.evaluate(() => { const c = document.getElementById('plate'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let dark = 0; for (let i = 0; i < d.length; i += 64) { if (d[i + 3] > 0 && d[i] < 90 && d[i + 2] > 110) dark++; } return dark > 100; }));
-  check('左上「← 返回」長按接線', await page.$eval('a.back', e => e.__lpWired === true));
+  check('左上「← 返回」長按接線；👍 不是長按', await page.$eval('a.back', e => e.__lpWired === true) && await page.$eval('#okBtn', e => !e.__lpWired && !e.hasAttribute('data-parent-longpress')));
 
   console.log('視力表');
   await page.goto(BASE + '/exam/eye.html'); await page.waitForTimeout(500);
@@ -73,9 +71,9 @@ const TTS_STUB = () => {
   await page.click('.row:nth-child(4) .sym:nth-child(2)'); await page.waitForTimeout(300);
   check('點符號 → 放大、同方向、判定列出現、自動問', await page.$eval('#focus', e => e.classList.contains('show')) && (await page.$eval('#focusSym svg', e => e.dataset.dir)) === target && await page.$eval('#verdict', e => e.classList.contains('show')) && await page.$eval('.row:nth-child(4) .sym:nth-child(2)', e => e.classList.contains('cur')) && (await page.evaluate(() => window.__tts[window.__tts.length - 1].text)) === '開口朝哪邊？');
   const NAME = { up: '上', down: '下', left: '左', right: '右' };
-  await hold(page, '#verdict .vbtn.ok', 1400); await page.waitForTimeout(300);
+  await page.click('#okBtn'); await page.waitForTimeout(300);
   const tts3 = await page.evaluate(() => window.__tts.map(x => x.text));
-  check('按住 👍 → 箭頭＋「開口朝X」、稱讚、煙火、符號打勾', (await page.$eval('#arrowBox', e => e.classList.contains('show'))) && (await page.$eval('#arrowText', e => e.textContent)) === '開口朝' + NAME[target] && tts3.some(t => new RegExp('開口朝' + NAME[target] + '！').test(t) && t.length > 6) && (await page.$$eval('#fx .firework', f => f.length)) > 0 && await page.$eval('.row:nth-child(4) .sym:nth-child(2)', e => e.classList.contains('done')));
+  check('按 👍 → 箭頭＋「開口朝X」、稱讚、煙火、符號打勾', (await page.$eval('#arrowBox', e => e.classList.contains('show'))) && (await page.$eval('#arrowText', e => e.textContent)) === '開口朝' + NAME[target] && tts3.some(t => new RegExp('開口朝' + NAME[target] + '！').test(t) && t.length > 6) && (await page.$$eval('#fx .firework', f => f.length)) > 0 && await page.$eval('.row:nth-child(4) .sym:nth-child(2)', e => e.classList.contains('done')));
   await page.waitForTimeout(2800);
   check('稱讚後回到視力表、紀錄答對 1', !(await page.$eval('#focus', e => e.classList.contains('show'))) && (await page.evaluate(() => JSON.parse(localStorage.getItem('exam.eye.log')))).filter(x => x.ok).length === 1);
   await page.click('.seg[data-opt=type] button[data-v=C]'); await page.waitForTimeout(300);

@@ -11,7 +11,7 @@
         /*
          * 體檢練習：視力表（v5.9.0）
          * 體檢時檢查員指著視力表上的 E（或缺角圓圈 C）問「開口朝哪邊？」，受檢者說出並用手比出上下左右。
-         * 這裡畫一張 10 列、由大到小的視力表，家長點一個符號就放大顯示；他說出／比出方向後家長按住 👍；
+         * 這裡畫一張 11 列、由大到小的視力表，家長點一個符號就放大顯示；他說出／比出方向後家長按 👍（單點即可）；
          * 看不出來按「看答案」（顯示箭頭並唸方向）。另有「大圖練習」：一次一個大符號。不用麥克風。
          */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -102,7 +102,7 @@
     </main>
     <div id="hintLine">家長點視力表上的一個符號，會放大顯示；問他「開口朝哪邊？」</div>
     <div id="verdict">
-        <button class="vbtn ok" data-parent-longpress="verdictOk" data-parent-hint="家長按住 👍 約一秒才算答對">👍 答對了（按住）</button>
+        <button class="vbtn ok" id="okBtn">👍 答對了</button>
         <button class="vbtn" id="againBtn">🔁 再一次</button>
         <button class="vbtn" id="revealBtn">👁 看答案</button>
         <button class="vbtn" id="nextBtn">⏭ 下一個</button>
@@ -111,7 +111,7 @@
 
     <div id="startOverlay">
         <h1 style="font-size:7vmin">👁 視力表練習</h1>
-        <p>家長點視力表上的一個 E（或缺角圓圈），問：「<b>開口朝哪邊？</b>」<br>他說出、比出「上、下、左、右」後，家長<b>按住 👍</b>；看不出來就按「👁 看答案」。</p>
+        <p>家長點視力表上的一個 E（或缺角圓圈），問：「<b>開口朝哪邊？</b>」<br>他說出、比出「上、下、左、右」後，家長<b>按 👍</b>；看不出來就按「👁 看答案」。</p>
         <button id="startBtn">開始練習</button>
         <p class="small">右上角可切換 E／缺角圓圈 C／C 八方向（含左上、右上、左下、右下）；「大圖練習」一次只出一個大符號。</p>
     </div>
@@ -235,7 +235,7 @@
                 speak(word);
             }
         }
-        window.verdictOk = () => { if (started) reveal(true); };
+        $('okBtn').addEventListener('click', () => { if (started) reveal(true); });   // 👍 單點即回饋（v5.9.2）
         $('revealBtn').addEventListener('click', () => { if (started) reveal(false); });
         $('nextBtn').addEventListener('click', () => { if (!started || busy) return; if (opts.mode === 'big') nextBig(); else closeFocus(); });
         $('againBtn').addEventListener('click', () => { if (started && cur && !busy) speak('再看一次，' + $('fqText').textContent); });
