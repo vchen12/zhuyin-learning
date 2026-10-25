@@ -43,9 +43,9 @@ async function run(wavName, fn) {
     await page.waitForTimeout(6000);                                                 // 「我要…尿尿」在 1.5–3.25s，靜音 1.5s 後判定
     const b1 = await page.evaluate(() => ({ verdict: document.getElementById('verdict').classList.contains('show'), reward: document.getElementById('focus').classList.contains('reward'), status: document.getElementById('focusStatus').textContent }));
     check('說完 → 先出判定列、還沒給報酬', b1.verdict && !b1.reward && /像「我要尿尿」嗎/.test(b1.status));
-    await hold(page, '#verdict .vbtn.ok', 1400); await page.waitForTimeout(200);   // 報酬給了之後 0.7 秒就回卡片格，要馬上看
+    await page.click('#verdictOkBtn'); await page.waitForTimeout(200);   // v5.9.5 說話板 👍 單點；報酬給了之後 0.7 秒就回卡片格，要馬上看
     const b2 = await page.evaluate(() => ({ reward: document.getElementById('focus').classList.contains('reward'), log: JSON.parse(localStorage.getItem('board.log') || '[]') }));
-    check('按住 👍 → 報酬、紀錄 ok', b2.reward && b2.log.some(x => x.verdict === 'ok' && x.basis === 'parent'));
+    check('按 👍 → 報酬、紀錄 ok', b2.reward && b2.log.some(x => x.verdict === 'ok' && x.basis === 'parent') && !(await page.$eval('#verdictOkBtn', e => e.__lpWired === true)));
   });
   console.log('錯誤：', errors.length ? errors : '無');
   console.log(`\n${pass}/${pass + fail} 通過`);
