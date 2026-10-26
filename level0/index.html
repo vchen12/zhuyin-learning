@@ -334,10 +334,10 @@
         }
         .falling-item {
             position: absolute;
-            font-size: 3rem;
+            font-size: 4.4rem;          /* v5.9.8：符號太小，滑鼠與手指都不好點 */
             background: white;
-            padding: 14px 24px;
-            border-radius: 14px;
+            padding: 16px 30px;
+            border-radius: 18px;
             cursor: pointer;
             box-shadow: 0 3px 6px rgba(0,0,0,0.2);
             transition: transform 0.2s;
@@ -761,7 +761,7 @@
             normal: { step: 0.22, spawnMs: 1300 },  // 約 26 秒
             fast:   { step: 0.45, spawnMs: 900 }    // 約 13 秒
         };
-        const MAX_ITEMS = 12;                       // 畫面上最多同時幾個（沒按掉就不再出）
+        const MAX_ITEMS = 10;                       // 畫面上最多同時幾個（沒按掉就不再出）；符號放大後 10 個就滿了
         // 發音排隊：按一個唸一個，不互相切斷；他按得比唸得快時只留最近兩個，不然越唸越落後
         const soundQueue = []; let soundPlaying = false;
         function queueSound(symbol) {

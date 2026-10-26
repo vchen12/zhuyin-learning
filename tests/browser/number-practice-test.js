@@ -82,7 +82,7 @@ const TTS_STUB = () => {
 
   console.log('第 0 關 掉落遊戲');
   await page.goto(BASE + '/level0/index.html'); await page.waitForTimeout(400);
-  check('速度：中＝落得慢（26 秒）、出得密（1.3 秒）、最多 12 個', await page.evaluate(() => FALL_SPEEDS.normal.step === 0.22 && FALL_SPEEDS.normal.spawnMs === 1300 && MAX_ITEMS === 12));
+  check('速度：中＝落得慢（26 秒）、出得密（1.3 秒）、最多 10 個', await page.evaluate(() => FALL_SPEEDS.normal.step === 0.22 && FALL_SPEEDS.normal.spawnMs === 1300 && MAX_ITEMS === 10));
   await page.evaluate(() => { setFallSpeed('fast'); startGame(); });   // 非觸控裝置預設「慢」，測試改快
   await page.waitForTimeout(3000);
   const n = await page.$$eval('#gameArea .falling-item', i => i.length);
@@ -91,7 +91,7 @@ const TTS_STUB = () => {
   await page.waitForTimeout(100);
   check('一碰就消失（pointerdown）、發音排隊只留最近兩個', (await page.$$eval('#gameArea .falling-item', i => i.length)) < removed && await page.evaluate(() => soundPlaying === true && soundQueue.length <= 2));
   await page.waitForTimeout(20000);
-  check('畫面最多 12 個', (await page.$$eval('#gameArea .falling-item', i => i.length)) <= 12);
+  check('畫面最多 10 個', (await page.$$eval('#gameArea .falling-item', i => i.length)) <= 10);
 
   console.log('錯誤：', errors.length ? errors : '無');
   console.log(`\n${pass}/${pass + fail} 通過`);

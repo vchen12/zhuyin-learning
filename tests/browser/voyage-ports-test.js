@@ -49,14 +49,15 @@ const TTS_STUB = () => {
 
   console.log('出航：航行動畫 → 抵港煙火／彩帶 → 稱讚句型');
   await page.click('#startBtn');
-  const t0 = Date.now(); let sailing = null, sailLeft = [], fx = null, wakeMax = 0;
+  const t0 = Date.now(); let sailing = null, sailLeft = [], fx = null, wakeMax = 0, seenCard = false;
   while (Date.now() - t0 < 8000) {
     const s = await page.evaluate(() => ({ sailing: document.body.classList.contains('sailing'), left: parseFloat(document.getElementById('ship').style.left) || 0, done: document.querySelectorAll('.port.done').length,
       fw: document.querySelectorAll('#fx .fxzone .firework').length, confetti: document.querySelectorAll('#fx .confetti').length, card: document.getElementById('portCard').classList.contains('show'),
       wake: getComputedStyle(document.getElementById('wake')).opacity, dolphin: !!document.querySelector('.dolphin'), gull: document.querySelectorAll('.gull').length }));
     if (s.sailing) { if (!sailing) sailing = s; sailLeft.push(s.left); wakeMax = Math.max(wakeMax, parseFloat(s.wake)); }   // 尾浪 opacity 有 .3s 過渡
+    if (s.card) seenCard = true;
     if (s.card && s.fw && !fx) fx = s;
-    if (s.done >= 1 && !s.card) break;
+    if (s.done >= 1 && seenCard && !s.card) break;   // 靠岸停 0.4 秒才出卡片（v5.9.8）：要等卡片出現過再收
     await page.waitForTimeout(60);
   }
   check('說完詞 → 進入航行動畫（尾浪、海豚、海鷗）', !!sailing && sailing.dolphin && sailing.gull === 2 && wakeMax > 0.5);

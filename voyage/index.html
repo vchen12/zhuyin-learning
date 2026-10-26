@@ -133,14 +133,15 @@
         #finale .firework { font-size: 5vmin; }
 
         /* 港口卡片（照片揭示） */
-        #portCard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.6); opacity: 0; pointer-events: none;
-                    width: min(70vmin, 90vw); background: #fff; border-radius: 3vmin; padding: 2vmin; box-shadow: 0 20px 60px rgba(0,0,0,.45);
-                    transition: transform .35s cubic-bezier(.2,.9,.3,1.3), opacity .3s; }
-        #portCard.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        /* 港口卡片放在航線下方的海面（top 50%），不遮住船與航線：他才看得到船開進港（v5.9.8 實測：照片蓋住船） */
+        #portCard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 6vmin) scale(.8); opacity: 0; pointer-events: none;
+                    width: min(52vmin, 90vw); background: #fff; border-radius: 3vmin; padding: 1.6vmin; box-shadow: 0 20px 60px rgba(0,0,0,.45);
+                    transition: transform .35s cubic-bezier(.2,.9,.3,1.3), opacity .3s; z-index: 12; }
+        #portCard.show { transform: translate(-50%, 0) scale(1); opacity: 1; }
         #portCard img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 2vmin; background: #eee; display: block; }
         #portCard .empty { width: 100%; aspect-ratio: 4/3; border-radius: 2vmin; background: #eef4fa; display: flex; align-items: center;
                            justify-content: center; font-size: 12vmin; }
-        #portCard .name { text-align: center; color: #10456f; font-size: 6vmin; font-weight: 800; padding: 1.5vmin 0 .5vmin; }
+        #portCard .name { text-align: center; color: #10456f; font-size: 5vmin; font-weight: 800; padding: 1vmin 0 .2vmin; }
 
         /* 終點慶祝 */
         #finale { position: absolute; inset: 0; background: rgba(16,69,111,.92); display: none; flex-direction: column; align-items: center;
@@ -231,8 +232,7 @@
         <div id="fx">
             <div class="fxzone" style="left:0;top:0;width:22%;height:100%"></div>
             <div class="fxzone" style="right:0;top:0;width:22%;height:100%"></div>
-            <div class="fxzone" style="left:22%;top:0;width:56%;height:16%"></div>
-            <div class="fxzone" style="left:22%;bottom:0;width:56%;height:14%"></div>
+            <div class="fxzone" style="left:22%;top:0;width:56%;height:22%"></div>
         </div>
         <div id="portCard"><div id="portMedia"></div><div class="name" id="portName"></div></div>
         <div id="finale"><h2>🎉 到了！</h2><div id="finaleStrip"></div><p style="font-size:3.6vmin;opacity:.85">等一下會再出航一次</p></div>
@@ -303,7 +303,8 @@
         const MAX_PORTS = 12;            // 站數上限（家長面板「加一站」；舊資料固定 5 站）
         const SAIL_MS = 1200;            // 航行動畫：說完一個詞後，船開進港口的時間（整段航程）；剩的距離短也至少 SAIL_MIN_MS
         const SAIL_MIN_MS = 800;
-        const HOLD_PROGRESS = 0.85;      // 門檻模式：船隨聲音最多開到這裡（港口前），等「說對了」才開進港
+        const HOLD_PROGRESS = 0.5;       // 門檻模式：船隨聲音最多開到這裡（半路），等「說對了」才開進港——留一段航程讓他看船開（v5.9.8）
+        const DOCK_MS = 400;             // 靠岸後停一下（汽笛）再出照片，照片不遮船的移動
         const FRAME_MS = 25;
         const CONFIRM_FRAMES = 3;        // 連續 3 幀人聲 → 引擎啟動（≈75ms；短音節如「嘟」也抓得到）
         const ENGINE_OFF_MS = 320;       // 靜音多久引擎停
@@ -312,7 +313,7 @@
         const UTTER_END_MS = 450;        // 鼓勵模式：發聲後靜音多久算說完
         const SPEECH_END_MS = typeof getSpeechEndMs === 'function' ? getSpeechEndMs() : 1500;   // 門檻 > 0：用設定頁的「說完」判定（說得慢的人字間會停）
         const LEG_FULL_MS = 1400;        // 持續發聲多久走完一段航程
-        const CARD_MS = 3200;            // 港口照片顯示時間
+        const CARD_MS = 3000;            // 港口照片顯示時間
         const FINALE_MS = 9000;          // 終點畫面停留時間，之後自動再出航
         const SPEAKER_TAIL_MS = 350;     // 喇叭播音（汽笛/TTS）結束後再忽略多久
         const DEFAULT_PORTS = ['基隆', '日本福岡', '韓國釜山', '基隆', '回家'];
@@ -754,11 +755,10 @@
             updatePorts();
             showWord();                      // 口令換成下一站的詞
             horn(1);
-            showPortCard(i);
-            celebrateFx();
             appendLog({ t: Date.now(), arrive: i, name: data.ports[i].name });
-            // 汽笛後稱讚：「太棒了！到基隆了！」（say() 會在播音期間關閉麥克風判定）
-            setTimeout(() => { say(arrivalPhrase(data.ports[i].name)); }, 1000);
+            // 靠岸先停 DOCK_MS（看得到船停在港口），再出照片（放在航線下方，不遮船）＋煙火；汽笛後稱讚：「太棒了！到基隆了！」
+            setTimeout(() => { showPortCard(i); celebrateFx(); }, DOCK_MS);
+            setTimeout(() => { say(arrivalPhrase(data.ports[i].name)); }, DOCK_MS + 800);
             setTimeout(() => {
                 hidePortCard();
                 legProgress = 0;
@@ -766,7 +766,7 @@
                 placeShip(); busy = false;
                 promptWord();
                 listenWord();
-            }, CARD_MS);
+            }, DOCK_MS + CARD_MS);
         }
         function showPortCard(i) {
             const p = data.ports[i];
@@ -811,6 +811,7 @@
             // 先講口令（同步、在手勢內）：iOS 的 TTS 要由這一下點擊「解鎖」，之後抵港稱讚、閒置提示才播得出來。
             // 講完再開麥克風：iOS 開麥克風會切換音訊路徑，會把還在講的這句打斷（實測：開場提示斷斷續續）
             await promptWord('說話，船就會開！跟我說：');
+            await SpeechModule.waitTtsIdle(4000, 400);   // 等提示真的講完（iOS 的 onend 會早到；開麥克風會切掉最後一個字）
             const ok = await Promise.race([SpeechModule.init(), new Promise(r => setTimeout(() => r('timeout'), 10000))]);
             if (ok !== true) { $('startErr').textContent = ok === 'timeout' ? '麥克風一直沒有回應。請重新整理頁面再試；或到 設定 → Safari → 麥克風 改為「允許」。' : '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風；若從主畫面圖示開啟，請改用 Safari。'; return; }
             SpeechModule.setHud(false);

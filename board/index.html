@@ -19,7 +19,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100%; }
         body {
-            min-height: 100vh; min-height: 100dvh; min-height: calc(var(--vh, 1vh) * 100);
+            /* v5.9.8：高度固定為可視高度、卡片格在裡面自己縮（實測：卡片多時頁面比螢幕長一列） */
+            height: 100vh; height: 100dvh; height: calc(var(--vh, 1vh) * 100); overflow: hidden; display: flex; flex-direction: column;
             font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
             background: #eef3f8; color: #1d2b3a; -webkit-user-select: none; user-select: none;
         }
@@ -29,11 +30,11 @@
         .back { color: #fff; text-decoration: none; font-size: 3vmin; font-weight: 700; white-space: nowrap; background: rgba(255,255,255,.18); padding: 1.2vmin 2vmin; border-radius: 99px; }
 
         /* 卡片格 */
-        #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30vmin, 44vw), 1fr)); gap: 2.5vmin; padding: 2.5vmin; }
+        #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30vmin, 44vw), 1fr)); gap: 2.5vmin; padding: 2.5vmin; flex: 1; min-height: 0; overflow: hidden; align-content: start; }
         .card { background: #fff; border-radius: 3vmin; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.10); border: .6vmin solid transparent; transition: transform .12s; }
         .card:active { transform: scale(.97); }
-        .card .pic { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: #dfe8f1; }
-        .card .ph { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 14vmin; background: #dfe8f1; }
+        .card .pic { width: 100%; aspect-ratio: 4/3; height: var(--pic-h, auto); object-fit: cover; display: block; background: #dfe8f1; }
+        .card .ph { width: 100%; aspect-ratio: 4/3; height: var(--pic-h, auto); display: flex; align-items: center; justify-content: center; font-size: min(14vmin, 70%); background: #dfe8f1; }
         .card .lbl { text-align: center; font-size: 4.6vmin; font-weight: 800; padding: 1.6vmin 1vmin; color: #10456f; }
         .card .lbl small { display: block; font-size: 2.6vmin; color: #6b7c8d; font-weight: 600; }
         .card.done { border-color: #ffd86b; }
@@ -293,7 +294,21 @@
                 c.addEventListener('click', () => enterFocus(it));
                 g.appendChild(c);
             });
+            fitGrid();
         }
+        // 讓所有卡片一次塞進畫面（不捲動）：依列數算出每張照片能有多高，寫進 --pic-h；夠高就用原本的 4:3
+        function fitGrid() {
+            const g = $('grid'), cards = Array.from(g.children); if (!cards.length) return;
+            g.style.removeProperty('--pic-h');
+            const first = cards[0].getBoundingClientRect(), gap = parseFloat(getComputedStyle(g).gap) || 0, pad = parseFloat(getComputedStyle(g).paddingTop) || 0;
+            const cols = Math.max(1, Math.round((g.clientWidth - pad * 2 + gap) / (first.width + gap)));
+            const rows = Math.ceil(cards.length / cols);
+            const lbl = cards[0].querySelector('.lbl'), lblH = lbl ? lbl.offsetHeight : 0, border = 2 * (parseFloat(getComputedStyle(cards[0]).borderTopWidth) || 0);
+            const avail = g.clientHeight - pad * 2 - gap * (rows - 1);
+            const picH = avail / rows - lblH - border;
+            if (picH < first.width * 0.75) g.style.setProperty('--pic-h', Math.max(40, Math.floor(picH)) + 'px');
+        }
+        window.addEventListener('resize', () => setTimeout(fitGrid, 150));
 
         // ==========================================
         // 專注畫面：示範 → 聽 → 報酬 → 家長判定
@@ -471,6 +486,7 @@
             // 先用語音告訴他怎麼玩（同步、在點擊事件內：iOS 只播手勢觸發的語音，這一下也解鎖後面的示範與稱讚）。
             // 講完再開麥克風：iOS 開麥克風會切換音訊路徑，會把還在講的這句打斷
             await SpeechModule.speak(CFG.intro || '點一張圖，聽我說一次，再跟我說一次。', 0.9);
+            await SpeechModule.waitTtsIdle(4000, 400);   // 等開場真的講完（iOS 的 onend 會早到；開麥克風會切掉最後一個字）
             const ok = await Promise.race([SpeechModule.init(), new Promise(r => setTimeout(() => r('timeout'), 10000))]);
             if (ok !== true) { $('startErr').textContent = ok === 'timeout' ? '麥克風一直沒有回應。請重新整理頁面再試；或到 設定 → Safari → 麥克風 改為「允許」。' : '麥克風無法使用。請在 Safari 中開啟本頁並允許麥克風。'; return; }
             SpeechModule.setHud(false);

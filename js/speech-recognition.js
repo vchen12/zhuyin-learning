@@ -260,6 +260,17 @@
         } catch (e) { /* ignore */ }
     }
 
+    /** 等語音合成真的講完（iOS 的 onend 偶爾比聲音早到；之後再開麥克風才不會切掉最後一個字）。最多等 maxMs，之後再留 tailMs */
+    function waitTtsIdle(maxMs, tailMs) {
+        const ss = global.speechSynthesis, t0 = Date.now();
+        return new Promise(resolve => {
+            (function poll() {
+                if (ss && (ss.speaking || ss.pending) && Date.now() - t0 < (maxMs || 4000)) { setTimeout(poll, 100); return; }
+                setTimeout(resolve, tailMs === undefined ? 350 : tailMs);
+            })();
+        });
+    }
+
     async function init() {
         if (!audioContext || !micStream) {
             try {
@@ -1032,6 +1043,7 @@
     global.SpeechModule = {
         init,
         prepareAudio,
+        waitTtsIdle,
         startListening: startListening,
         stopListening: stopListening,
         resetState: resetState,
