@@ -22,21 +22,24 @@
         .np-progress { display: none; width: min(70vmin, 90vw); color: #fff; font-size: 2.4vmin; text-align: center; }
         .np-progress .bar { height: 1.6vmin; background: rgba(255,255,255,.25); border-radius: 99px; overflow: hidden; margin-top: .6vmin; }
         .np-progress .fill { height: 100%; width: 0; background: linear-gradient(90deg, #4facfe, #00f2fe); transition: width .3s; }
-        .np-card { width: min(56vmin, 86vw); height: min(36vmin, 54vw); background: #fff; border-radius: 3vmin; box-shadow: 0 10px 30px rgba(0,0,0,.28);
+        .np-card { width: min(60vmin, 90vw); height: min(34vmin, 50vw); background: #fff; border-radius: 3vmin; box-shadow: 0 10px 30px rgba(0,0,0,.28);
                    display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; flex: none; -webkit-user-select: none; user-select: none; }
         .np-card:active { transform: scale(.97); }
-        .np-card .digit { font-size: 24vmin; font-weight: 900; color: var(--np-c1, #667eea); line-height: 1; letter-spacing: .5vmin; }
+        .np-card .digit { font-size: 25vmin; font-weight: 900; color: var(--np-c1, #667eea); line-height: 1; letter-spacing: .5vmin; }
         .np-card .zy { font-size: 4.6vmin; color: #556; margin-top: .6vmin; min-height: 5vmin; }
         .np-card.q .digit { color: #e0a800; }
+        .np-card.q { height: min(24vmin, 36vw); }
         .np-status { color: #fff; font-size: 3vmin; font-weight: 700; text-align: center; min-height: 4vmin; text-shadow: 0 2px 4px rgba(0,0,0,.3); }
-        .np-grid { display: none; grid-template-columns: repeat(var(--np-cols, 5), 1fr); gap: 1.2vmin; width: min(96vw, 110vmin); overflow-y: auto; -webkit-overflow-scrolling: touch; padding: .4vmin; min-height: 0; }
-        .np-num { background: rgba(255,255,255,.22); border: 2px solid #fff; border-radius: 1.6vmin; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
-                  min-height: 10vmin; padding: 1vmin .4vmin; cursor: pointer; font-weight: 900; font-size: 5vmin; line-height: 1.1; -webkit-user-select: none; user-select: none; }
-        .np-num small { font-size: 2vmin; font-weight: 600; opacity: .9; }
+        .np-grid { display: none; grid-template-columns: repeat(var(--np-cols, 5), 1fr); gap: 1.4vmin; width: min(96vw, 120vmin); overflow-y: auto; -webkit-overflow-scrolling: touch; padding: .4vmin; min-height: 0; }
+        /* 數字格：至少 13vmin 高（iPad 約 100px）、字 7vmin——實測他常按錯（v5.9.8） */
+        .np-num { background: rgba(255,255,255,.22); border: 2px solid #fff; border-radius: 2vmin; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                  min-height: 13vmin; padding: 1vmin .4vmin; cursor: pointer; font-weight: 900; font-size: 7vmin; line-height: 1.1; -webkit-user-select: none; user-select: none; }
+        .np-num small { font-size: 2.4vmin; font-weight: 600; opacity: .9; }
         .np-num.mastered { background: rgba(76,175,80,.55); border-color: #4caf50; }
         .np-num:active { transform: scale(.95); }
-        .np-options { display: none; grid-template-columns: 1fr 1fr; gap: 2vmin; width: min(70vmin, 90vw); }
-        .np-opt { background: rgba(255,255,255,.3); color: #fff; border: 2px solid #fff; padding: 2.6vmin; border-radius: 2vmin; font-size: 6vmin; font-weight: 900; cursor: pointer; }
+        /* 四選一：兩欄大格，每格至少 17vmin 高、字 11vmin（v5.9.8 實測：格子太小常按錯） */
+        .np-options { display: none; grid-template-columns: 1fr 1fr; gap: 2.4vmin; width: min(96vw, 110vmin); }
+        .np-opt { background: rgba(255,255,255,.3); color: #fff; border: 3px solid #fff; min-height: 17vmin; padding: 1.5vmin; border-radius: 2.5vmin; font-size: 11vmin; font-weight: 900; cursor: pointer; line-height: 1; }
         .np-opt:disabled { opacity: .6; }
         .np-opt.correct { background: #4caf50; border-color: #4caf50; animation: np-pulse .5s; }
         .np-opt.wrong { background: #ff5252; border-color: #ff5252; animation: np-shake .5s; }

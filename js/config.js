@@ -5,7 +5,7 @@
 
 const APP_CONFIG = {
     // 版本資訊
-    version: '5.9.7',
+    version: '5.9.8',
 
     // 圖片模式：'private' 使用私人照片，'public' 使用公開圖庫
     imageMode: 'public',
@@ -200,6 +200,17 @@ function speak(text, a, b) {
             resolve();
         };
         if (!APP_CONFIG.enableTTS || typeof speechSynthesis === 'undefined' || !text) { finish(); return; }
+        // iOS：頁面還沒有任何手勢時 speak() 不會播，有時還會排到之後某次點擊才突然冒出來（實測：回首頁再進遊戲，開場提示有時沒有、有時嚇一跳）。
+        // 還沒手勢就先存著（只留最後一句），第一次點擊時同步講出來——每次進遊戲都一致：一碰螢幕就有開場提示。
+        if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.hasBeenActive && !options.force) {
+            speak._pending = { text: String(text), options: options };
+            if (!speak._armed) {
+                speak._armed = true;
+                const fire = () => { const p = speak._pending; speak._pending = null; if (p) speak(p.text, Object.assign({ force: true }, p.options)); };
+                document.addEventListener('pointerdown', fire, { once: true, capture: true });
+            }
+            finish(); return;
+        }
         try {
             const u = new SpeechSynthesisUtterance(String(text));
             u.lang = options.lang || 'zh-TW';
@@ -957,7 +968,13 @@ function initBackLongPress(root) {
  */
 function initViewportHeight() {
     if (typeof window === 'undefined' || !document.documentElement) return;
-    const set = () => { document.documentElement.style.setProperty('--vh', (window.innerHeight / 100) + 'px'); };
+    const set = () => {
+        const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+        document.documentElement.style.setProperty('--vh', (h / 100) + 'px');
+        // v5.9.8：html 本身也鎖成可視高度。頁面都寫 html { height: 100% }，而 iOS Safari 的 100% 是「含工具列」的版面視口，
+        // body 雖已用 --vh 算對，整頁還是比螢幕高一個工具列、可以往上捲（實測：我要／家人視窗多了一個工具列的高度）
+        document.documentElement.style.height = h + 'px';
+    };
     set();
     window.addEventListener('resize', set);
     window.addEventListener('orientationchange', () => setTimeout(set, 300));
