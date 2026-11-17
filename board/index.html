@@ -34,7 +34,7 @@
         .card { background: #fff; border-radius: 3vmin; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.10); border: .6vmin solid transparent; transition: transform .12s; }
         .card:active { transform: scale(.97); }
         .card .pic { width: 100%; aspect-ratio: 4/3; height: var(--pic-h, auto); object-fit: cover; display: block; background: #dfe8f1; }
-        .card .ph { width: 100%; aspect-ratio: 4/3; height: var(--pic-h, auto); display: flex; align-items: center; justify-content: center; font-size: min(14vmin, 70%); background: #dfe8f1; }
+        .card .ph { width: 100%; aspect-ratio: 4/3; height: var(--pic-h, auto); display: flex; align-items: center; justify-content: center; font-size: min(14vmin, calc(var(--pic-h, 24vmin) * 0.62)); background: #dfe8f1; }   /* 圖示字級跟著格子高度（v5.9.9：之前寫成父層的 70%，圖示變極小） */
         .card .lbl { text-align: center; font-size: 4.6vmin; font-weight: 800; padding: 1.6vmin 1vmin; color: #10456f; }
         .card .lbl small { display: block; font-size: 2.6vmin; color: #6b7c8d; font-weight: 600; }
         .card.done { border-color: #ffd86b; }
@@ -178,7 +178,7 @@
                     { id: 'sit',    label: '坐坐',   say: '我要坐坐',   reply: '好，坐下來',     emoji: '🪑' },
                     { id: 'walk',   label: '走路',   say: '我要走路',   reply: '好，我們去走走', emoji: '🚶' },
                     { id: 'water',  label: '喝水',   say: '我要喝水',   reply: '好，水給你',     emoji: '🥤' },
-                    { id: 'eat',    label: '吃飯',   say: '我要吃飯',   reply: '好，我們吃飯',   emoji: '🍚' }
+                    { id: 'eat',    label: '吃飯',   say: '我要吃飯',   reply: '好，我們吃飯',   emoji: '🍱' }
                 ]
             },
             family: {
@@ -226,6 +226,8 @@
             try { saved = JSON.parse(localStorage.getItem('board.items.' + SET) || 'null'); } catch (e) { /* ignore */ }
             const defs = defaultItems();
             if (!saved) return defs;
+            // v5.9.9：吃飯改成豐盛的便當（已存的卡片一併換並存回）
+            if (saved.some(x => x.id === 'eat' && x.emoji === '🍚')) { saved.forEach(x => { if (x.id === 'eat' && x.emoji === '🍚') x.emoji = '🍱'; }); try { localStorage.setItem('board.items.' + SET, JSON.stringify(saved.map(it => ({ id: it.id, label: it.label, say: it.say, reply: it.reply, emoji: it.emoji })))); } catch (e) { /* ignore */ } }
             // 家人組：以設定頁為準補上新家人與照片
             if (SET === 'family') {
                 defs.forEach(d => {
