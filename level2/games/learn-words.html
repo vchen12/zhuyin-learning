@@ -328,6 +328,12 @@
             .word-item-emoji { font-size: 1rem; }
             .word-item-text { font-size: 0.55rem; }
         }
+    
+        /* v5.9.10 圖示清查：分類鈕與字詞格的圖示從 21px 放大（實測圖示太小） */
+        .category-grid, .categories { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+        .category-btn .icon { font-size: 2.2rem; } .category-btn .name { font-size: 1rem; }
+        .word-list { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+        .word-item { min-height: 92px; padding: 10px 6px; } .word-item-emoji { font-size: 2.4rem; } .word-item-text { font-size: 1rem; }
     </style>
 </head>
 <body>
