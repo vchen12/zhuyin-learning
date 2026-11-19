@@ -170,7 +170,7 @@
                 note: '卡片是他日常真的會說的需求。照片建議用家裡實物（他的毛巾、家裡的馬桶）。「示範」錄家長唸一次；「回應」錄家人的答覆（例如「好，我們去尿尿」），沒有錄音就用合成語音。',
                 prefix: '我要',
                 defaults: [
-                    { id: 'pee',    label: '尿尿',   say: '我要尿尿',   reply: '好，我們去尿尿', emoji: '🚻' },
+                    { id: 'pee',    label: '尿尿',   say: '我要尿尿',   reply: '好，我們去尿尿', emoji: 'urinal' },
                     { id: 'poo',    label: '便便',   say: '我要便便',   reply: '好，我們去廁所', emoji: '🚽' },
                     { id: 'towel',  label: '毛巾',   say: '我要毛巾',   reply: '好，毛巾給你',   emoji: '🧺' },
                     { id: 'tissue', label: '衛生紙', say: '我要衛生紙', reply: '好，衛生紙給你', emoji: '🧻' },
@@ -226,8 +226,8 @@
             try { saved = JSON.parse(localStorage.getItem('board.items.' + SET) || 'null'); } catch (e) { /* ignore */ }
             const defs = defaultItems();
             if (!saved) return defs;
-            // v5.9.9：吃飯改成豐盛的便當（已存的卡片一併換並存回）
-            if (saved.some(x => x.id === 'eat' && x.emoji === '🍚')) { saved.forEach(x => { if (x.id === 'eat' && x.emoji === '🍚') x.emoji = '🍱'; }); try { localStorage.setItem('board.items.' + SET, JSON.stringify(saved.map(it => ({ id: it.id, label: it.label, say: it.say, reply: it.reply, emoji: it.emoji })))); } catch (e) { /* ignore */ } }
+            // v5.9.9：吃飯改成豐盛的便當；v5.9.11：尿尿改成小便斗圖（已存的卡片一併換並存回）
+            if (saved.some(x => (x.id === 'eat' && x.emoji === '🍚') || (x.id === 'pee' && x.emoji === '🚻'))) { saved.forEach(x => { if (x.id === 'eat' && x.emoji === '🍚') x.emoji = '🍱'; if (x.id === 'pee' && x.emoji === '🚻') x.emoji = 'urinal'; }); try { localStorage.setItem('board.items.' + SET, JSON.stringify(saved.map(it => ({ id: it.id, label: it.label, say: it.say, reply: it.reply, emoji: it.emoji })))); } catch (e) { /* ignore */ } }
             // 家人組：以設定頁為準補上新家人與照片
             if (SET === 'family') {
                 defs.forEach(d => {
@@ -281,6 +281,14 @@
         // ==========================================
         // 卡片格
         // ==========================================
+        // 卡片圖示：emoji 文字；'urinal' 畫一個小便斗（Unicode 沒有這個 emoji；v5.9.11 實測回饋：🚻 要換成小便斗）
+        const URINAL_SVG = '<svg viewBox="0 0 100 100" style="width:1.3em;height:1.3em;vertical-align:middle" aria-label="小便斗">' +
+            '<rect x="0" y="0" width="100" height="100" rx="10" fill="#cfe3f3"/>' +
+            '<rect x="44" y="6" width="12" height="14" rx="3" fill="#9aa8b5"/><rect x="36" y="18" width="28" height="10" rx="4" fill="#b8c4cf"/>' +
+            '<path d="M26 30 h48 v22 c0 18 -10 30 -24 36 c-14 -6 -24 -18 -24 -36 z" fill="#fff" stroke="#8fa3b5" stroke-width="3"/>' +
+            '<path d="M34 38 h32 v12 c0 12 -7 20 -16 24 c-9 -4 -16 -12 -16 -24 z" fill="#e6f0f7"/>' +
+            '<circle cx="50" cy="76" r="4" fill="#8fa3b5"/></svg>';
+        function iconHtml(emoji) { return emoji === 'urinal' ? URINAL_SVG : escapeHtml(emoji || '🙂'); }
         function renderGrid() {
             const g = $('grid'); g.innerHTML = '';
             $('empty').style.display = items.length ? 'none' : 'block';
@@ -291,7 +299,7 @@
                 const c = document.createElement('div');
                 c.className = 'card' + (okToday[it.id] ? ' done' : '');
                 const pu = photoUrl(it);
-                c.innerHTML = (pu ? '<img class="pic" src="' + pu + '" alt="">' : '<div class="ph">' + escapeHtml(it.emoji || '🙂') + '</div>') +
+                c.innerHTML = (pu ? '<img class="pic" src="' + pu + '" alt="">' : '<div class="ph">' + iconHtml(it.emoji) + '</div>') +
                     '<div class="lbl">' + (CFG.prefix ? '<small>' + escapeHtml(CFG.prefix) + '</small>' : '') + escapeHtml(it.label) + '</div>';
                 c.addEventListener('click', () => enterFocus(it));
                 g.appendChild(c);
@@ -327,7 +335,7 @@
             $('verdict').classList.remove('show');
             const pu = photoUrl(it);
             if (pu) { $('focusPic').src = pu; $('focusPic').style.display = 'block'; $('focusPh').style.display = 'none'; }
-            else { $('focusPic').style.display = 'none'; $('focusPh').style.display = 'flex'; $('focusPh').textContent = it.emoji || '🙂'; }
+            else { $('focusPic').style.display = 'none'; $('focusPh').style.display = 'flex'; $('focusPh').innerHTML = iconHtml(it.emoji); }
             $('focusSay').textContent = it.say;
             $('focusHeard').textContent = '';
             $('voiceFill').style.width = '0';
@@ -524,7 +532,7 @@
                 const d = document.createElement('div'); d.className = 'item';
                 const pu = photoUrl(it);
                 d.innerHTML =
-                    '<div>' + (pu ? '<img class="thumb" src="' + pu + '">' : '<div class="thumb">' + escapeHtml(it.emoji || '🙂') + '</div>') +
+                    '<div>' + (pu ? '<img class="thumb" src="' + pu + '">' : '<div class="thumb">' + iconHtml(it.emoji) + '</div>') +
                         '<label class="pick" style="margin-top:.8vmin">📷 照片<input type="file" accept="image/*" data-idx="' + idx + '"></label></div>' +
                     '<div>' +
                         '<input type="text" data-idx="' + idx + '" data-k="label" value="' + escapeHtml(it.label) + '" placeholder="卡片上的字">' +
